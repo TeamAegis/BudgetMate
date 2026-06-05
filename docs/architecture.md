@@ -57,6 +57,7 @@ WebView and keeps money math out of JavaScript.
 | WebView | WKWebView (iOS) / Android System WebView | Native, small, OS-maintained. |
 | Frontend | **Angular 18+ standalone**, CSR static build | User-committed; no SSR (Tauri serves static files). |
 | Charts | **Chart.js** via `ng2-charts` (bundled) | Canvas, small, fast on mobile, MIT, no CDN. |
+| Icons | **`@lucide/angular`** (bundled, tree-shaken inline SVG) | Single-weight outline, MIT, no CDN/icon-font. The single icon source — see `docs/design/design-system.md` §5. |
 | Core logic | **Rust** | Memory-safe, fast, testable, owns money + crypto. |
 | DB | **SQLite + SQLCipher**, via `rusqlite` (`sqlcipher` feature) or `sqlx`+`libsqlite3-sys` `bundled-sqlcipher` | Encrypted at rest; ACID. **Not** the official SQL plugin (no SQLCipher support). |
 | Money | `rust_decimal` and/or integer minor units | Never float. |
@@ -93,14 +94,20 @@ src/app/
 │   ├── models/        # TS interfaces mirroring Rust DTOs (kept in sync)
 │   └── lock/          # biometric/passphrase unlock flow, idle-lock
 ├── features/
-│   ├── transactions/  # FR-1.1..1.4 entry, split, recurring, multi-currency
-│   ├── budgets/       # FR-3.1 envelopes
+│   ├── home/          # Dashboard (balance, trend, quick actions, goals preview)
+│   ├── transactions/  # "Expenses": FR-1.1..1.4 entry, split, recurring, multi-currency
+│   ├── budgets/       # FR-3.1 envelopes (reached from Settings)
 │   ├── goals/         # FR-3.2 savings goals
-│   ├── reports/       # FR-3.3 charts
+│   ├── reports/       # "Analytics": FR-3.3 charts
 │   ├── import/        # FR-2.1 OCR review, FR-2.2 file import, FR-2.4 dedup review
 │   └── settings/      # backup/restore/export, currency base, lock timeout
 └── shared/            # dumb UI components, chart wrappers, pipes (money/date)
 ```
+> **UI/UX source of truth:** `docs/design/` — `design-system.md` (tokens: coral + Poppins, MUR
+> default), `ux-blueprint.md` (IA, flows, states), and `screens.md` (per-screen FR ↔ Rust-command
+> map). Canonical bottom nav: **Home · Expenses · Goals · Analytics**; Settings via the header
+> icon; Budgets/Import are nested actions (folder names above are retained; routes/titles follow
+> the design). Styling rule: `.claude/rules/design.md` (tokens only, no CDN).
 
 ### 3.3 Frontend rules
 - **All** access to data goes through `core/bridge` (`invoke`); feature components never call
@@ -108,6 +115,8 @@ src/app/
 - No business logic (money math, dedup, recurrence, categorisation) in TypeScript — call
   Rust. TS only formats and presents.
 - Charts: import only the Chart.js controllers/elements actually used (tree-shake).
+- Icons: use **`@lucide/angular`** for every icon — import only the icons a component uses
+  (tree-shaken inline SVG, no CDN). See `.claude/rules/design.md` and `docs/design/design-system.md` §5.
 
 ---
 

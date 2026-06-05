@@ -4,10 +4,11 @@ import { Component } from '@angular/core';
   selector: 'app-transactions',
   template: `
     <section class="feature-page">
-      <h1>Transactions</h1>
+      <h1>Expenses</h1>
       <p class="muted">
-        Manual entry, splits, recurring, and multi-currency (FR-1.x). All money math runs in the
-        Rust core; this screen will call typed bridge wrappers.
+        Transaction list + manual entry, splits, recurring, and multi-currency (FR-1.x); Scan
+        Receipt and Import are nested actions here. All money math runs in the Rust core; this
+        screen calls typed bridge wrappers.
       </p>
     </section>
   `,
@@ -15,10 +16,10 @@ import { Component } from '@angular/core';
     .feature-page {
       display: flex;
       flex-direction: column;
-      gap: var(--space-md);
+      gap: var(--space-4);
     }
     .muted {
-      color: var(--color-on-surface-variant);
+      color: var(--c-text-muted);
     }
   `,
 })

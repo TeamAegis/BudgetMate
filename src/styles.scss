@@ -1,5 +1,6 @@
 // Global styles — design tokens, bundled fonts, base reset.
-@use 'styles/tokens' as *;
+// Tokens are plain CSS custom properties (no SCSS mixins). See docs/design/design-system.md.
+@use 'styles/tokens';
 @use 'styles/fonts';
 
 * {
@@ -14,18 +15,20 @@ body {
 }
 
 body {
-  background: var(--color-background);
-  color: var(--color-on-background);
-  @include type-body-md;
+  background: var(--c-bg);
+  color: var(--c-text);
+  font-family: var(--font-family);
+  font-size: var(--t-body);
+  font-weight: var(--fw-regular);
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  // Disable text selection / callout for a native-app feel on mobile.
+  // Native-app feel: disable selection/callout except in editable fields.
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   user-select: none;
 }
 
-// Inputs and editable areas remain selectable.
 input,
 textarea,
 [contenteditable] {
@@ -34,19 +37,20 @@ textarea,
 }
 
 h1 {
-  @include type-display-md;
+  font-family: var(--font-family);
+  font-size: var(--t-screen-title);
+  font-weight: var(--fw-bold);
   margin: 0;
 }
 h2 {
-  @include type-headline-lg;
-  margin: 0;
-}
-h3 {
-  @include type-headline-md;
+  font-family: var(--font-family);
+  font-size: var(--t-title);
+  font-weight: var(--fw-medium);
   margin: 0;
 }
 
-// Utility for aligned currency / numeric columns.
+// Aligned currency / numeric columns (tabular figures).
 .numeric {
-  @include type-numeric;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
 }

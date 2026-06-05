@@ -4,18 +4,18 @@ import { Component } from '@angular/core';
   selector: 'app-budgets',
   template: `
     <section class="feature-page">
-      <h1>Budgets</h1>
-      <p class="muted">Envelope-style monthly caps, spent vs remaining (FR-3.1).</p>
+      <h1>Budgets / Envelopes</h1>
+      <p class="muted">Envelope-style monthly caps, spent vs remaining (FR-3.1). Reached from Settings.</p>
     </section>
   `,
   styles: `
     .feature-page {
       display: flex;
       flex-direction: column;
-      gap: var(--space-md);
+      gap: var(--space-4);
     }
     .muted {
-      color: var(--color-on-surface-variant);
+      color: var(--c-text-muted);
     }
   `,
 })

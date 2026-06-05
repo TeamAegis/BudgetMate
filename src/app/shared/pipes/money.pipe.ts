@@ -12,10 +12,12 @@ export class MoneyPipe implements PipeTransform {
     if (!value) {
       return '';
     }
-    const { amountMinor, currency } = value;
+    // Default currency is MUR ("Rs") per the design system (docs/design/design-system.md §8).
+    const { amountMinor, currency = 'MUR' } = value;
     const fmt = new Intl.NumberFormat(locale ?? undefined, {
       style: 'currency',
       currency,
+      currencyDisplay: 'narrowSymbol',
     });
     // Derive minor-unit scale from the currency's fraction digits (e.g. 2 for USD, 0 for JPY).
     const fractionDigits = fmt.resolvedOptions().maximumFractionDigits ?? 2;

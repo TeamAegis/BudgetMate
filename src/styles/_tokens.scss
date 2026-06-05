@@ -1,151 +1,89 @@
-// Design tokens — generated from Designs/DESIGN.md (BudgetMate Narrative).
-// Single source of truth for colour, type, spacing, radius, elevation.
-// Do not hardcode hex/px in components; reference these CSS custom properties.
+// BudgetMate design tokens — source of truth: docs/design/design-system.md
+// Self-hosted Poppins only (NFR-P4: never load fonts/assets from a CDN).
+//
+// Bundle Poppins weights locally and declare @font-face pointing at local woff2, e.g.:
+//   @font-face { font-family: 'Poppins'; font-weight: 200; font-display: swap;
+//     src: url('/assets/fonts/poppins-extralight.woff2') format('woff2'); }
+//   ...repeat for 300, 400, 500, 700.
 
 :root {
-  // ── Colour: surfaces ──────────────────────────────────────────────
-  --color-surface: #f8f9ff;
-  --color-surface-dim: #cbdbf5;
-  --color-surface-bright: #f8f9ff;
-  --color-surface-container-lowest: #ffffff;
-  --color-surface-container-low: #eff4ff;
-  --color-surface-container: #e5eeff;
-  --color-surface-container-high: #dce9ff;
-  --color-surface-container-highest: #d3e4fe;
-  --color-surface-variant: #d3e4fe;
-  --color-on-surface: #0b1c30;
-  --color-on-surface-variant: #45464d;
-  --color-inverse-surface: #213145;
-  --color-inverse-on-surface: #eaf1ff;
-  --color-background: #f8f9ff;
-  --color-on-background: #0b1c30;
+  // ---- Color: brand ----
+  --c-primary: #ff7755;
+  --c-primary-700: #d84f2c;        // accessible coral for small text/icons on white (AA)
+  --c-primary-40: rgba(255, 119, 85, 0.40);  // hero balance card fill
+  --c-primary-10: rgba(255, 119, 85, 0.10);  // goals / soft section fill
+  --c-primary-05: rgba(255, 119, 85, 0.05);  // quick-action chips
 
-  // ── Colour: outlines / tint ───────────────────────────────────────
-  --color-outline: #76777d;
-  --color-outline-variant: #c6c6cd;
-  --color-surface-tint: #565e74;
+  // ---- Color: neutrals ----
+  --c-bg: #ffffff;
+  --c-surface: #fbfbfb;            // bottom nav, raised surfaces
+  --c-text: #000000;
+  --c-text-muted: #5a5a5a;
+  --c-border: #ececec;
 
-  // ── Colour: primary (Deep Navy) ───────────────────────────────────
-  --color-primary: #000000;
-  --color-on-primary: #ffffff;
-  --color-primary-container: #131b2e;
-  --color-on-primary-container: #7c839b;
-  --color-inverse-primary: #bec6e0;
+  // ---- Color: semantic (required by FR-3.1 / FR-2.4 / states) ----
+  --c-positive: #2e9e6b;
+  --c-warning: #e8a13a;
+  --c-danger: #d8453b;
+  --c-info: #3a86c8;
 
-  // ── Colour: secondary (Professional Blue — primary actions) ───────
-  --color-secondary: #0051d5;
-  --color-on-secondary: #ffffff;
-  --color-secondary-container: #316bf3;
-  --color-on-secondary-container: #fefcff;
+  // ---- Elevation ----
+  --c-shadow-pink: rgba(255, 203, 203, 0.29);
+  --elev-card: 5px 5px 0px 0px var(--c-shadow-pink);
+  --elev-float: 0 6px 16px rgba(0, 0, 0, 0.12);
 
-  // ── Colour: tertiary (Emerald — growth / positive) ────────────────
-  --color-tertiary: #000000;
-  --color-on-tertiary: #ffffff;
-  --color-tertiary-container: #002113;
-  --color-on-tertiary-container: #009668;
+  // ---- Typography ----
+  --font-family: 'Poppins', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --fw-extralight: 200;
+  --fw-light: 300;
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-bold: 700;
 
-  // ── Colour: error (Coral — alerts / over-budget) ──────────────────
-  --color-error: #ba1a1a;
-  --color-on-error: #ffffff;
-  --color-error-container: #ffdad6;
-  --color-on-error-container: #93000a;
+  // type scale (size only; pair with weights above)
+  --t-wordmark: 32px;       // logo (700, letter-spacing .15em)
+  --t-screen-title: 30px;   // 700
+  --t-balance: 32px;        // 200 (the big balance figure)
+  --t-title: 16px;          // 500
+  --t-section: 14px;        // 500
+  --t-body: 13px;           // 400
+  --t-caption: 12px;        // 300
 
-  // Semantic financial aliases (use these in finance UI for clarity)
-  --color-growth: #009668; // income, savings met, positive trends
-  --color-alert: #ba1a1a; // expenses, over-budget, negative trends
+  // ---- Spacing (4px base) ----
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;          // standard card padding
+  --space-6: 24px;          // standard screen gutter
+  --space-8: 32px;
 
-  // ── Typography families ───────────────────────────────────────────
-  --font-display: 'Manrope', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --font-body: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  // ---- Radius ----
+  --radius-sm: 5px;         // chips, chart bars, small buttons
+  --radius-md: 10px;        // section cards
+  --radius-lg: 20px;        // hero balance card
+  --radius-pill: 999px;     // progress track, toggles, FAB
 
-  // ── Spacing (8px linear scale) ────────────────────────────────────
-  --space-xs: 4px;
-  --space-base: 8px;
-  --space-sm: 12px;
-  --space-md: 16px;
-  --space-lg: 24px;
-  --space-xl: 32px;
-  --grid-margin: 24px;
-  --grid-gutter: 16px;
+  // ---- Icons (all icons via @lucide/angular; see docs/design/design-system.md §5) ----
+  --icon-size-sm: 24px;     // inline / action icons (nav uses 22–24)
+  --icon-size-md: 32px;     // larger feature glyphs
+  --icon-stroke: 1.75;      // default lucide stroke width (set via provideLucideConfig)
 
-  // ── Radius ────────────────────────────────────────────────────────
-  --radius-sm: 0.25rem;
-  --radius: 0.5rem; // default — cards & primary buttons
-  --radius-md: 0.75rem;
-  --radius-lg: 1rem;
-  --radius-xl: 1.5rem;
-  --radius-full: 9999px;
+  // ---- Layout ----
+  --layout-header-h: 80px;
+  --layout-bottomnav-h: 80px;
+  --layout-fab-size: 60px;
+  --tap-target-min: 44px;   // accessibility minimum
 
-  // ── Elevation (ambient, low-opacity shadows) ──────────────────────
-  --elevation-1: 0 1px 2px rgba(11, 28, 48, 0.04), 0 1px 3px rgba(11, 28, 48, 0.06);
-  --elevation-2: 0 4px 12px rgba(11, 28, 48, 0.08), 0 2px 4px rgba(11, 28, 48, 0.04);
+  // ---- Motion ----
+  --motion-fast: 150ms;
+  --motion-standard: 200ms;
+  --easing: cubic-bezier(0.2, 0, 0, 1);
 }
 
-// ── Typography scale (mixins) ───────────────────────────────────────
-// Usage: @include type-headline-lg;
-@mixin type-display-lg {
-  font-family: var(--font-display);
-  font-size: 48px;
-  font-weight: 700;
-  line-height: 56px;
-  letter-spacing: -0.02em;
-}
-@mixin type-display-md {
-  font-family: var(--font-display);
-  font-size: 36px;
-  font-weight: 700;
-  line-height: 44px;
-  letter-spacing: -0.02em;
-}
-@mixin type-headline-lg {
-  font-family: var(--font-display);
-  font-size: 28px;
-  font-weight: 600;
-  line-height: 36px;
-}
-@mixin type-headline-md {
-  font-family: var(--font-display);
-  font-size: 24px;
-  font-weight: 600;
-  line-height: 32px;
-}
-@mixin type-body-lg {
-  font-family: var(--font-body);
-  font-size: 18px;
-  font-weight: 400;
-  line-height: 28px;
-}
-@mixin type-body-md {
-  font-family: var(--font-body);
-  font-size: 16px;
-  font-weight: 400;
-  line-height: 24px;
-}
-@mixin type-body-sm {
-  font-family: var(--font-body);
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 20px;
-}
-@mixin type-label-lg {
-  font-family: var(--font-body);
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 20px;
-  letter-spacing: 0.05em;
-}
-@mixin type-label-md {
-  font-family: var(--font-body);
-  font-size: 12px;
-  font-weight: 500;
-  line-height: 16px;
-}
-// Numeric data — tabular figures so currency columns align.
-@mixin type-numeric {
-  font-family: var(--font-body);
-  font-size: 16px;
-  font-weight: 600;
-  line-height: 24px;
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: 'tnum' 1;
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-fast: 0ms;
+    --motion-standard: 0ms;
+  }
 }

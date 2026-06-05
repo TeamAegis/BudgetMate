@@ -18,13 +18,15 @@ and [`CLAUDE.md`](CLAUDE.md) for the operating rules.
 ## Layout
 ```
 src/                     Angular app (core/bridge · core/models · features · shared)
-src/styles/_tokens.scss  Design tokens generated from Designs/DESIGN.md
+src/styles/_tokens.scss  Design tokens (coral / Poppins) — mirrors docs/design/design-system.md
+design-tokens.json       Same tokens, machine-readable (for tooling / sync)
+docs/design/             UI/UX spec: design-system · ux-blueprint · screens (FR↔command map)
 src-tauri/src/           Rust core: db (SQLCipher) · crypto (Argon2id) · domain (money)
                          · rules (receipt/engine/dedup) · import · export · commands
 src-tauri/plugins/ocr/   Custom OCR plugin (raw text+boxes; native engine deferred)
 src-tauri/capabilities/  Tauri ACL (minimal grants)
 scripts/guards.mjs       no-network / no-telemetry / no-float-money CI guards
-.claude/rules,skills     Agent rules + skills (run-app, db-migration, new-feature)
+.claude/rules,skills     Agent rules (frontend · rust · database · design) + skills
 ```
 
 ## Prerequisites
@@ -58,7 +60,12 @@ npm run lint && npm test && npm run guards \
 ```
 
 ## Notes
-- Fonts (Manrope, Inter) are **bundled** — drop the `.woff2` files into
+- **Design system:** coral (`#FF7755`) + **Poppins**, icons via **`@lucide/angular`** (bundled,
+  tree-shaken, no CDN), default currency **MUR ("Rs")**. The full UI/UX spec lives in
+  [`docs/design/`](docs/design/); tokens are in
+  [`src/styles/_tokens.scss`](src/styles/_tokens.scss) + [`design-tokens.json`](design-tokens.json)
+  and the build rule is [`.claude/rules/design.md`](.claude/rules/design.md).
+- Fonts (**Poppins**) are **bundled** — drop the `.woff2` files into
   [`src/assets/fonts/`](src/assets/fonts/README.md) (no CDN). The UI falls back to `system-ui`
   until then.
 - All IPC goes through `src/app/core/bridge` (lint-enforced). Add features via the `new-feature`

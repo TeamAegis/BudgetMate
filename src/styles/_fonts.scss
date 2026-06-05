@@ -1,45 +1,19 @@
-// Local @font-face declarations — fonts are BUNDLED, never fetched from a CDN/Google Fonts
-// (privacy rule, .claude/rules/frontend.md).
+// Local @font-face declarations — Poppins is BUNDLED, never fetched from a CDN/Google Fonts
+// (NFR-P4, .claude/rules/design.md / frontend.md).
 //
 // Place the .woff2 files in src/assets/fonts/ (see src/assets/fonts/README.md). Until they are
-// present the UI falls back to the system-ui stack defined in _tokens.scss — layout is unaffected
-// because the fallback families are listed in --font-display / --font-body.
+// present the UI falls back to the system-ui stack defined in --font-family (_tokens.scss) —
+// layout is unaffected.
+//
+// Weights used by the design system (docs/design/design-system.md §3):
+// 200 ExtraLight · 300 Light · 400 Regular · 500 Medium · 700 Bold.
 
-// ── Manrope (display / headlines) ───────────────────────────────────
-@font-face {
-  font-family: 'Manrope';
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url('/assets/fonts/manrope-600.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Manrope';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url('/assets/fonts/manrope-700.woff2') format('woff2');
-}
-
-// ── Inter (body / labels / numeric) ─────────────────────────────────
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url('/assets/fonts/inter-400.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url('/assets/fonts/inter-500.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url('/assets/fonts/inter-600.woff2') format('woff2');
+@each $weight, $file in (200: 'extralight', 300: 'light', 400: 'regular', 500: 'medium', 700: 'bold') {
+  @font-face {
+    font-family: 'Poppins';
+    font-style: normal;
+    font-weight: $weight;
+    font-display: swap;
+    src: url('/assets/fonts/poppins-#{$file}.woff2') format('woff2');
+  }
 }

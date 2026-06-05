@@ -12,7 +12,8 @@ telemetry.** iOS + Android via Tauri 2.x.
 ## Stack (do not substitute without updating the architecture doc)
 - **Shell:** Tauri 2.11.x, native system WebView.
 - **Frontend:** Angular 18+ **standalone**, **CSR static build (NO SSR / no Angular
-  Universal)**. Charts: Chart.js via `ng2-charts`, bundled locally.
+  Universal)**. Charts: Chart.js via `ng2-charts`, bundled locally. Icons: **`@lucide/angular`**
+  (bundled, tree-shaken) — the only icon source; no icon fonts/CDN.
 - **Core logic:** Rust. Owns all money math, crypto, DB, import/export, rules.
 - **DB:** SQLite + **SQLCipher** via `rusqlite` (`sqlcipher` feature) or `sqlx` +
   `libsqlite3-sys` `bundled-sqlcipher`. **NOT** the official `tauri-plugin-sql` (it has no
@@ -60,13 +61,17 @@ telemetry.** iOS + Android via Tauri 2.x.
 - Full local gate before PR: `npm run lint && npm test && cargo test ... && cargo clippy ...`
 
 ## Repo map
-- `src/` — Angular app (`core/`, `features/`, `shared/`). See `.claude/rules/frontend.md`.
+- `src/` — Angular app (`core/`, `features/`, `shared/`). See `.claude/rules/frontend.md` and,
+  for UI/styling, `.claude/rules/design.md`.
+- `src/styles/_tokens.scss` + `design-tokens.json` — design tokens (mirror
+  `docs/design/design-system.md`). Use tokens only; never hardcode hex/px/radii in components.
 - `src-tauri/src/` — Rust core (`db/`, `import/`, `rules/`, `export/`, `crypto/`). See
   `.claude/rules/rust.md` and `.claude/rules/database.md`.
 - `src-tauri/plugins/ocr/` — custom native OCR plugin (Swift + Kotlin).
 - `src-tauri/capabilities/` — Tauri ACL.
 - `src-tauri/gen/` — committed android/ + apple/ projects. Do not gitignore.
-- `docs/` — architecture + requirements. Update these when behaviour changes.
+- `docs/` — architecture + requirements; `docs/design/` — UI/UX spec (design-system,
+  ux-blueprint, screens). Update these when behaviour/UI changes.
 
 ## Definition of done for any change
 1. Logic in Rust, presentation in Angular; bridge used for IPC.

@@ -1,7 +1,13 @@
 <div class="app-shell">
   <header class="app-header">
     <span class="brand">BudgetMate</span>
-    <span class="core-status">
+    <a class="settings-link" routerLink="/settings" aria-label="Settings" title="Settings">
+      <svg lucideSettings [size]="24"></svg>
+    </a>
+  </header>
+
+  @if (appInfo() || health() || coreError()) {
+    <div class="core-status">
       @if (appInfo(); as info) {
         <span class="ok">core {{ info.version }} · {{ info.platform }}</span>
       }
@@ -14,16 +20,30 @@
       @if (coreError(); as err) {
         <span class="muted">{{ err }}</span>
       }
-    </span>
-  </header>
+    </div>
+  }
 
   <main class="app-content">
     <router-outlet />
   </main>
 
+  <!-- Canonical bottom nav (docs/design/design-system.md §7): icon + label, active = coral. -->
   <nav class="app-nav">
-    @for (item of nav; track item.path) {
-      <a [routerLink]="item.path" routerLinkActive="active">{{ item.label }}</a>
-    }
+    <a routerLink="/home" routerLinkActive="active">
+      <svg lucideHouse [size]="22"></svg>
+      <span>Home</span>
+    </a>
+    <a routerLink="/expenses" routerLinkActive="active">
+      <svg lucideWallet [size]="22"></svg>
+      <span>Expenses</span>
+    </a>
+    <a routerLink="/goals" routerLinkActive="active">
+      <svg lucideTarget [size]="22"></svg>
+      <span>Goals</span>
+    </a>
+    <a routerLink="/analytics" routerLinkActive="active">
+      <svg lucidePieChart [size]="22"></svg>
+      <span>Analytics</span>
+    </a>
   </nav>
 </div>

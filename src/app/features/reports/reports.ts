@@ -8,7 +8,7 @@ import { registerCharts } from '../../shared/charts/chart-setup';
   imports: [BaseChartDirective],
   template: `
     <section class="feature-page">
-      <h1>Reports</h1>
+      <h1>Analytics</h1>
       <p class="muted">
         Pie (spend by category) and line (spend over time) from Rust-side aggregations (FR-3.3).
         Chart.js is bundled locally and tree-shaken; data below is placeholder until the
@@ -23,18 +23,18 @@ import { registerCharts } from '../../shared/charts/chart-setup';
     .feature-page {
       display: flex;
       flex-direction: column;
-      gap: var(--space-md);
+      gap: var(--space-4);
     }
     .muted {
-      color: var(--color-on-surface-variant);
+      color: var(--c-text-muted);
     }
     .chart-card {
       max-width: 360px;
-      padding: var(--space-md);
-      background: var(--color-surface-container-lowest);
-      border: 1px solid var(--color-outline-variant);
-      border-radius: var(--radius);
-      box-shadow: var(--elevation-1);
+      padding: var(--space-5);
+      background: var(--c-surface);
+      border: 1px solid var(--c-border);
+      border-radius: var(--radius-md);
+      box-shadow: var(--elev-card);
     }
   `,
 })

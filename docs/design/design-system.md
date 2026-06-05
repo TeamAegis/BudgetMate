@@ -1,0 +1,213 @@
+# BudgetMate — Design System
+
+The visual language, taken from the actual Figma file and reconciled with the offline/no-CDN
+constraints. Values here are the source of truth; `src/styles/_tokens.scss` and
+`design-tokens.json` mirror them.
+
+---
+
+## 1. Brand & tone
+BudgetMate is calm, trustworthy, and in-the-user's-control. Warm coral primary on generous
+white space; soft rounded cards; friendly illustrations for empty states. Nothing alarmist,
+nothing that implies surveillance or cloud — the design should *feel* private and local.
+
+---
+
+## 2. Color
+
+### 2.1 Core palette (from Figma)
+| Token | Value | Use |
+|---|---|---|
+| `--c-primary` | `#FF7755` | Brand coral: logo, active nav, CTAs, chart bars, progress fill. |
+| `--c-primary-700` | `#D84F2C` | **Accessible** coral for *small text/icons on white* (see §2.3). |
+| `--c-primary-40` | `rgba(255,119,85,0.40)` | Hero balance-card fill. |
+| `--c-primary-10` | `rgba(255,119,85,0.10)` | Goals card / soft section fill. |
+| `--c-primary-05` | `rgba(255,119,85,0.05)` | Quick-action chips, subtle tiles. |
+| `--c-bg` | `#FFFFFF` | App background. |
+| `--c-surface` | `#FBFBFB` | Bottom nav, raised surfaces. |
+| `--c-text` | `#000000` | Primary text. |
+| `--c-text-muted` | `#5A5A5A` | Secondary text/labels (added; Figma used pure black at low size). |
+| `--c-shadow-pink` | `rgba(255,203,203,0.29)` | Signature offset card shadow. |
+
+### 2.2 Semantic (added — not in Figma, required by the FRs)
+The Figma has no success/error/warning states, but envelope budgeting (FR-3.1), dedup
+(FR-2.4), and over-budget warnings need them. Defined to harmonise with the coral:
+| Token | Value | Use |
+|---|---|---|
+| `--c-positive` | `#2E9E6B` | Income, on-track, savings progress. |
+| `--c-warning` | `#E8A13A` | Approaching budget cap, dedup "review" flag. |
+| `--c-danger` | `#D8453B` | Over budget, destructive actions, errors. |
+| `--c-info` | `#3A86C8` | Neutral info, tips. |
+
+### 2.3 Accessibility note (important)
+`#FF7755` on white is ≈ **2.8:1** contrast — it **fails** WCAG AA for normal text (needs
+4.5:1) and is borderline for large text (needs 3:1). In the current Figma, nav labels and
+captions use coral on white at 12–13px, which is **not accessible**.
+- **Rule:** use `--c-primary` for large/bold text (≥24px or ≥19px bold), fills, and icons
+  paired with a text label. For small coral text/labels on white, use `--c-primary-700`
+  (`#D84F2C` ≈ 4.6:1). Verify any new pairing.
+
+---
+
+## 3. Typography
+
+**Family:** **Poppins** — **self-hosted/bundled** (NFR-P4: never load from Google Fonts/CDN).
+Ship the needed weights as local `woff2` and declare with `@font-face`. Fallback stack:
+`Poppins, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`.
+
+**Weights in use (from Figma):** ExtraLight 200, Light 300, Regular 400, Medium 500,
+Bold 700.
+
+### Type scale
+| Token | Size / weight | Used for (Figma origin) |
+|---|---|---|
+| `--t-wordmark` | 32px / 700, tracking 4.8px | "BudgetMate" logo only. |
+| `--t-screen-title` | 30px / 700 | Screen headers ("Expenses", "Goals", "Transactions"). |
+| `--t-balance` | 32px / 200 | The big balance figure ("Rs 10,000"). |
+| `--t-title` | 16px / 500 | Card titles ("Current Balance"). |
+| `--t-section` | 14px / 500 | Section labels ("Goals", "Usable Balance Trend"). |
+| `--t-body` | 13px / 400 | Body, list titles, amounts. |
+| `--t-caption` | 12px / 300 | Nav labels, helper text, "More Goals >". |
+
+Line-height: `normal` per Figma; for multi-line body use 1.5. Avoid weights below Light for
+body text on small screens (legibility).
+
+---
+
+## 4. Spacing, layout & shape
+
+### 4.1 Spacing scale (4px base)
+`--space-1: 4px`, `--space-2: 8px`, `--space-3: 12px`, `--space-4: 16px`,
+`--space-5: 20px`, `--space-6: 24px`, `--space-8: 32px`.
+> Figma used some odd values (18, 31). Standardise: **screen gutter = 24px**
+> (`--space-6`), **card padding = 20px** (`--space-5`). Keep these consistent — the Figma is
+> inconsistent here and should be normalised in build.
+
+### 4.2 Layout frame
+- Mobile artboard: **412 × 917** (Android reference). Design fluid, not fixed — must adapt to
+  iOS safe areas and varying heights.
+- **Header:** 80px tall, wordmark/title left, menu/settings icon right.
+- **Bottom nav:** 80px tall, surface `--c-surface`, 4 tabs.
+- Reserve OS safe-area insets (notch / home indicator) via env() padding.
+
+### 4.3 Radius
+`--radius-sm: 5px` (chips, chart bars, small buttons) · `--radius-md: 10px` (section cards) ·
+`--radius-lg: 20px` (hero balance card) · `--radius-pill: 999px` (progress track, toggles,
+FAB).
+
+### 4.4 Elevation
+- `--elev-card: 5px 5px 0px 0px rgba(255,203,203,0.29)` — the signature offset pink shadow
+  (hero card).
+- `--elev-float: 0 6px 16px rgba(0,0,0,0.12)` — FAB / modals (added; Figma had none).
+
+---
+
+## 5. Iconography
+
+**Icon library: [`@lucide/angular`](https://lucide.dev/guide/angular) — the single, mandatory
+source for ALL icons in the app.** Lucide is single-weight outline line icons (exactly the style
+this system wants), MIT-licensed, and ships each icon as a tree-shakable standalone Angular
+component that renders an **inline SVG** — bundled in the JS, **no CDN, no icon font, no network
+request** (NFR-P4). Do not hand-roll ad-hoc inline `<svg>`s, import an icon font, or add a second
+icon library.
+
+### Usage (standalone components)
+Import only the icons a component uses and add them to its `imports`; reference each by its
+`lucide…` attribute directive on an `<svg>`:
+```ts
+import { LucideSettings, LucideHouse } from '@lucide/angular';
+@Component({ imports: [LucideSettings, LucideHouse], /* … */ })
+```
+```html
+<svg lucideSettings [size]="24" aria-label="Settings"></svg>
+```
+Global defaults (e.g. stroke width) are set once via `provideLucideConfig({ strokeWidth: 1.75 })`
+in `src/app/app.config.ts`. For data-driven/dynamic icons, use Lucide's dynamic component with
+`provideLucideIcons(...)` rather than a `@switch` of static directives.
+
+### Sizing & colour
+- **Sizes:** nav icons **22–24px**, inline/action icons **24px**, larger feature glyphs up to
+  **32px**. Tokens: `--icon-size-sm` (24), `--icon-size-md` (32). Stroke width **1.75**.
+- Icons inherit `currentColor`. **Active** nav icon + label use `--c-primary-700` (the
+  AA-accessible coral on white); **inactive** use `--c-text-muted`. Never rely on colour alone —
+  pair an icon with a text label or sign.
+
+### Accessibility
+- Every standalone/interactive icon needs an accessible name (`aria-label` / `title`); decorative
+  icons paired with visible text use `aria-hidden="true"`.
+- Keep tap targets ≥ `--tap-target-min` (44px) even when the glyph is smaller.
+
+### Common mappings (extend as needed)
+Home `house` · Expenses `wallet` · Goals `target` · Analytics `pie-chart` · Settings `settings` ·
+Add `plus` · Scan receipt `scan-line` · Import `file-down` · Over-budget/alert `triangle-alert` ·
+Success `circle-check` · Duplicate/review `copy`.
+
+---
+
+## 6. Motion
+Subtle and fast (supports the <800ms-feel goal; nothing that delays first paint):
+- Standard transition: 150–200ms ease-out (taps, toggles, chip press).
+- Progress bars animate fill on mount: 300ms ease-out.
+- Respect `prefers-reduced-motion`: disable non-essential animation.
+- No skeleton-blocking animation on cold start — show content progressively.
+
+---
+
+## 7. Component library
+
+Each component lists its origin (Figma node or "new" if required by FRs but absent in Figma)
+and the tokens it consumes. Components are dumb/presentational (`shared/`) unless noted.
+
+### Present in Figma
+- **AppHeader** — title/wordmark + trailing icon. Variants: brand (home) / titled (sub-screens).
+- **BottomNav** — 4 tabs. **Canonical tabs: Home · Expenses · Goals · Analytics.**
+  ⚠️ Figma inconsistently labels the 4th tab "Charts" on some screens and "Analytics" on
+  others, and tab x-positions drift between screens — **normalise to evenly-spaced flexbox
+  and one label ("Analytics")**.
+- **BalanceCard** — hero. `--c-primary-40` fill, `--radius-lg`, `--elev-card`. Shows Current
+  Balance (`--t-balance`), Usable Balance, wallet illustration.
+- **QuickActionChip** — 90×60 tile, `--c-primary-05`, `--radius-sm`, icon + caption.
+  ⚠️ Figma shows duplicate "Transaction" labels — placeholder; real actions: *Add
+  Transaction*, *Add Goal*, *Scan Receipt*.
+- **GoalProgressRow** — label, current amount, pill progress track with knob, target amount.
+  Track uses `--c-primary-10`, fill `--c-primary`, knob `--c-primary`.
+- **TrendChart** — bar series + line overlay, "Usable Balance Trend". Bars `--c-primary`,
+  `--radius-sm` top. **Implement with bundled Chart.js (canvas)**, not static images.
+- **TransactionListItem** — leading icon tile, title, date, trailing signed amount
+  (`+ Rs 500`). Sign coloured: income `--c-positive`, expense `--c-danger`/`--c-text`.
+- **SegmentedToggle** — Daily/Weekly/Monthly and Ongoing/Completed. Pill, active segment
+  `--c-primary`.
+- **FAB** — 60px coral circle, `+` icon, `--elev-float`. For add-transaction / add-goal.
+- **TransactionPopup** — modal card: title, body, *Back* + *Modify* buttons.
+- **EmptyState** — centred illustration + message + CTA ("No goals? Create one!",
+  "Tap the Button below…", "No Data").
+- **TextField (underline)** — income/type inputs: label, value, bottom rule. For amounts use
+  a numeric keypad.
+
+### New — required by FRs, absent in Figma (specified here, to design)
+- **LockScreen** — biometric prompt + passphrase fallback (FR-5.1). App entry gate.
+- **ReceiptScanSheet** — camera/preview → OCR progress → **editable extracted fields**
+  (merchant/date/total) for confirmation (FR-2.1).
+- **ImportWizard** — file picker → column mapping (CSV) → rule preview → **dedup review list**
+  → confirm (FR-2.2/2.3/2.4).
+- **SplitEditor** — add/remove split rows; live "remaining to allocate" that must reach 0
+  (FR-1.2).
+- **CurrencyField** — amount + currency selector + user-entered FX rate + computed base
+  amount (FR-1.4).
+- **EnvelopeCard** — category cap with spent/remaining bar; warning/over states using
+  `--c-warning`/`--c-danger` (FR-3.1).
+- **RecurringRuleForm** — template + schedule picker (FR-1.3).
+- **RuleBuilderRow** — "If [field] [op] [value] → set [field] [value]" (FR-2.3).
+- **SettingsList + BackupRestorePanel** — base currency, lock timeout, export, encrypted
+  backup/restore (FR-4.x, FR-5.2).
+- **Banner/Toast** — success/warning/error feedback (semantic colours).
+
+---
+
+## 8. Currency & number formatting
+- Default currency **MUR**, symbol **"Rs"**, format `Rs 1,234` (no decimals shown when whole;
+  2 decimals otherwise). Formatting is done by a shared Angular pipe from **integer minor
+  units** received from Rust — never computed in TS.
+- Multi-currency rows show original amount + `(≈ Rs … )` base conversion (FR-1.4).
+- Negative/expense amounts and positive/income amounts are visually distinguished by colour +
+  sign, not colour alone (accessibility).

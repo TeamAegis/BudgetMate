@@ -12,10 +12,10 @@ import { Component } from '@angular/core';
     .feature-page {
       display: flex;
       flex-direction: column;
-      gap: var(--space-md);
+      gap: var(--space-4);
     }
     .muted {
-      color: var(--color-on-surface-variant);
+      color: var(--c-text-muted);
     }
   `,
 })

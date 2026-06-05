@@ -1,67 +1,91 @@
-@use '../styles/tokens' as *;
-
 .app-shell {
   display: flex;
   flex-direction: column;
   height: 100%;
+  background: var(--c-bg);
 }
 
 .app-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-md);
-  padding: var(--space-sm) var(--space-md);
-  background: var(--color-primary-container);
-  color: var(--color-on-primary);
+  min-height: var(--layout-header-h);
+  padding: var(--space-4) var(--space-6);
+  // Respect notch / safe-area on mobile.
+  padding-top: max(var(--space-4), env(safe-area-inset-top));
 
   .brand {
-    @include type-headline-md;
-    color: var(--color-on-primary);
+    font-family: var(--font-family);
+    font-size: var(--t-wordmark);
+    font-weight: var(--fw-bold);
+    letter-spacing: 0.15em;
+    color: var(--c-primary-700); // accessible coral for the wordmark
   }
 
-  .core-status {
-    @include type-label-md;
-    display: flex;
-    gap: var(--space-sm);
-    opacity: 0.9;
+  .settings-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--tap-target-min);
+    min-height: var(--tap-target-min);
+    color: var(--c-text);
+    text-decoration: none;
+  }
+}
 
-    .ok {
-      color: var(--color-tertiary-fixed-dim, #4edea3);
-    }
-    .bad {
-      color: var(--color-error-container);
-    }
-    .muted {
-      opacity: 0.7;
-    }
+.core-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding: 0 var(--space-6) var(--space-2);
+  font-size: var(--t-caption);
+  font-weight: var(--fw-light);
+
+  .ok {
+    color: var(--c-positive);
+  }
+  .bad {
+    color: var(--c-danger);
+  }
+  .muted {
+    color: var(--c-text-muted);
   }
 }
 
 .app-content {
   flex: 1 1 auto;
   overflow-y: auto;
-  padding: var(--grid-margin);
+  padding: var(--space-6);
 }
 
 .app-nav {
   display: flex;
   justify-content: space-around;
-  gap: var(--space-xs);
-  padding: var(--space-base);
-  background: var(--color-surface-container);
-  border-top: 1px solid var(--color-outline-variant);
+  align-items: center;
+  min-height: var(--layout-bottomnav-h);
+  padding: var(--space-2) var(--space-2) max(var(--space-2), env(safe-area-inset-bottom));
+  background: var(--c-surface);
+  border-top: 1px solid var(--c-border);
 
   a {
-    @include type-label-md;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-1);
+    min-width: var(--tap-target-min);
+    min-height: var(--tap-target-min);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-md);
+    font-size: var(--t-caption);
+    font-weight: var(--fw-regular);
     text-decoration: none;
-    color: var(--color-on-surface-variant);
-    padding: var(--space-base) var(--space-sm);
-    border-radius: var(--radius);
+    color: var(--c-text-muted);
+    transition: color var(--motion-fast) var(--easing);
 
     &.active {
-      color: var(--color-on-secondary);
-      background: var(--color-secondary);
+      color: var(--c-primary-700); // accessible coral for the small active label + icon
+      font-weight: var(--fw-medium);
     }
   }
 }
