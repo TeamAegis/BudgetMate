@@ -1,0 +1,23 @@
+:host {
+  display: inline-flex;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--tap-target-min);
+  min-height: var(--tap-target-min);
+  border: none;
+  background: transparent;
+  color: var(--c-text-muted);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.icon-btn:hover:not(:disabled) {
+  color: var(--c-primary-700);
+}
+.icon-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

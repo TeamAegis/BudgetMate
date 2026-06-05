@@ -2,10 +2,11 @@ import { Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { LucideWallet, LucideTags, LucideChevronRight, LucideLock } from '@lucide/angular';
 import { LockService } from '../../core/lock/lock.service';
+import { SelectField, type SelectOption } from '../../shared/ui/select-field/select-field';
 
 @Component({
   selector: 'app-settings',
-  imports: [RouterLink, LucideWallet, LucideTags, LucideChevronRight, LucideLock],
+  imports: [RouterLink, LucideWallet, LucideTags, LucideChevronRight, LucideLock, SelectField],
   template: `
     <section class="feature-page">
       <ul class="settings-list">
@@ -31,20 +32,14 @@ import { LockService } from '../../core/lock/lock.service';
       <div class="setting-row">
         <svg lucideLock [size]="20" aria-hidden="true"></svg>
         <span class="label" id="lock-timeout-label">Lock timeout</span>
-        <select
-          class="control"
-          aria-labelledby="lock-timeout-label"
+        <app-select-field
+          [options]="timeoutOptions"
           [value]="lock.idleTimeoutSecs()"
-          (change)="onTimeoutChange($event)"
-        >
-          <option [value]="30">30 seconds</option>
-          <option [value]="60">1 minute</option>
-          <option [value]="120">2 minutes</option>
-          <option [value]="300">5 minutes</option>
-          <option [value]="0">Never</option>
-        </select>
+          (valueChange)="onTimeoutChange($event)"
+          ariaLabelledby="lock-timeout-label"
+        />
       </div>
-      <p class="hint">Auto-locks the app after this idle time. Backgrounding always locks.</p>
+      <p class="setting-hint">Auto-locks the app after this idle time. Backgrounding always locks.</p>
 
       <p class="muted">
         Base currency, budgets/envelopes, rules, export, and encrypted backup/restore
@@ -122,15 +117,7 @@ import { LockService } from '../../core/lock/lock.service';
       flex: 1;
       font-weight: var(--fw-medium);
     }
-    .setting-row .control {
-      padding: var(--space-2) var(--space-3);
-      border: 1px solid var(--c-border);
-      border-radius: var(--radius-sm);
-      font: inherit;
-      background: var(--c-bg);
-      color: var(--c-text);
-    }
-    .hint {
+    .setting-hint {
       margin-top: calc(-1 * var(--space-3));
       font-size: var(--t-caption);
       color: var(--c-text-muted);
@@ -140,8 +127,15 @@ import { LockService } from '../../core/lock/lock.service';
 export class Settings {
   protected readonly lock = inject(LockService);
 
-  protected onTimeoutChange(event: Event): void {
-    const secs = Number((event.target as HTMLSelectElement).value);
-    void this.lock.updateIdleTimeout(secs);
+  protected readonly timeoutOptions: SelectOption[] = [
+    { value: 30, label: '30 seconds' },
+    { value: 60, label: '1 minute' },
+    { value: 120, label: '2 minutes' },
+    { value: 300, label: '5 minutes' },
+    { value: 0, label: 'Never' },
+  ];
+
+  protected onTimeoutChange(value: number | string): void {
+    void this.lock.updateIdleTimeout(Number(value));
   }
 }
