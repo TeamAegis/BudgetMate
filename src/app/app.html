@@ -1,56 +1,60 @@
 <div class="app-shell">
-  <header class="app-header">
-    @if (hasBack()) {
-      <button type="button" class="back" (click)="goBack()" aria-label="Back" title="Back">
-        <svg lucideArrowLeft [size]="24"></svg>
-      </button>
-    }
-    <span class="brand" [class.titled]="!isBrand()">{{ pageTitle() }}</span>
-    @if (!hasBack()) {
-      <a class="settings-link" routerLink="/settings" aria-label="Settings" title="Settings">
-        <svg lucideSettings [size]="24"></svg>
-      </a>
-    }
-  </header>
+  @if (!chromeless()) {
+    <header class="app-header">
+      @if (hasBack()) {
+        <button type="button" class="back" (click)="goBack()" aria-label="Back" title="Back">
+          <svg lucideArrowLeft [size]="24"></svg>
+        </button>
+      }
+      <span class="brand" [class.titled]="!isBrand()">{{ pageTitle() }}</span>
+      @if (!hasBack()) {
+        <a class="settings-link" routerLink="/settings" aria-label="Settings" title="Settings">
+          <svg lucideSettings [size]="24"></svg>
+        </a>
+      }
+    </header>
 
-  @if (appInfo() || health() || coreError()) {
-    <div class="core-status">
-      @if (appInfo(); as info) {
-        <span class="ok">core {{ info.version }} · {{ info.platform }}</span>
-      }
-      @if (health(); as h) {
-        <span [class.ok]="h.ok" [class.bad]="!h.ok">
-          db {{ h.ok ? 'ok' : 'fail' }} · schema v{{ h.schemaVersion }}
-          {{ h.encrypted ? '· encrypted' : '· UNENCRYPTED' }}
-        </span>
-      }
-      @if (coreError(); as err) {
-        <span class="muted">{{ err }}</span>
-      }
-    </div>
+    @if (appInfo() || health() || coreError()) {
+      <div class="core-status">
+        @if (appInfo(); as info) {
+          <span class="ok">core {{ info.version }} · {{ info.platform }}</span>
+        }
+        @if (health(); as h) {
+          <span [class.ok]="h.ok" [class.bad]="!h.ok">
+            db {{ h.ok ? 'ok' : 'fail' }} · schema v{{ h.schemaVersion }}
+            {{ h.encrypted ? '· encrypted' : '· UNENCRYPTED' }}
+          </span>
+        }
+        @if (coreError(); as err) {
+          <span class="muted">{{ err }}</span>
+        }
+      </div>
+    }
   }
 
   <main class="app-content">
     <router-outlet />
   </main>
 
-  <!-- Canonical bottom nav (docs/design/design-system.md §7): icon + label, active = coral. -->
-  <nav class="app-nav">
-    <a routerLink="/home" routerLinkActive="active">
-      <svg lucideHouse [size]="22"></svg>
-      <span>Home</span>
-    </a>
-    <a routerLink="/expenses" routerLinkActive="active">
-      <svg lucideWallet [size]="22"></svg>
-      <span>Expenses</span>
-    </a>
-    <a routerLink="/goals" routerLinkActive="active">
-      <svg lucideTarget [size]="22"></svg>
-      <span>Goals</span>
-    </a>
-    <a routerLink="/analytics" routerLinkActive="active">
-      <svg lucidePieChart [size]="22"></svg>
-      <span>Analytics</span>
-    </a>
-  </nav>
+  @if (!chromeless()) {
+    <!-- Canonical bottom nav (docs/design/design-system.md §7): icon + label, active = coral. -->
+    <nav class="app-nav">
+      <a routerLink="/home" routerLinkActive="active">
+        <svg lucideHouse [size]="22"></svg>
+        <span>Home</span>
+      </a>
+      <a routerLink="/expenses" routerLinkActive="active">
+        <svg lucideWallet [size]="22"></svg>
+        <span>Expenses</span>
+      </a>
+      <a routerLink="/goals" routerLinkActive="active">
+        <svg lucideTarget [size]="22"></svg>
+        <span>Goals</span>
+      </a>
+      <a routerLink="/analytics" routerLinkActive="active">
+        <svg lucidePieChart [size]="22"></svg>
+        <span>Analytics</span>
+      </a>
+    </nav>
+  }
 </div>

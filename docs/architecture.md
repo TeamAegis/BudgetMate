@@ -168,9 +168,19 @@ updated in the same change (see `CLAUDE.md`).
 ### 5.2 Key management
 - The DB key is **derived from the user passphrase** (Argon2id) and never stored in
   plaintext.
+- The app **boots locked**: managed state holds no connection until the user unlocks. The key is
+  derived inside the unlock command, used to open the SQLCipher connection, and the `Zeroizing`
+  key/hex are dropped immediately — the keyed connection itself is the only live secret.
+- The per-install **salt** and the **recorded Argon2 parameters** (frozen at enrolment so future
+  opens reproduce the key) plus non-sensitive lock settings live in an unencrypted sidecar
+  `app_data_dir/vault-meta.json`. They must be readable before the DB is open and are not secret;
+  security rests on the passphrase + Argon2 cost. An encrypted DB with no sidecar is treated as an
+  inconsistent (unrecoverable) state — never silently re-initialised.
 - The biometric flow unlocks a key stored in the platform secure enclave / Android Keystore;
-  that releases (or decrypts) the DB key into **memory only**.
-- On background/lock (FR-5.2), the in-memory key is zeroised.
+  that releases (or decrypts) the DB key into **memory only**. Biometric is Android-only; desktop
+  (dev) and the not-yet-enrolled case degrade to passphrase entry.
+- On background/lock (FR-5.2), the connection is dropped (zeroising the in-memory key) via an idle
+  timer and a Page-Visibility listener; the app returns to the lock screen.
 - All DB operations open with the key set before any read/write.
 
 ### 5.3 ACID

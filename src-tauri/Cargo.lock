@@ -276,6 +276,7 @@ dependencies = [
  "argon2",
  "chrono",
  "csv",
+ "getrandom 0.3.4",
  "log",
  "regex",
  "rusqlite",

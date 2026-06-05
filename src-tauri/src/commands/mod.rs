@@ -3,6 +3,7 @@
 
 pub mod accounts;
 pub mod categories;
+pub mod vault;
 
 use serde::Serialize;
 use tauri::State;

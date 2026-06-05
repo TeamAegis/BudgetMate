@@ -7,7 +7,9 @@
 import { invoke } from '@tauri-apps/api/core';
 import type {
   AppInfo,
+  AppState,
   DbHealth,
+  VaultSettings,
   Account,
   NewAccount,
   UpdateAccount,
@@ -30,6 +32,41 @@ export function getAppInfo(): Promise<AppInfo> {
 /** Opens the SQLCipher DB with the in-memory key and reports schema/encryption state. */
 export function dbHealth(): Promise<DbHealth> {
   return invoke<DbHealth>('db_health');
+}
+
+// ── Unlock / key lifecycle (FR-5.1 / FR-5.2) ────────────────────────────────────
+
+/** Current vault/lock state: initialized? unlocked? biometric availability + idle timeout. */
+export function appState(): Promise<AppState> {
+  return invoke<AppState>('app_state');
+}
+/** First-run: set the passphrase, derive the key, create + open the encrypted DB, and unlock. */
+export function setPassphrase(passphrase: string): Promise<AppState> {
+  return invoke<AppState>('set_passphrase', { passphrase });
+}
+/** Unlock an initialized vault with the passphrase. Wrong passphrase rejects generically. */
+export function unlock(passphrase: string): Promise<AppState> {
+  return invoke<AppState>('unlock', { passphrase });
+}
+/** Biometric unlock (Android). Rejects where biometric is unavailable. */
+export function unlockWithBiometric(): Promise<AppState> {
+  return invoke<AppState>('unlock_with_biometric');
+}
+/** Lock: drop the in-memory key + connection in the Rust core. */
+export function lock(): Promise<void> {
+  return invoke<void>('lock');
+}
+/** Read non-sensitive lock settings (idle timeout, biometric enabled). */
+export function getSettings(): Promise<VaultSettings> {
+  return invoke<VaultSettings>('get_settings');
+}
+/** Persist the idle auto-lock timeout (seconds; 0 disables the idle timer). */
+export function setIdleTimeout(secs: number): Promise<VaultSettings> {
+  return invoke<VaultSettings>('set_idle_timeout', { secs });
+}
+/** Enable/disable biometric unlock. */
+export function setBiometricEnabled(enabled: boolean): Promise<VaultSettings> {
+  return invoke<VaultSettings>('set_biometric_enabled', { enabled });
 }
 
 // ── Accounts ───────────────────────────────────────────────────────────────────
