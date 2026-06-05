@@ -4,23 +4,10 @@
   gap: var(--space-4);
 }
 
-.page-head {
+// Screen title + back live in the AppHeader (app shell); this row holds only the Add action.
+.page-actions {
   display: flex;
-  align-items: center;
-  gap: var(--space-3);
-
-  h1 {
-    flex: 1;
-  }
-  .back {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: var(--tap-target-min);
-    min-height: var(--tap-target-min);
-    color: var(--c-text);
-    text-decoration: none;
-  }
+  justify-content: flex-end;
 }
 
 .muted {

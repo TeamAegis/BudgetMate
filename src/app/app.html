@@ -1,9 +1,16 @@
 <div class="app-shell">
   <header class="app-header">
-    <span class="brand">BudgetMate</span>
-    <a class="settings-link" routerLink="/settings" aria-label="Settings" title="Settings">
-      <svg lucideSettings [size]="24"></svg>
-    </a>
+    @if (hasBack()) {
+      <button type="button" class="back" (click)="goBack()" aria-label="Back" title="Back">
+        <svg lucideArrowLeft [size]="24"></svg>
+      </button>
+    }
+    <span class="brand" [class.titled]="!isBrand()">{{ pageTitle() }}</span>
+    @if (!hasBack()) {
+      <a class="settings-link" routerLink="/settings" aria-label="Settings" title="Settings">
+        <svg lucideSettings [size]="24"></svg>
+      </a>
+    }
   </header>
 
   @if (appInfo() || health() || coreError()) {

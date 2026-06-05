@@ -4,7 +4,6 @@ import { Component } from '@angular/core';
   selector: 'app-transactions',
   template: `
     <section class="feature-page">
-      <h1>Expenses</h1>
       <p class="muted">
         Transaction list + manual entry, splits, recurring, and multi-currency (FR-1.x); Scan
         Receipt and Import are nested actions here. All money math runs in the Rust core; this

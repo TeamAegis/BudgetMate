@@ -166,9 +166,10 @@ in the current Figma — design them to this spec.
 
 ### 7.1a Accounts **[NEW — FR-1.x foundation]**
 - **FR:** underpins FR-1.1 (account picker), FR-1.4 (per-account currency), FR-3.x.
-- **Components:** list of accounts (name · type · currency · opening balance via the money pipe,
-  Rs) + create/edit form (name, type ∈ cash|bank|card|wallet|other, ISO-4217 currency) + archive.
-  Lucide icons (`wallet`, `pencil`, `archive`). Reached from Settings.
+- **Components:** AppHeader (titled "Accounts" + back); in-content **Add** action button; list of
+  accounts (name · type · currency · opening balance via the money pipe, Rs) + create/edit form
+  (name, type ∈ cash|bank|card|wallet|other, ISO-4217 currency) + archive. Lucide icons (`wallet`,
+  `pencil`, `archive`). Reached from Settings.
 - **Commands:** `list_accounts(includeArchived)`, `create_account`, `update_account`,
   `archive_account`.
 - **States:** loading · empty (seeded "Cash" account on first run, so rarely empty) · populated ·
@@ -178,9 +179,10 @@ in the current Figma — design them to this spec.
 
 ### 7.1b Categories **[NEW — FR-1.x/FR-2.3 foundation]**
 - **FR:** underpins category pickers (FR-1.1), the rule engine (FR-2.3), analytics (FR-3.3).
-- **Components:** list (name · kind · parent) + create/edit form (name, kind ∈
-  expense|income|transfer, optional parent) + archive. Tree via `parent_id`; the backend rejects
-  cycles/self-parent. Lucide `tags`/`pencil`/`archive`.
+- **Components:** AppHeader (titled "Categories" + back); in-content **Add** action button; list
+  (name · kind · parent) + create/edit form (name, kind ∈ expense|income|transfer, optional parent)
+  + archive. Tree via `parent_id`; the backend rejects cycles/self-parent. Lucide
+  `tags`/`pencil`/`archive`.
 - **Commands:** `list_categories(includeArchived)`, `create_category`, `update_category`,
   `archive_category`.
 - **States:** loading · empty (default set seeded on first run) · populated · error · busy.

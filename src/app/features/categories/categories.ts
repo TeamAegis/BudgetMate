@@ -1,7 +1,6 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { RouterLink } from '@angular/router';
-import { LucideArchive, LucidePencil, LucidePlus, LucideArrowLeft } from '@lucide/angular';
+import { LucideArchive, LucidePencil, LucidePlus } from '@lucide/angular';
 import {
   listCategories,
   createCategory,
@@ -15,7 +14,7 @@ const KINDS: CategoryKind[] = ['expense', 'income', 'transfer'];
 
 @Component({
   selector: 'app-categories',
-  imports: [ReactiveFormsModule, RouterLink, LucideArchive, LucidePencil, LucidePlus, LucideArrowLeft],
+  imports: [ReactiveFormsModule, LucideArchive, LucidePencil, LucidePlus],
   templateUrl: './categories.html',
   styleUrl: './categories.scss',
 })
