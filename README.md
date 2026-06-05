@@ -1,5 +1,7 @@
 # BudgetMate (codename *Vault*)
 
+[![CI](https://github.com/TeamAegis/BudgetMate/actions/workflows/ci.yml/badge.svg)](https://github.com/TeamAegis/BudgetMate/actions/workflows/ci.yml)
+
 > **Your money, your control.**
 
 A **strictly offline**, privacy-first mobile budget app. Manual expense tracking, on-device OCR
