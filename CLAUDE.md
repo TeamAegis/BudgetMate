@@ -76,6 +76,18 @@ only (WebView2); **iOS is deferred** (macOS/Xcode-only build). See `docs/archite
 - `docs/` — architecture + requirements; `docs/design/` — UI/UX spec (design-system,
   ux-blueprint, screens). Update these when behaviour/UI changes.
 
+## Git & CI workflow (always)
+- **Never commit or push to `main` directly.** Every change goes on its own branch off updated
+  `main` and lands via a PR — so `main` always holds working code. Direct pushes to `main` are
+  blocked by `.githooks/pre-push`; after cloning, run **`git config core.hooksPath .githooks`** once
+  (see the `harden-main` skill).
+- Branch with the **`feature-branch`** skill: `git switch -c <type>/<issue#>-<slug>`
+  (`feat|fix|chore|docs|refactor`). **Conventional Commits**; every commit ends with the
+  `Co-Authored-By: Claude Opus 4.8 (1M context)` trailer. Open a PR linking the issue (`Closes #N`).
+- **CI must be green before merge** — land PRs with the **`merge-pr`** skill (`gh pr checks
+  --watch --fail-fast`); never merge a failing/pending check, never `--admin`/`--no-verify` past it.
+- New GitHub Actions workflows: use the **`new-workflow`** skill (the real CI pipeline is issue #5).
+
 ## Definition of done for any change
 1. Logic in Rust, presentation in Angular; bridge used for IPC.
 2. Money is minor-units/decimal; DB writes are transactional.
