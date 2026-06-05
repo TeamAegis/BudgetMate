@@ -158,7 +158,7 @@ mod tests {
     fn meta_roundtrips_and_detects_first_run() {
         let dir = temp_dir("roundtrip");
         assert!(!is_initialised(&dir));
-        assert_eq!(consistency(&dir).unwrap(), false, "fresh install");
+        assert!(!consistency(&dir).unwrap(), "fresh install");
 
         let meta = VaultMeta {
             meta_version: CURRENT_META_VERSION,
