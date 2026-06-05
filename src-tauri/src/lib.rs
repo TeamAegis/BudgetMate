@@ -9,6 +9,7 @@ pub mod export;
 pub mod import;
 pub mod rules;
 pub mod state;
+pub mod vault;
 
 use tauri::Manager;
 
@@ -38,24 +39,24 @@ pub fn run() {
                 )?;
             }
 
-            // Open the encrypted DB once, migrate + seed, and hold it in managed state.
-            // NOTE: DEV key until the unlock/key-lifecycle flow (#2) replaces this with a key
-            // derived from the user passphrase / released by biometrics. The DB file is genuinely
-            // SQLCipher-encrypted either way.
-            let dir = app.path().app_data_dir()?;
-            std::fs::create_dir_all(&dir)?;
-            let db_path = dir.join("budgetmate.db");
-            let key = crypto::derive_key(b"dev-passphrase", b"budgetmate-dev-salt")?;
-            let key_hex = crypto::key_to_sqlcipher_hex(&key);
-            let now = chrono::Utc::now().to_rfc3339();
-            let conn = db::open_and_migrate(&db_path, &key_hex, &now)?;
-            app.manage(state::DbState::new(conn));
+            // The app boots LOCKED: no key is in memory and the DB connection is absent until the
+            // user unlocks (commands::vault). The key is derived from the passphrase (Argon2id)
+            // and held only as the keyed connection; it is dropped on lock/background (FR-5.2).
+            app.manage(state::DbState::locked());
 
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             commands::get_app_info,
             commands::db_health,
+            commands::vault::app_state,
+            commands::vault::set_passphrase,
+            commands::vault::unlock,
+            commands::vault::unlock_with_biometric,
+            commands::vault::lock,
+            commands::vault::get_settings,
+            commands::vault::set_idle_timeout,
+            commands::vault::set_biometric_enabled,
             commands::accounts::list_accounts,
             commands::accounts::create_account,
             commands::accounts::update_account,

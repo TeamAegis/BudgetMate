@@ -42,9 +42,11 @@ rusqlite = { version = "0.37", features = ["bundled-sqlcipher-vendored-openssl"]
 # Money: integer minor units + rust_decimal for fx math. NEVER f32/f64 for money.
 rust_decimal = { version = "1", features = ["serde-with-str"] }
 
-# Crypto: passphrase KDF (Argon2id) + in-memory key zeroisation.
+# Crypto: passphrase KDF (Argon2id) + in-memory key zeroisation. `getrandom` (already pulled
+# transitively) generates the per-install salt from the OS CSPRNG.
 argon2 = "0.5"
 zeroize = { version = "1", features = ["zeroize_derive"] }
+getrandom = "0.3"
 
 # Import / export (all pure-Rust, offline).
 csv = "1"

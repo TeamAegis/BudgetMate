@@ -21,6 +21,26 @@ export interface DbHealth {
   encrypted: boolean;
 }
 
+/** Mirrors Rust `AppState` (commands::vault). Drives shell routing: setup vs unlock vs app. */
+export interface AppState {
+  /** A passphrase has been set (vault meta exists). */
+  initialized: boolean;
+  /** The DB key is in memory and the connection is open. */
+  unlocked: boolean;
+  /** Biometric hardware is available on this platform (Android). */
+  biometricAvailable: boolean;
+  /** Biometric unlock has been enabled by the user. */
+  biometricEnabled: boolean;
+  /** Idle auto-lock timeout in seconds; 0 disables the idle timer. */
+  idleTimeoutSecs: number;
+}
+
+/** Mirrors Rust `VaultSettings` (vault). Non-sensitive lock preferences, readable while locked. */
+export interface VaultSettings {
+  idleTimeoutSecs: number;
+  biometricEnabled: boolean;
+}
+
 /** Mirrors Rust `Money` (domain::money). */
 export interface Money {
   amountMinor: number;
