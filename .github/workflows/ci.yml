@@ -2,12 +2,16 @@ name: CI
 
 # Runs the full pre-PR gate on every PR and on pushes to main (architecture.md §10.4).
 # Offline product → no secrets, no network beyond the Actions marketplace + apt/npm/crates.
+#
+# Split into two PARALLEL jobs so frontend feedback is fast and wall-clock = the slower job
+# (not the sum). The rust job is the long pole on a COLD cache (it compiles bundled SQLCipher +
+# vendored OpenSSL + Tauri from source); once main has a cached run, rust-cache restores those
+# artifacts and it drops to ~1-2 min.
 on:
   pull_request:
   push:
     branches: [main]
 
-# Cancel superseded runs on the same ref.
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -16,12 +20,36 @@ permissions:
   contents: read
 
 jobs:
-  gate:
-    name: gate
+  frontend:
+    name: frontend
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     env:
       # GitHub's ubuntu image ships Google Chrome; karma-chrome-launcher reads CHROME_BIN.
       CHROME_BIN: /usr/bin/google-chrome
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install npm dependencies
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Unit tests (headless)
+        run: npm test
+      - name: Guards (no-network / no-telemetry / no-float-money)
+        run: npm run guards
+
+  rust:
+    name: rust
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CARGO_INCREMENTAL: 0 # better cache hits in CI; incremental is useless across fresh runners
+      CARGO_TERM_COLOR: always
     steps:
       - uses: actions/checkout@v4
 
@@ -34,40 +62,23 @@ jobs:
             libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libxdo-dev \
             libayatana-appindicator3-dev patchelf nasm
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Install npm dependencies
-        run: npm ci
-
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
 
+      # Caches ~/.cargo (registry/git) AND src-tauri/target — including the expensive compiled
+      # OpenSSL/SQLCipher artifacts. Saved after a successful job; PRs restore main's cache.
       - name: Cache Rust
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
 
-      # ── The gate (same as the local pre-PR gate, CLAUDE.md / run-app) ──
-      - name: Lint (Angular)
-        run: npm run lint
+      - name: Clippy (warnings = errors)
+        run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
 
-      - name: Unit tests (Angular, headless)
-        run: npm test
-
-      - name: Guards (no-network / no-telemetry / no-float-money)
-        run: npm run guards
-
-      - name: Rust tests
+      - name: Tests
         run: cargo test --manifest-path src-tauri/Cargo.toml
-
-      - name: Rust clippy (warnings = errors)
-        run: cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
 
   # ── Deferred: Android bundle-size metric (issue #5) ──
   # Recording the APK/AAB size against the budget (NFR-Perf1: <=25 MB) needs the Android
