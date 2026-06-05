@@ -5,17 +5,25 @@
 use rusqlite::Connection;
 use std::path::Path;
 
+pub mod accounts;
+pub mod categories;
+
 #[derive(Debug, thiserror::Error)]
 pub enum DbError {
     #[error("sqlite error: {0}")]
     Sqlite(#[from] rusqlite::Error),
     #[error("wrong passphrase or corrupt database")]
     KeyVerificationFailed,
+    #[error("{0}")]
+    Invalid(String),
 }
 
 /// Forward-only migration list. NEVER edit a shipped migration — add a new, higher version
 /// (db-migration skill). Each `&str` is the forward DDL; the runner records the version.
-const MIGRATIONS: &[(i64, &str)] = &[(1, include_str!("migrations/0001_init.sql"))];
+const MIGRATIONS: &[(i64, &str)] = &[
+    (1, include_str!("migrations/0001_init.sql")),
+    (2, include_str!("migrations/0002_category_archived.sql")),
+];
 
 /// Open the encrypted DB: set the raw key, then verify with a cheap read. A failed verify means
 /// a wrong key or corruption. `key_hex` is the lowercase 64-char hex of the 32-byte key.
@@ -60,6 +68,56 @@ pub fn run_migrations(conn: &Connection, now_iso: &str) -> Result<i64, DbError> 
     Ok(current)
 }
 
+/// Open the encrypted DB and bring it fully up to date: set the key, run migrations, seed
+/// first-run defaults. Returns the ready-to-use connection. Used at startup (and by `db_health`).
+pub fn open_and_migrate(path: &Path, key_hex: &str, now_iso: &str) -> Result<Connection, DbError> {
+    let conn = open_encrypted(path, key_hex)?;
+    run_migrations(&conn, now_iso)?;
+    seed_defaults(&conn)?;
+    Ok(conn)
+}
+
+/// Seed a minimal starter set on first run so the app isn't empty. Idempotent: only seeds when
+/// the respective table is empty. Wrapped in one transaction (ACID).
+pub fn seed_defaults(conn: &Connection) -> Result<(), DbError> {
+    let tx = conn.unchecked_transaction()?;
+
+    let account_count: i64 = tx.query_row("SELECT count(*) FROM accounts", [], |r| r.get(0))?;
+    if account_count == 0 {
+        // Default currency MUR (design-system §8). Multi-account schema, single default in v1.
+        tx.execute(
+            "INSERT INTO accounts (name, type, currency, opening_balance_minor, archived)
+             VALUES ('Cash', 'cash', 'MUR', 0, 0)",
+            [],
+        )?;
+    }
+
+    let category_count: i64 = tx.query_row("SELECT count(*) FROM categories", [], |r| r.get(0))?;
+    if category_count == 0 {
+        let defaults: &[(&str, &str)] = &[
+            ("Groceries", "expense"),
+            ("Dining", "expense"),
+            ("Transport", "expense"),
+            ("Rent", "expense"),
+            ("Utilities", "expense"),
+            ("Shopping", "expense"),
+            ("Health", "expense"),
+            ("Entertainment", "expense"),
+            ("Salary", "income"),
+            ("Other Income", "income"),
+        ];
+        for (name, kind) in defaults {
+            tx.execute(
+                "INSERT INTO categories (name, parent_id, kind, archived) VALUES (?1, NULL, ?2, 0)",
+                rusqlite::params![name, kind],
+            )?;
+        }
+    }
+
+    tx.commit()?;
+    Ok(())
+}
+
 /// True if the connection is actually encrypted (SQLCipher reports a non-zero cipher version).
 pub fn is_encrypted(conn: &Connection) -> bool {
     conn.query_row("PRAGMA cipher_version", [], |r| r.get::<_, String>(0))
@@ -85,7 +143,7 @@ mod tests {
             let conn = open_encrypted(&path, good).unwrap();
             assert!(is_encrypted(&conn), "connection must report SQLCipher cipher version");
             let v = run_migrations(&conn, "2026-06-05T00:00:00Z").unwrap();
-            assert_eq!(v, 1);
+            assert_eq!(v, MIGRATIONS.len() as i64);
         }
 
         // Raw bytes on disk must NOT contain the plaintext SQLite header "SQLite format 3".
@@ -112,10 +170,10 @@ mod tests {
         // In-memory DB (no key) is enough to exercise the migration runner logic.
         let conn = Connection::open_in_memory().unwrap();
         let v1 = run_migrations(&conn, "2026-06-05T00:00:00Z").unwrap();
-        assert_eq!(v1, 1);
+        assert_eq!(v1, MIGRATIONS.len() as i64);
         // Re-running must not double-apply or error.
         let v2 = run_migrations(&conn, "2026-06-05T00:00:01Z").unwrap();
-        assert_eq!(v2, 1);
+        assert_eq!(v2, MIGRATIONS.len() as i64);
         // Core tables exist.
         let n: i64 = conn
             .query_row(
@@ -125,5 +183,19 @@ mod tests {
             )
             .unwrap();
         assert_eq!(n, 1);
+    }
+
+    #[test]
+    fn seed_defaults_is_idempotent() {
+        let conn = Connection::open_in_memory().unwrap();
+        run_migrations(&conn, "2026-06-05T00:00:00Z").unwrap();
+        seed_defaults(&conn).unwrap();
+        seed_defaults(&conn).unwrap(); // second run must not duplicate
+
+        let accounts: i64 = conn.query_row("SELECT count(*) FROM accounts", [], |r| r.get(0)).unwrap();
+        let categories: i64 =
+            conn.query_row("SELECT count(*) FROM categories", [], |r| r.get(0)).unwrap();
+        assert_eq!(accounts, 1, "exactly one default account");
+        assert_eq!(categories, 10, "default category set seeded once");
     }
 }

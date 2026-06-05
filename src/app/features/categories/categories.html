@@ -1,0 +1,78 @@
+<section class="feature-page">
+  <header class="page-head">
+    <a routerLink="/settings" class="back" aria-label="Back to settings">
+      <svg lucideArrowLeft [size]="20"></svg>
+    </a>
+    <h1>Categories</h1>
+    @if (!showForm()) {
+      <button type="button" class="btn primary" (click)="startCreate()" [disabled]="busy()">
+        <svg lucidePlus [size]="18"></svg>
+        <span>Add</span>
+      </button>
+    }
+  </header>
+
+  @if (error(); as err) {
+    <p class="banner error" role="alert">{{ err }}</p>
+  }
+
+  @if (showForm()) {
+    <form class="card form" [formGroup]="form" (ngSubmit)="save()">
+      <label>
+        <span>Name</span>
+        <input type="text" formControlName="name" placeholder="e.g. Groceries" />
+      </label>
+      <label>
+        <span>Kind</span>
+        <select formControlName="kind">
+          @for (k of kinds; track k) {
+            <option [value]="k">{{ k }}</option>
+          }
+        </select>
+      </label>
+      <label>
+        <span>Parent (optional)</span>
+        <select formControlName="parentId">
+          <option [ngValue]="null">— None —</option>
+          @for (p of parentOptions(); track p.id) {
+            <option [ngValue]="p.id">{{ p.name }}</option>
+          }
+        </select>
+      </label>
+      <div class="actions">
+        <button type="button" class="btn ghost" (click)="cancel()" [disabled]="busy()">Cancel</button>
+        <button type="submit" class="btn primary" [disabled]="busy() || form.invalid">
+          {{ busy() ? 'Saving…' : 'Save' }}
+        </button>
+      </div>
+    </form>
+  }
+
+  @if (loading()) {
+    <p class="muted">Loading…</p>
+  } @else if (!showForm() && categories().length === 0 && !error()) {
+    <div class="empty">
+      <p>No categories yet.</p>
+      <button type="button" class="btn primary" (click)="startCreate()">Add your first category</button>
+    </div>
+  } @else {
+    <ul class="rows">
+      @for (c of categories(); track c.id) {
+        <li class="card row">
+          <div class="row-main">
+            <span class="name">{{ c.name }}</span>
+            <span class="meta">{{ c.kind }} · parent: {{ parentName(c.parentId) }}</span>
+          </div>
+          <div class="row-actions">
+            <button type="button" class="icon-btn" (click)="startEdit(c)" [disabled]="busy()" aria-label="Edit">
+              <svg lucidePencil [size]="18"></svg>
+            </button>
+            <button type="button" class="icon-btn" (click)="archive(c)" [disabled]="busy()" aria-label="Archive">
+              <svg lucideArchive [size]="18"></svg>
+            </button>
+          </div>
+        </li>
+      }
+    </ul>
+  }
+</section>

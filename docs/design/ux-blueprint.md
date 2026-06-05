@@ -43,9 +43,14 @@ App Shell (header + bottom nav)
    ├── Analytics                   (Analytics tab)
    │     • Spend by category (pie)  • Spend over time (line)  • filters
    └── Settings                    (header icon)                    [NEW]
+         • Accounts (CRUD)  • Categories (CRUD, tree)
          • Base currency  • Lock timeout  • Budgets/envelopes
          • Rules  • Export (CSV/XLSX)  • Encrypted backup / restore
 ```
+
+Accounts & Categories are managed under Settings (foundational data; seeded with a default
+account + category set on first run). v1 is single-account in practice (multi-account schema, no
+switcher).
 
 Onboarding (first run, before the shell): intro → income setup → first goal (the
 "Home page" and "Getting Started" frames map here).

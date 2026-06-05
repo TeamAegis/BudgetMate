@@ -159,10 +159,31 @@ in the current Figma — design them to this spec.
 ## 7. Settings **[NEW]**
 
 ### 7.1 Settings list
-- **FR:** FR-4.x, FR-5.2, FR-3.1, FR-2.3.
-- **Components:** SettingsList rows → Base currency, Lock timeout, Budgets/Envelopes, Rules,
-  Export, Backup/Restore, About/Privacy note.
+- **FR:** FR-4.x, FR-5.2, FR-3.1, FR-2.3, FR-1.x (accounts/categories foundation).
+- **Components:** SettingsList rows → **Accounts**, **Categories**, Base currency, Lock timeout,
+  Budgets/Envelopes, Rules, Export, Backup/Restore, About/Privacy note.
 - **Commands:** `get_settings()`, `update_settings(dto)`.
+
+### 7.1a Accounts **[NEW — FR-1.x foundation]**
+- **FR:** underpins FR-1.1 (account picker), FR-1.4 (per-account currency), FR-3.x.
+- **Components:** list of accounts (name · type · currency · opening balance via the money pipe,
+  Rs) + create/edit form (name, type ∈ cash|bank|card|wallet|other, ISO-4217 currency) + archive.
+  Lucide icons (`wallet`, `pencil`, `archive`). Reached from Settings.
+- **Commands:** `list_accounts(includeArchived)`, `create_account`, `update_account`,
+  `archive_account`.
+- **States:** loading · empty (seeded "Cash" account on first run, so rarely empty) · populated ·
+  error · busy (saving). Archive hides from pickers, never deletes.
+- **Notes:** v1 is effectively single default account (multi-account schema, **no switcher**).
+  Opening-balance money entry lands with the CurrencyField (FR-1.4); accounts start at Rs 0.
+
+### 7.1b Categories **[NEW — FR-1.x/FR-2.3 foundation]**
+- **FR:** underpins category pickers (FR-1.1), the rule engine (FR-2.3), analytics (FR-3.3).
+- **Components:** list (name · kind · parent) + create/edit form (name, kind ∈
+  expense|income|transfer, optional parent) + archive. Tree via `parent_id`; the backend rejects
+  cycles/self-parent. Lucide `tags`/`pencil`/`archive`.
+- **Commands:** `list_categories(includeArchived)`, `create_category`, `update_category`,
+  `archive_category`.
+- **States:** loading · empty (default set seeded on first run) · populated · error · busy.
 
 ### 7.2 Budgets / Envelopes
 - **FR:** FR-3.1.
