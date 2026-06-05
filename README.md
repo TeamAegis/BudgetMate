@@ -37,6 +37,9 @@ scripts/guards.mjs       no-network / no-telemetry / no-float-money CI guards
 - **Android (when building for device):** Android Studio → SDK, Build-Tools, **NDK 28+**,
   Command-line Tools; set `ANDROID_HOME`, `NDK_HOME`, `JAVA_HOME` (Android Studio JBR);
   `rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android`.
+- **After cloning, enable the git hooks** (protects `main`; blocks direct pushes):
+  `git config core.hooksPath .githooks`. Work happens on feature branches + PRs — see the
+  `feature-branch` / `merge-pr` skills and the "Git & CI workflow" section of `CLAUDE.md`.
 
 ## Commands
 ```
