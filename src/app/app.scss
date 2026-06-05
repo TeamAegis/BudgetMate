@@ -5,51 +5,7 @@
   background: var(--c-bg);
 }
 
-.app-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: var(--layout-header-h);
-  padding: var(--space-4) var(--space-6);
-  // Respect notch / safe-area on mobile.
-  padding-top: max(var(--space-4), env(safe-area-inset-top));
-
-  // Brand wordmark (Home). Fills the row so the trailing icon stays right-aligned.
-  .brand {
-    flex: 1;
-    font-family: var(--font-family);
-    font-size: var(--t-wordmark);
-    font-weight: var(--fw-bold);
-    letter-spacing: 0.15em;
-    color: var(--c-primary-700); // accessible coral for the wordmark
-
-    // Titled variant (sub-screens): the screen name, not the brand.
-    &.titled {
-      font-size: var(--t-screen-title);
-      letter-spacing: normal;
-      color: var(--c-text);
-    }
-  }
-
-  .back,
-  .settings-link {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: var(--tap-target-min);
-    min-height: var(--tap-target-min);
-    color: var(--c-text);
-    text-decoration: none;
-  }
-
-  // The back affordance is a button, not a link — strip the native chrome.
-  .back {
-    padding: 0;
-    background: none;
-    border: none;
-    cursor: pointer;
-  }
-}
+// AppHeader and BottomNav are now their own components (shared/ui/); their styles live there.
 
 .core-status {
   display: flex;
@@ -74,36 +30,4 @@
   flex: 1 1 auto;
   overflow-y: auto;
   padding: var(--space-6);
-}
-
-.app-nav {
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  min-height: var(--layout-bottomnav-h);
-  padding: var(--space-2) var(--space-2) max(var(--space-2), env(safe-area-inset-bottom));
-  background: var(--c-surface);
-  border-top: 1px solid var(--c-border);
-
-  a {
-    display: inline-flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: var(--space-1);
-    min-width: var(--tap-target-min);
-    min-height: var(--tap-target-min);
-    padding: var(--space-2) var(--space-3);
-    border-radius: var(--radius-md);
-    font-size: var(--t-caption);
-    font-weight: var(--fw-regular);
-    text-decoration: none;
-    color: var(--c-text-muted);
-    transition: color var(--motion-fast) var(--easing);
-
-    &.active {
-      color: var(--c-primary-700); // accessible coral for the small active label + icon
-      font-weight: var(--fw-medium);
-    }
-  }
 }

@@ -1,72 +1,66 @@
 <section class="feature-page">
   @if (!showForm()) {
     <div class="page-actions">
-      <button type="button" class="btn primary" (click)="startCreate()" [disabled]="busy()">
-        <svg lucidePlus [size]="18"></svg>
+      <app-button variant="primary" (click)="startCreate()" [disabled]="busy()">
+        <svg icon lucidePlus [size]="18"></svg>
         <span>Add</span>
-      </button>
+      </app-button>
     </div>
   }
 
   @if (error(); as err) {
-    <p class="banner error" role="alert">{{ err }}</p>
+    <app-banner>{{ err }}</app-banner>
   }
 
   @if (showForm()) {
-    <form class="card form" [formGroup]="form" (ngSubmit)="save()">
-      <label>
-        <span>Name</span>
-        <input type="text" formControlName="name" placeholder="e.g. Groceries" />
-      </label>
-      <label>
-        <span>Kind</span>
-        <select formControlName="kind">
-          @for (k of kinds; track k) {
-            <option [value]="k">{{ k }}</option>
-          }
-        </select>
-      </label>
-      <label>
-        <span>Parent (optional)</span>
-        <select formControlName="parentId">
-          <option [ngValue]="null">— None —</option>
-          @for (p of parentOptions(); track p.id) {
-            <option [ngValue]="p.id">{{ p.name }}</option>
-          }
-        </select>
-      </label>
-      <div class="actions">
-        <button type="button" class="btn ghost" (click)="cancel()" [disabled]="busy()">Cancel</button>
-        <button type="submit" class="btn primary" [disabled]="busy() || form.invalid">
-          {{ busy() ? 'Saving…' : 'Save' }}
-        </button>
-      </div>
-    </form>
+    <app-card>
+      <form class="form" [formGroup]="form" (ngSubmit)="save()">
+        <app-form-field label="Name">
+          <input type="text" formControlName="name" placeholder="e.g. Groceries" />
+        </app-form-field>
+        <app-form-field label="Kind">
+          <select formControlName="kind">
+            @for (k of kinds; track k) {
+              <option [value]="k">{{ k }}</option>
+            }
+          </select>
+        </app-form-field>
+        <app-form-field label="Parent (optional)">
+          <select formControlName="parentId">
+            <option [ngValue]="null">— None —</option>
+            @for (p of parentOptions(); track p.id) {
+              <option [ngValue]="p.id">{{ p.name }}</option>
+            }
+          </select>
+        </app-form-field>
+        <div class="actions">
+          <app-button variant="ghost" (click)="cancel()" [disabled]="busy()">Cancel</app-button>
+          <app-button type="submit" variant="primary" [disabled]="busy() || form.invalid">
+            {{ busy() ? 'Saving…' : 'Save' }}
+          </app-button>
+        </div>
+      </form>
+    </app-card>
   }
 
   @if (loading()) {
     <p class="muted">Loading…</p>
   } @else if (!showForm() && categories().length === 0 && !error()) {
-    <div class="empty">
-      <p>No categories yet.</p>
-      <button type="button" class="btn primary" (click)="startCreate()">Add your first category</button>
-    </div>
+    <app-empty-state
+      message="No categories yet."
+      cta="Add your first category"
+      (action)="startCreate()"
+    />
   } @else {
     <ul class="rows">
       @for (c of categories(); track c.id) {
-        <li class="card row">
-          <div class="row-main">
-            <span class="name">{{ c.name }}</span>
-            <span class="meta">{{ c.kind }} · parent: {{ parentName(c.parentId) }}</span>
-          </div>
-          <div class="row-actions">
-            <button type="button" class="icon-btn" (click)="startEdit(c)" [disabled]="busy()" aria-label="Edit">
-              <svg lucidePencil [size]="18"></svg>
-            </button>
-            <button type="button" class="icon-btn" (click)="archive(c)" [disabled]="busy()" aria-label="Archive">
-              <svg lucideArchive [size]="18"></svg>
-            </button>
-          </div>
+        <li app-list-row [name]="c.name" [meta]="c.kind + ' · parent: ' + parentName(c.parentId)">
+          <app-icon-button actions ariaLabel="Edit" (click)="startEdit(c)" [disabled]="busy()">
+            <svg lucidePencil [size]="18"></svg>
+          </app-icon-button>
+          <app-icon-button actions ariaLabel="Archive" (click)="archive(c)" [disabled]="busy()">
+            <svg lucideArchive [size]="18"></svg>
+          </app-icon-button>
         </li>
       }
     </ul>

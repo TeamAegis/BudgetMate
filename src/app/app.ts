@@ -1,39 +1,16 @@
 import { Component, OnInit, effect, inject, signal } from '@angular/core';
 import { Location } from '@angular/common';
-import {
-  NavigationEnd,
-  Router,
-  RouterOutlet,
-  RouterLink,
-  RouterLinkActive,
-} from '@angular/router';
+import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs/operators';
-import {
-  LucideHouse,
-  LucideWallet,
-  LucideTarget,
-  LucidePieChart,
-  LucideSettings,
-  LucideArrowLeft,
-} from '@lucide/angular';
 import { getAppInfo, dbHealth, isTauri } from './core/bridge';
 import { LockService } from './core/lock/lock.service';
 import type { AppInfo, DbHealth } from './core/models';
+import { AppHeader } from './shared/ui/app-header/app-header';
+import { BottomNav } from './shared/ui/bottom-nav/bottom-nav';
 
 @Component({
   selector: 'app-root',
-  imports: [
-    RouterOutlet,
-    RouterLink,
-    RouterLinkActive,
-    // All icons come from @lucide/angular (bundled, tree-shaken). See .claude/rules/design.md.
-    LucideHouse,
-    LucideWallet,
-    LucideTarget,
-    LucidePieChart,
-    LucideSettings,
-    LucideArrowLeft,
-  ],
+  imports: [RouterOutlet, AppHeader, BottomNav],
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })

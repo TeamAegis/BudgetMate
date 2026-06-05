@@ -22,7 +22,9 @@ Applies to the Angular app. Read alongside root `CLAUDE.md`.
 - `core/` — bridge, models (mirror Rust DTOs 1:1), lock/unlock flow, guards.
 - `features/<name>/` — one folder per feature area (transactions, budgets, goals, reports,
   import, settings). Smart components here.
-- `shared/` — dumb/presentational components, money/date pipes, chart wrappers.
+- `shared/` — dumb/presentational components, money/date pipes, chart wrappers. Reusable UI
+  components live in `shared/ui/` (one folder per component, `app-<name>` selector). **Reuse or
+  extend these rather than re-inlining markup/SCSS in a feature** — see the `ui-component` skill.
 
 ## Performance
 - Lazy-load `import` (OCR review) and `reports` (charts) routes; they must not block first

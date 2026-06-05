@@ -4,6 +4,10 @@ import { Router } from '@angular/router';
 import { LucideShieldCheck, LucideFingerprint, LucideEye, LucideEyeOff } from '@lucide/angular';
 import { LockService } from '../../core/lock/lock.service';
 import { isTauri } from '../../core/bridge';
+import { Button } from '../../shared/ui/button/button';
+import { Banner } from '../../shared/ui/banner/banner';
+import { Card } from '../../shared/ui/card/card';
+import { FormField } from '../../shared/ui/form-field/form-field';
 
 /**
  * Lock screen (FR-5.1 / FR-5.2) — one component, two variants chosen by vault state:
@@ -20,6 +24,10 @@ import { isTauri } from '../../core/bridge';
     LucideFingerprint,
     LucideEye,
     LucideEyeOff,
+    Button,
+    Banner,
+    Card,
+    FormField,
   ],
   template: `
     <section class="lock">
@@ -36,61 +44,66 @@ import { isTauri } from '../../core/bridge';
       </p>
 
       @if (!tauri) {
-        <p class="banner error">Run the app (npm run tauri dev) to set up the vault.</p>
+        <app-banner>Run the app (npm run tauri dev) to set up the vault.</app-banner>
       } @else {
         @if (error(); as err) {
-          <p class="banner error" role="alert">{{ err }}</p>
+          <app-banner>{{ err }}</app-banner>
         }
-        <form class="card form" [formGroup]="form" (ngSubmit)="submit()">
-          <label>
-            <span>Passphrase</span>
-            <input
-              [type]="reveal() ? 'text' : 'password'"
-              formControlName="passphrase"
-              autocomplete="off"
-              autocapitalize="off"
-              spellcheck="false"
-            />
-          </label>
-          @if (setup()) {
-            <label>
-              <span>Confirm passphrase</span>
+        <app-card class="form-card">
+          <form class="form" [formGroup]="form" (ngSubmit)="submit()">
+            <app-form-field label="Passphrase">
               <input
                 [type]="reveal() ? 'text' : 'password'"
-                formControlName="confirm"
+                formControlName="passphrase"
                 autocomplete="off"
                 autocapitalize="off"
                 spellcheck="false"
               />
-            </label>
-            <small class="hint">Minimum 8 characters.</small>
-          }
-          <button
-            type="button"
-            class="reveal"
-            (click)="reveal.set(!reveal())"
-            [attr.aria-pressed]="reveal()"
-          >
-            @if (reveal()) {
-              <svg lucideEyeOff [size]="16"></svg>
-              <span>Hide passphrase</span>
-            } @else {
-              <svg lucideEye [size]="16"></svg>
-              <span>Show passphrase</span>
+            </app-form-field>
+            @if (setup()) {
+              <app-form-field label="Confirm passphrase" hint="Minimum 8 characters.">
+                <input
+                  [type]="reveal() ? 'text' : 'password'"
+                  formControlName="confirm"
+                  autocomplete="off"
+                  autocapitalize="off"
+                  spellcheck="false"
+                />
+              </app-form-field>
             }
-          </button>
-          <div class="actions">
-            <button type="submit" class="btn primary" [disabled]="busy()">
-              {{ busy() ? 'Please wait…' : setup() ? 'Create & unlock' : 'Unlock' }}
+            <button
+              type="button"
+              class="reveal"
+              (click)="reveal.set(!reveal())"
+              [attr.aria-pressed]="reveal()"
+            >
+              @if (reveal()) {
+                <svg lucideEyeOff [size]="16"></svg>
+                <span>Hide passphrase</span>
+              } @else {
+                <svg lucideEye [size]="16"></svg>
+                <span>Show passphrase</span>
+              }
             </button>
-          </div>
-        </form>
+            <div class="actions">
+              <app-button type="submit" variant="primary" [block]="true" [disabled]="busy()">
+                {{ busy() ? 'Please wait…' : setup() ? 'Create & unlock' : 'Unlock' }}
+              </app-button>
+            </div>
+          </form>
+        </app-card>
 
         @if (!setup() && biometricAvailable()) {
-          <button type="button" class="btn ghost biometric" (click)="biometric()" [disabled]="busy()">
-            <svg lucideFingerprint [size]="20"></svg>
+          <app-button
+            variant="ghost"
+            class="biometric"
+            [block]="true"
+            (click)="biometric()"
+            [disabled]="busy()"
+          >
+            <svg icon lucideFingerprint [size]="20"></svg>
             <span>Use biometrics</span>
-          </button>
+          </app-button>
         }
       }
     </section>

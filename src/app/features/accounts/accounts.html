@@ -1,69 +1,64 @@
 <section class="feature-page">
   @if (!showForm()) {
     <div class="page-actions">
-      <button type="button" class="btn primary" (click)="startCreate()" [disabled]="busy()">
-        <svg lucidePlus [size]="18"></svg>
+      <app-button variant="primary" (click)="startCreate()" [disabled]="busy()">
+        <svg icon lucidePlus [size]="18"></svg>
         <span>Add</span>
-      </button>
+      </app-button>
     </div>
   }
 
   @if (error(); as err) {
-    <p class="banner error" role="alert">{{ err }}</p>
+    <app-banner>{{ err }}</app-banner>
   }
 
   @if (showForm()) {
-    <form class="card form" [formGroup]="form" (ngSubmit)="save()">
-      <label>
-        <span>Name</span>
-        <input type="text" formControlName="name" placeholder="e.g. Cash, Main Bank" />
-      </label>
-      <label>
-        <span>Type</span>
-        <select formControlName="accountType">
-          @for (k of kinds; track k) {
-            <option [value]="k">{{ k }}</option>
-          }
-        </select>
-      </label>
-      <label>
-        <span>Currency</span>
-        <input type="text" formControlName="currency" maxlength="3" class="numeric" />
-        <small class="hint">3-letter ISO code, e.g. MUR</small>
-      </label>
-      <div class="actions">
-        <button type="button" class="btn ghost" (click)="cancel()" [disabled]="busy()">Cancel</button>
-        <button type="submit" class="btn primary" [disabled]="busy() || form.invalid">
-          {{ busy() ? 'Saving…' : 'Save' }}
-        </button>
-      </div>
-    </form>
+    <app-card>
+      <form class="form" [formGroup]="form" (ngSubmit)="save()">
+        <app-form-field label="Name">
+          <input type="text" formControlName="name" placeholder="e.g. Cash, Main Bank" />
+        </app-form-field>
+        <app-form-field label="Type">
+          <select formControlName="accountType">
+            @for (k of kinds; track k) {
+              <option [value]="k">{{ k }}</option>
+            }
+          </select>
+        </app-form-field>
+        <app-form-field label="Currency" hint="3-letter ISO code, e.g. MUR">
+          <input type="text" formControlName="currency" maxlength="3" class="numeric" />
+        </app-form-field>
+        <div class="actions">
+          <app-button variant="ghost" (click)="cancel()" [disabled]="busy()">Cancel</app-button>
+          <app-button type="submit" variant="primary" [disabled]="busy() || form.invalid">
+            {{ busy() ? 'Saving…' : 'Save' }}
+          </app-button>
+        </div>
+      </form>
+    </app-card>
   }
 
   @if (loading()) {
     <p class="muted">Loading…</p>
   } @else if (!showForm() && accounts().length === 0 && !error()) {
-    <div class="empty">
-      <p>No accounts yet.</p>
-      <button type="button" class="btn primary" (click)="startCreate()">Add your first account</button>
-    </div>
+    <app-empty-state
+      message="No accounts yet."
+      cta="Add your first account"
+      (action)="startCreate()"
+    />
   } @else {
     <ul class="rows">
       @for (a of accounts(); track a.id) {
-        <li class="card row">
-          <div class="row-main">
-            <span class="name">{{ a.name }}</span>
-            <span class="meta">{{ a.accountType }} · {{ a.currency }}</span>
-          </div>
-          <span class="amount numeric">{{ { amountMinor: a.openingBalanceMinor, currency: a.currency } | money }}</span>
-          <div class="row-actions">
-            <button type="button" class="icon-btn" (click)="startEdit(a)" [disabled]="busy()" aria-label="Edit">
-              <svg lucidePencil [size]="18"></svg>
-            </button>
-            <button type="button" class="icon-btn" (click)="archive(a)" [disabled]="busy()" aria-label="Archive">
-              <svg lucideArchive [size]="18"></svg>
-            </button>
-          </div>
+        <li app-list-row [name]="a.name" [meta]="a.accountType + ' · ' + a.currency">
+          <span amount class="amount numeric">{{
+            { amountMinor: a.openingBalanceMinor, currency: a.currency } | money
+          }}</span>
+          <app-icon-button actions ariaLabel="Edit" (click)="startEdit(a)" [disabled]="busy()">
+            <svg lucidePencil [size]="18"></svg>
+          </app-icon-button>
+          <app-icon-button actions ariaLabel="Archive" (click)="archive(a)" [disabled]="busy()">
+            <svg lucideArchive [size]="18"></svg>
+          </app-icon-button>
         </li>
       }
     </ul>
