@@ -5,7 +5,16 @@
 // All business logic lives in Rust; these wrappers only marshal arguments and return DTOs.
 
 import { invoke } from '@tauri-apps/api/core';
-import type { AppInfo, DbHealth } from '../models';
+import type {
+  AppInfo,
+  DbHealth,
+  Account,
+  NewAccount,
+  UpdateAccount,
+  Category,
+  NewCategory,
+  UpdateCategory,
+} from '../models';
 
 /** Whether we are running inside the Tauri runtime (vs. plain browser `ng serve`). */
 export function isTauri(): boolean {
@@ -21,4 +30,34 @@ export function getAppInfo(): Promise<AppInfo> {
 /** Opens the SQLCipher DB with the in-memory key and reports schema/encryption state. */
 export function dbHealth(): Promise<DbHealth> {
   return invoke<DbHealth>('db_health');
+}
+
+// ── Accounts ───────────────────────────────────────────────────────────────────
+
+export function listAccounts(includeArchived = false): Promise<Account[]> {
+  return invoke<Account[]>('list_accounts', { includeArchived });
+}
+export function createAccount(account: NewAccount): Promise<Account> {
+  return invoke<Account>('create_account', { account });
+}
+export function updateAccount(account: UpdateAccount): Promise<Account> {
+  return invoke<Account>('update_account', { account });
+}
+export function archiveAccount(id: number): Promise<void> {
+  return invoke<void>('archive_account', { id });
+}
+
+// ── Categories ───────────────────────────────────────────────────────────────────
+
+export function listCategories(includeArchived = false): Promise<Category[]> {
+  return invoke<Category[]>('list_categories', { includeArchived });
+}
+export function createCategory(category: NewCategory): Promise<Category> {
+  return invoke<Category>('create_category', { category });
+}
+export function updateCategory(category: UpdateCategory): Promise<Category> {
+  return invoke<Category>('update_category', { category });
+}
+export function archiveCategory(id: number): Promise<void> {
+  return invoke<void>('archive_category', { id });
 }

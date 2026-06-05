@@ -27,6 +27,14 @@ export const routes: Routes = [
     path: 'settings',
     loadComponent: () => import('./features/settings/settings').then((m) => m.Settings),
   },
+  {
+    path: 'settings/accounts',
+    loadComponent: () => import('./features/accounts/accounts').then((m) => m.Accounts),
+  },
+  {
+    path: 'settings/categories',
+    loadComponent: () => import('./features/categories/categories').then((m) => m.Categories),
+  },
   // Nested actions (not in the bottom nav).
   {
     path: 'budgets',

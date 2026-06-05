@@ -1,12 +1,14 @@
 //! Thin `#[tauri::command]` wrappers: validate input, call domain/db, return a serde DTO.
 //! No heavy logic here. Every DTO has a 1:1 mirror in `src/app/core/models` (kept in sync).
 
-use serde::Serialize;
-use std::fs;
-use tauri::{AppHandle, Manager};
+pub mod accounts;
+pub mod categories;
 
-use crate::crypto;
+use serde::Serialize;
+use tauri::State;
+
 use crate::db;
+use crate::state::DbState;
 
 /// Mirrors TS `AppInfo`.
 #[derive(Debug, Serialize)]
@@ -17,7 +19,7 @@ pub struct AppInfo {
     pub platform: String,
 }
 
-/// Mirrors TS `DbHealth`. Proves the encrypted DB opened with the in-memory key and migrated.
+/// Mirrors TS `DbHealth`. Reports the managed encrypted connection's state.
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DbHealth {
@@ -35,26 +37,16 @@ pub fn get_app_info() -> AppInfo {
     }
 }
 
-/// Open the SQLCipher DB with a key derived in-memory, run migrations, and report state.
-///
-/// NOTE: this uses a DEV passphrase/salt to prove the encrypted DB path end-to-end. The real
-/// key comes from the biometric/passphrase unlock flow (FR-5.1, architecture §5.2); replace the
-/// dev derivation when that lands. The DB file is genuinely SQLCipher-encrypted either way.
+/// Report the managed DB connection's health: open, encrypted, and at which schema version.
+/// The connection is opened + migrated at startup (`lib.rs`); the unlock flow (#2) will gate it.
 #[tauri::command]
-pub fn db_health(app: AppHandle) -> Result<DbHealth, String> {
-    let dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
-    fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
-    let db_path = dir.join("budgetmate.db");
-
-    // DEV ONLY — see note above.
-    let key = crypto::derive_key(b"dev-passphrase", b"budgetmate-dev-salt")
-        .map_err(|e| e.to_string())?;
-    let key_hex = crypto::key_to_sqlcipher_hex(&key);
-
-    let conn = db::open_encrypted(&db_path, &key_hex).map_err(|e| e.to_string())?;
-    let encrypted = db::is_encrypted(&conn);
-    let now = chrono::Utc::now().to_rfc3339();
-    let schema_version = db::run_migrations(&conn, &now).map_err(|e| e.to_string())?;
-
-    Ok(DbHealth { ok: true, schema_version, encrypted })
+pub fn db_health(state: State<'_, DbState>) -> Result<DbHealth, String> {
+    state.with(|conn| {
+        let schema_version: i64 = conn.query_row(
+            "SELECT COALESCE(MAX(version), 0) FROM schema_migrations",
+            [],
+            |r| r.get(0),
+        )?;
+        Ok(DbHealth { ok: true, schema_version, encrypted: db::is_encrypted(conn) })
+    })
 }
