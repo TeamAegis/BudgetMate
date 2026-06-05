@@ -1,0 +1,52 @@
+// Global styles — design tokens, bundled fonts, base reset.
+@use 'styles/tokens' as *;
+@use 'styles/fonts';
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-on-background);
+  @include type-body-md;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  // Disable text selection / callout for a native-app feel on mobile.
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+// Inputs and editable areas remain selectable.
+input,
+textarea,
+[contenteditable] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+h1 {
+  @include type-display-md;
+  margin: 0;
+}
+h2 {
+  @include type-headline-lg;
+  margin: 0;
+}
+h3 {
+  @include type-headline-md;
+  margin: 0;
+}
+
+// Utility for aligned currency / numeric columns.
+.numeric {
+  @include type-numeric;
+}

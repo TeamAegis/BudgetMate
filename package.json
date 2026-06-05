@@ -1,0 +1,61 @@
+{
+  "name": "budgetmate",
+  "version": "0.0.0",
+  "description": "BudgetMate (Vault) — strictly offline, privacy-first budget app",
+  "private": true,
+  "scripts": {
+    "ng": "ng",
+    "start": "ng serve --port 4200",
+    "build": "ng build",
+    "watch": "ng build --watch --configuration development",
+    "test": "ng test --watch=false --browsers=ChromeHeadless",
+    "lint": "eslint .",
+    "tauri": "tauri",
+    "guards": "node scripts/guards.mjs"
+  },
+  "prettier": {
+    "printWidth": 100,
+    "singleQuote": true,
+    "overrides": [
+      {
+        "files": "*.html",
+        "options": {
+          "parser": "angular"
+        }
+      }
+    ]
+  },
+  "dependencies": {
+    "@angular/cdk": "^20.2.0",
+    "@angular/common": "^20.3.0",
+    "@angular/compiler": "^20.3.0",
+    "@angular/core": "^20.3.0",
+    "@angular/forms": "^20.3.0",
+    "@angular/platform-browser": "^20.3.0",
+    "@angular/router": "^20.3.0",
+    "@tauri-apps/api": "^2.11.0",
+    "chart.js": "^4.5.1",
+    "ng2-charts": "^9.0.0",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.3.0",
+    "zone.js": "~0.15.0"
+  },
+  "devDependencies": {
+    "@angular/build": "^20.3.27",
+    "@angular/cli": "^20.3.27",
+    "@angular/compiler-cli": "^20.3.0",
+    "@eslint/js": "^9.0.0",
+    "@tauri-apps/cli": "^2.11.2",
+    "@types/jasmine": "~5.1.0",
+    "angular-eslint": "^20.0.0",
+    "eslint": "^9.0.0",
+    "jasmine-core": "~5.9.0",
+    "karma": "~6.4.0",
+    "karma-chrome-launcher": "~3.2.0",
+    "karma-coverage": "~2.2.0",
+    "karma-jasmine": "~5.1.0",
+    "karma-jasmine-html-reporter": "~2.1.0",
+    "typescript": "~5.9.2",
+    "typescript-eslint": "^8.0.0"
+  }
+}

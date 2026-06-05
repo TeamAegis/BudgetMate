@@ -1,0 +1,80 @@
+# CLAUDE.md — Vault (Private Offline Budget App)
+
+Greenfield mobile app. Read this fully before doing anything. Keep changes consistent with
+`docs/architecture.md` and `docs/functional-requirements.md` — those are the source of truth;
+this file is the operating manual.
+
+## What this is
+A **strictly offline**, privacy-first mobile budget app. Manual expense tracking, on-device
+OCR receipt scanning, deterministic categorisation. **No network, no cloud, no AI logic, no
+telemetry.** iOS + Android via Tauri 2.x.
+
+## Stack (do not substitute without updating the architecture doc)
+- **Shell:** Tauri 2.11.x, native system WebView.
+- **Frontend:** Angular 18+ **standalone**, **CSR static build (NO SSR / no Angular
+  Universal)**. Charts: Chart.js via `ng2-charts`, bundled locally.
+- **Core logic:** Rust. Owns all money math, crypto, DB, import/export, rules.
+- **DB:** SQLite + **SQLCipher** via `rusqlite` (`sqlcipher` feature) or `sqlx` +
+  `libsqlite3-sys` `bundled-sqlcipher`. **NOT** the official `tauri-plugin-sql` (it has no
+  SQLCipher support).
+- **OCR:** custom Tauri mobile plugin → Apple Vision (iOS, Swift) + ML Kit (Android, Kotlin).
+  Pure-Rust `ocrs`/RTen is the only allowed fallback. **Never** add Tesseract.js as primary.
+- **Plugins:** `tauri-plugin-biometric`, `tauri-plugin-dialog`, `tauri-plugin-fs`,
+  `tauri-plugin-android-fs` (Android export). Money: `rust_decimal` / integer minor units.
+  Import: `ofx-rs`, `csv`. Export: `rust_xlsxwriter`.
+
+## YOU MUST (hard rules — violating these breaks the product promise)
+- **YOU MUST NOT add any network capability.** No `tauri-plugin-http`, no `reqwest`/`hyper`/
+  `ureq`/`tokio::net`, no remote fonts/scripts/CDN. The CI no-network guard will fail the
+  build; do not work around it.
+- **YOU MUST NOT add telemetry, analytics, or crash-reporting** of any kind.
+- **YOU MUST keep money as integer minor units or `rust_decimal`. Never `f32`/`f64` for
+  money.**
+- **YOU MUST keep all business logic (money, dedup, recurrence, categorisation, currency
+  conversion) in Rust.** TypeScript only formats and presents.
+- **YOU MUST wrap multi-step DB writes in a single transaction** (ACID). A crash mid-save must
+  never corrupt data.
+- **YOU MUST route all frontend↔backend access through `src/app/core/bridge`** (typed
+  `invoke<T>()` wrappers). Feature components never call Tauri directly.
+- **YOU MUST NOT remove `INTERNET`-omission from `gen/android` or add network entitlements on
+  iOS.** Zero-internet is enforced there.
+
+## Conventions
+- Angular: standalone components, signals/typed forms, no NgModules unless unavoidable. Lazy-
+  load `import` (OCR) and `reports` (charts) routes to protect cold start.
+- When a Rust DTO changes, update its mirror in `src/app/core/models` **in the same change**.
+- Keep the Tauri ACL minimal: grant only the commands a capability actually uses.
+- OCR plugin returns raw text + boxes only; field extraction (merchant/date/total) is
+  deterministic Rust, and results are always confirmed by the user before saving.
+- Recurrence is materialised **lazily on app open** — never add a background scheduler/polling
+  (battery rule).
+
+## Commands
+- Frontend dev: `npm run start` (Angular on :4200)
+- Frontend build: `npm run build` → `dist/vault/browser`
+- Run on device/emulator: `npm run tauri android dev` / `npm run tauri ios dev`
+- Build app: `npm run tauri android build` / `npm run tauri ios build`
+- Rust tests: `cargo test --manifest-path src-tauri/Cargo.toml`
+- Rust lint: `cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings`
+- Frontend tests/lint: `npm test` / `npm run lint`
+- Full local gate before PR: `npm run lint && npm test && cargo test ... && cargo clippy ...`
+
+## Repo map
+- `src/` — Angular app (`core/`, `features/`, `shared/`). See `.claude/rules/frontend.md`.
+- `src-tauri/src/` — Rust core (`db/`, `import/`, `rules/`, `export/`, `crypto/`). See
+  `.claude/rules/rust.md` and `.claude/rules/database.md`.
+- `src-tauri/plugins/ocr/` — custom native OCR plugin (Swift + Kotlin).
+- `src-tauri/capabilities/` — Tauri ACL.
+- `src-tauri/gen/` — committed android/ + apple/ projects. Do not gitignore.
+- `docs/` — architecture + requirements. Update these when behaviour changes.
+
+## Definition of done for any change
+1. Logic in Rust, presentation in Angular; bridge used for IPC.
+2. Money is minor-units/decimal; DB writes are transactional.
+3. No network/telemetry introduced; CI guards pass.
+4. Rust DTO ↔ TS model kept in sync.
+5. Tests + clippy + lint pass locally.
+6. If behaviour changed, `docs/` updated.
+
+> If a task seems to require breaking a YOU MUST rule, stop and flag it — do not silently work
+> around it. These rules are the product.

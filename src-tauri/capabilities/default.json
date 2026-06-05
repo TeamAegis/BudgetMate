@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Minimal grants for the main window. App-defined commands (get_app_info, db_health) need no permission. Only the OCR plugin command is granted. dialog/fs/biometric grants are added per-feature when the frontend actually calls them (new-feature skill) — keep this list minimal.",
+  "windows": ["main"],
+  "permissions": ["core:default", "ocr:default"]
+}

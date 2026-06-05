@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+
+# Angular build output
+dist/
+.angular/
+
+# Rust / Tauri build artifacts
+src-tauri/target/
+
+# IMPORTANT: do NOT ignore src-tauri/gen/ — the committed android project
+# enforces the INTERNET-permission omission (zero-network guarantee).
+# Only ignore transient build dirs inside gen/.
+src-tauri/gen/android/app/build/
+src-tauri/gen/android/.gradle/
+src-tauri/gen/android/local.properties
+
+# Backups (encrypted user data — never commit)
+*.vaultbak
+
+# Logs / env
+*.log
+.env
+.env.*
+
+# OS / editor cruft
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+*.swp
+.idea/
+.vscode/*
+!.vscode/extensions.json

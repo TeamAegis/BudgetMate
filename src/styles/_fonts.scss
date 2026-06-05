@@ -1,0 +1,45 @@
+// Local @font-face declarations — fonts are BUNDLED, never fetched from a CDN/Google Fonts
+// (privacy rule, .claude/rules/frontend.md).
+//
+// Place the .woff2 files in src/assets/fonts/ (see src/assets/fonts/README.md). Until they are
+// present the UI falls back to the system-ui stack defined in _tokens.scss — layout is unaffected
+// because the fallback families are listed in --font-display / --font-body.
+
+// ── Manrope (display / headlines) ───────────────────────────────────
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/assets/fonts/manrope-600.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/assets/fonts/manrope-700.woff2') format('woff2');
+}
+
+// ── Inter (body / labels / numeric) ─────────────────────────────────
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/assets/fonts/inter-400.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/assets/fonts/inter-500.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/assets/fonts/inter-600.woff2') format('woff2');
+}

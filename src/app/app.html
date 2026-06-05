@@ -1,0 +1,29 @@
+<div class="app-shell">
+  <header class="app-header">
+    <span class="brand">BudgetMate</span>
+    <span class="core-status">
+      @if (appInfo(); as info) {
+        <span class="ok">core {{ info.version }} · {{ info.platform }}</span>
+      }
+      @if (health(); as h) {
+        <span [class.ok]="h.ok" [class.bad]="!h.ok">
+          db {{ h.ok ? 'ok' : 'fail' }} · schema v{{ h.schemaVersion }}
+          {{ h.encrypted ? '· encrypted' : '· UNENCRYPTED' }}
+        </span>
+      }
+      @if (coreError(); as err) {
+        <span class="muted">{{ err }}</span>
+      }
+    </span>
+  </header>
+
+  <main class="app-content">
+    <router-outlet />
+  </main>
+
+  <nav class="app-nav">
+    @for (item of nav; track item.path) {
+      <a [routerLink]="item.path" routerLinkActive="active">{{ item.label }}</a>
+    }
+  </nav>
+</div>

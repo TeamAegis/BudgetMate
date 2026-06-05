@@ -1,0 +1,44 @@
+# Rules — Frontend (`src/`)
+
+Applies to the Angular app. Read alongside root `CLAUDE.md`.
+
+## Framework
+- Angular 18+, **standalone components only** (no NgModules unless a dependency forces it).
+- **CSR static build — never enable SSR / Angular Universal.** Tauri serves static files.
+- Prefer **signals** for component state and **typed reactive forms** for input.
+- Build output must land in `dist/vault/browser` with `baseHref: "/"`.
+
+## Boundaries (non-negotiable)
+- **No business logic in TypeScript.** Money math, currency conversion, dedup, recurrence,
+  categorisation, and validation of financial invariants all live in Rust. TS calls Rust and
+  formats the result.
+- **All IPC goes through `core/bridge`.** Add a typed wrapper there
+  (`invoke<ReturnType>('cmd', args)`); feature code imports the wrapper, never `@tauri-apps/api`
+  directly. This keeps the ACL auditable.
+- Keep the Tauri command surface small — if a screen needs new data, prefer extending an
+  existing Rust query over adding many fine-grained calls.
+
+## Structure
+- `core/` — bridge, models (mirror Rust DTOs 1:1), lock/unlock flow, guards.
+- `features/<name>/` — one folder per feature area (transactions, budgets, goals, reports,
+  import, settings). Smart components here.
+- `shared/` — dumb/presentational components, money/date pipes, chart wrappers.
+
+## Performance
+- Lazy-load `import` (OCR review) and `reports` (charts) routes; they must not block first
+  paint (cold-start budget).
+- Charts: import only the Chart.js controllers/elements used; never load Chart.js (or fonts)
+  from a CDN.
+- No source maps in production builds.
+
+## Privacy
+- No remote anything: no Google Fonts, no CDN scripts, no analytics, no external image hosts.
+  Everything is bundled. CSP is strict.
+
+## Money & display
+- Receive money from Rust as minor units (+ currency); format with a shared pipe. Never do
+  arithmetic on money in TS beyond what a formatter needs.
+
+## When adding a feature
+Follow the `new-feature` skill (`.claude/skills/new-feature/`). Always: add the Rust command +
+DTO first, mirror the DTO in `core/models`, add a bridge wrapper, then build the component.

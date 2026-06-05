@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>BudgetMate</title>
+    <base href="/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <!--
+      Privacy CSP: no remote anything. Everything (fonts, scripts, styles, images) is bundled.
+      The authoritative CSP for the packaged app is set in src-tauri/tauri.conf.json; this meta
+      tag mirrors the intent for the browser dev preview. 'unsafe-inline' on style-src is
+      required for Angular component styles.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: asset: http://asset.localhost; font-src 'self'; connect-src 'self' ipc: http://ipc.localhost ws://localhost:4200 http://localhost:4200; object-src 'none'; base-uri 'self'; form-action 'none'"
+    />
+    <meta name="color-scheme" content="light" />
+    <meta name="theme-color" content="#131b2e" />
+    <link rel="icon" type="image/x-icon" href="favicon.ico" />
+  </head>
+  <body>
+    <app-root></app-root>
+  </body>
+</html>
