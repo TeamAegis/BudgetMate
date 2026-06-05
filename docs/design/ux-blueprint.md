@@ -63,7 +63,8 @@ Onboarding (first run, before the shell): intro → income setup → first goal 
 - **Header trailing icon** opens Settings (and, from sub-screens, contextual actions).
 - **FAB** appears on Expenses (Add Transaction) and Goals (Add Goal); long-press or a small
   menu can expose Scan Receipt / Import on Expenses.
-- **Back** affordance on all pushed screens (add/edit, scan, import, detail, settings).
+- **Back** affordance on all pushed screens (add/edit, scan, import, detail, settings), rendered in
+  the AppHeader's leading slot; it navigates back through history (origin-aware).
 - Modals (TransactionPopup, confirm dialogs) overlay; dismiss returns to origin.
 
 ---

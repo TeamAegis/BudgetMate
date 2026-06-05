@@ -4,7 +4,6 @@ import { Component } from '@angular/core';
   selector: 'app-goals',
   template: `
     <section class="feature-page">
-      <h1>Goals</h1>
       <p class="muted">Savings goals with milestone progress (FR-3.2).</p>
     </section>
   `,

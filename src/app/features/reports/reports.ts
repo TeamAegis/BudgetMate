@@ -8,7 +8,6 @@ import { registerCharts } from '../../shared/charts/chart-setup';
   imports: [BaseChartDirective],
   template: `
     <section class="feature-page">
-      <h1>Analytics</h1>
       <p class="muted">
         Pie (spend by category) and line (spend over time) from Rust-side aggregations (FR-3.3).
         Chart.js is bundled locally and tree-shaken; data below is placeholder until the

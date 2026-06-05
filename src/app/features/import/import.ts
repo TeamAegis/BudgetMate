@@ -4,7 +4,6 @@ import { Component } from '@angular/core';
   selector: 'app-import',
   template: `
     <section class="feature-page">
-      <h1>Import</h1>
       <p class="muted">
         On-device OCR receipt review (FR-2.1), CSV/OFX/QFX file import (FR-2.2), rule engine
         (FR-2.3) and dedup review (FR-2.4). OCR returns raw text + boxes; deterministic Rust

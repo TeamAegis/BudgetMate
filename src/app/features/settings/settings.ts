@@ -7,8 +7,6 @@ import { LucideWallet, LucideTags, LucideChevronRight } from '@lucide/angular';
   imports: [RouterLink, LucideWallet, LucideTags, LucideChevronRight],
   template: `
     <section class="feature-page">
-      <h1>Settings</h1>
-
       <ul class="settings-list">
         <li>
           <a routerLink="/settings/accounts">

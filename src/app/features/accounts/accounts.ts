@@ -1,7 +1,6 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { RouterLink } from '@angular/router';
-import { LucideArchive, LucidePencil, LucidePlus, LucideArrowLeft } from '@lucide/angular';
+import { LucideArchive, LucidePencil, LucidePlus } from '@lucide/angular';
 import {
   listAccounts,
   createAccount,
@@ -16,15 +15,7 @@ const KINDS: AccountKind[] = ['cash', 'bank', 'card', 'wallet', 'other'];
 
 @Component({
   selector: 'app-accounts',
-  imports: [
-    ReactiveFormsModule,
-    RouterLink,
-    MoneyPipe,
-    LucideArchive,
-    LucidePencil,
-    LucidePlus,
-    LucideArrowLeft,
-  ],
+  imports: [ReactiveFormsModule, MoneyPipe, LucideArchive, LucidePencil, LucidePlus],
   templateUrl: './accounts.html',
   styleUrl: './accounts.scss',
 })

@@ -4,7 +4,6 @@ import { Component } from '@angular/core';
   selector: 'app-budgets',
   template: `
     <section class="feature-page">
-      <h1>Budgets / Envelopes</h1>
       <p class="muted">Envelope-style monthly caps, spent vs remaining (FR-3.1). Reached from Settings.</p>
     </section>
   `,

@@ -7,8 +7,6 @@ import { LucidePlus, LucideTarget, LucideScanLine } from '@lucide/angular';
   imports: [RouterLink, LucidePlus, LucideTarget, LucideScanLine],
   template: `
     <section class="feature-page">
-      <h1>Home</h1>
-
       <!-- BalanceCard (hero) — screens.md §3. Placeholder until get_dashboard() lands. -->
       <div class="balance-card">
         <span class="label">Current Balance</span>

@@ -86,7 +86,9 @@ body text on small screens (legibility).
 ### 4.2 Layout frame
 - Mobile artboard: **412 × 917** (Android reference). Design fluid, not fixed — must adapt to
   iOS safe areas and varying heights.
-- **Header:** 80px tall, wordmark/title left, menu/settings icon right.
+- **Header:** 80px tall. Leading slot = back affordance on pushed screens (else empty); centre-left
+  = wordmark (Home) or screen title (sub-screens); trailing = settings icon, shown only on the
+  bottom-nav tabs. The screen name lives **only** here — screens never render an in-body title.
 - **Bottom nav:** 80px tall, surface `--c-surface`, 4 tabs.
 - Reserve OS safe-area insets (notch / home indicator) via env() padding.
 
@@ -159,7 +161,11 @@ Each component lists its origin (Figma node or "new" if required by FRs but abse
 and the tokens it consumes. Components are dumb/presentational (`shared/`) unless noted.
 
 ### Present in Figma
-- **AppHeader** — title/wordmark + trailing icon. Variants: brand (home) / titled (sub-screens).
+- **AppHeader** — leading back affordance (pushed screens) + title/wordmark + trailing icon.
+  Variants: brand (home, `--t-wordmark`) / titled (sub-screens, `--t-screen-title`). It is the
+  **only** place a screen name appears — no in-body screen titles. Driven by the active route's
+  `data.title` / `data.back`; the trailing settings icon shows only when there is no back affordance
+  (i.e. the bottom-nav tabs).
 - **BottomNav** — 4 tabs. **Canonical tabs: Home · Expenses · Goals · Analytics.**
   ⚠️ Figma inconsistently labels the 4th tab "Charts" on some screens and "Analytics" on
   others, and tab x-positions drift between screens — **normalise to evenly-spaced flexbox

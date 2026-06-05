@@ -1,16 +1,12 @@
 <section class="feature-page">
-  <header class="page-head">
-    <a routerLink="/settings" class="back" aria-label="Back to settings">
-      <svg lucideArrowLeft [size]="20"></svg>
-    </a>
-    <h1>Accounts</h1>
-    @if (!showForm()) {
+  @if (!showForm()) {
+    <div class="page-actions">
       <button type="button" class="btn primary" (click)="startCreate()" [disabled]="busy()">
         <svg lucidePlus [size]="18"></svg>
         <span>Add</span>
       </button>
-    }
-  </header>
+    </div>
+  }
 
   @if (error(); as err) {
     <p class="banner error" role="alert">{{ err }}</p>
