@@ -31,9 +31,15 @@ Feature code calls this — never `@tauri-apps/api` directly.
 
 ## Step 5 — Angular feature (`src/app/features/<name>/`)
 - Standalone component, signals for state, typed forms for input.
-- Call the bridge wrapper; format money with the shared pipe; render with shared/dumb
+- Call the bridge wrapper; format money with the shared `money` pipe; render with shared/dumb
   components.
-- If the feature is heavy (OCR/charts), make its route lazy-loaded.
+- If the feature is heavy (OCR/charts), make its route lazy-loaded; nav follows the canonical IA
+  (Home · Expenses · Goals · Analytics + Settings).
+- **Build the UI to the design spec — use the `new-screen` skill.** In short: check
+  `docs/design/screens.md` for the screen's spec (FR, components, commands, states); style with
+  **design tokens only** (`src/styles/_tokens.scss`, never hardcoded hex/px); use **`@lucide/angular`**
+  for every icon; cover the five states (loading/empty/populated/error/busy); follow
+  `.claude/rules/design.md`.
 
 ## Step 6 — Verify the rules
 - No business logic leaked into TS.

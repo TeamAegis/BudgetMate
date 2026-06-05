@@ -7,7 +7,8 @@ this file is the operating manual.
 ## What this is
 A **strictly offline**, privacy-first mobile budget app. Manual expense tracking, on-device
 OCR receipt scanning, deterministic categorisation. **No network, no cloud, no AI logic, no
-telemetry.** iOS + Android via Tauri 2.x.
+telemetry.** Built with Tauri 2.x. **v1 targets Android**; Windows desktop is a dev/test target
+only (WebView2); **iOS is deferred** (macOS/Xcode-only build). See `docs/architecture.md` §11.
 
 ## Stack (do not substitute without updating the architecture doc)
 - **Shell:** Tauri 2.11.x, native system WebView.
@@ -53,8 +54,9 @@ telemetry.** iOS + Android via Tauri 2.x.
 ## Commands
 - Frontend dev: `npm run start` (Angular on :4200)
 - Frontend build: `npm run build` → `dist/vault/browser`
-- Run on device/emulator: `npm run tauri android dev` / `npm run tauri ios dev`
-- Build app: `npm run tauri android build` / `npm run tauri ios build`
+- Desktop dev (WebView2, fast UI/bridge loop): `npm run tauri dev`
+- Run on device/emulator: `npm run tauri android dev`
+- Build app: `npm run tauri android build`
 - Rust tests: `cargo test --manifest-path src-tauri/Cargo.toml`
 - Rust lint: `cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings`
 - Frontend tests/lint: `npm test` / `npm run lint`
@@ -69,7 +71,8 @@ telemetry.** iOS + Android via Tauri 2.x.
   `.claude/rules/rust.md` and `.claude/rules/database.md`.
 - `src-tauri/plugins/ocr/` — custom native OCR plugin (Swift + Kotlin).
 - `src-tauri/capabilities/` — Tauri ACL.
-- `src-tauri/gen/` — committed android/ + apple/ projects. Do not gitignore.
+- `src-tauri/gen/` — committed `android/` project (the `apple/` project is added when iOS
+  resumes). Do not gitignore — the Android manifest enforces zero-internet.
 - `docs/` — architecture + requirements; `docs/design/` — UI/UX spec (design-system,
   ux-blueprint, screens). Update these when behaviour/UI changes.
 

@@ -42,3 +42,8 @@ Applies to the Angular app. Read alongside root `CLAUDE.md`.
 ## When adding a feature
 Follow the `new-feature` skill (`.claude/skills/new-feature/`). Always: add the Rust command +
 DTO first, mirror the DTO in `core/models`, add a bridge wrapper, then build the component.
+
+When building/changing any screen or presentational component, follow the `new-screen` skill
+(`.claude/skills/new-screen/`) and `.claude/rules/design.md`: design tokens only, `@lucide/angular`
+icons, the shared money pipe, and the five required states. Screen specs live in
+`docs/design/screens.md`.
