@@ -98,3 +98,58 @@ export interface NewCategory {
 export interface UpdateCategory extends NewCategory {
   id: number;
 }
+
+// ── Transactions (mirror domain::transaction) ──────────────────────────────────────
+
+/** How a transaction entered the ledger. Mirrors the Rust `source` CHECK column. */
+export type TransactionSource = 'manual' | 'ocr' | 'import';
+
+/** One category line of a transaction (mirrors Rust `TxSplit`). Amount is signed like the parent. */
+export interface TxSplit {
+  id: number;
+  categoryId: number;
+  categoryName: string;
+  amountMinor: number;
+}
+
+/**
+ * Mirrors Rust `Transaction`. `amountMinor` is SIGNED (expenses negative, income/transfers
+ * positive) and is computed in Rust — never derive or re-sign it in TS. Categorisation is via
+ * `splits` (one for a manual entry; ≥2 once FR-1.2 lands).
+ */
+export interface Transaction {
+  id: number;
+  accountId: number;
+  postedDate: string;
+  amountMinor: number;
+  currency: Iso4217;
+  /** fx rate as a decimal string (never a float); "1" for same-currency entries. */
+  fxRate: string;
+  baseAmountMinor: number;
+  payee: string | null;
+  note: string | null;
+  source: TransactionSource;
+  sourceRef: string | null;
+  pendingReview: boolean;
+  createdAt: string;
+  splits: TxSplit[];
+}
+
+/**
+ * Input for create_transaction (mirrors Rust `NewTransaction`). `amount` is the user's
+ * NON-NEGATIVE major-unit string (e.g. "15.00"); Rust parses it to minor units in the account's
+ * currency and applies the sign from the category kind. No money math in TS.
+ */
+export interface NewTransaction {
+  accountId: number;
+  postedDate: string;
+  amount: string;
+  categoryId: number;
+  payee?: string | null;
+  note?: string | null;
+}
+
+/** Input for update_transaction (mirrors Rust `UpdateTransaction`). */
+export interface UpdateTransaction extends NewTransaction {
+  id: number;
+}

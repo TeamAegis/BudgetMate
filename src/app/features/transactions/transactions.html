@@ -1,0 +1,94 @@
+<section class="feature-page">
+  @if (!showForm()) {
+    <div class="page-actions">
+      <app-button variant="primary" (click)="startCreate()" [disabled]="busy() || loading()">
+        <svg icon lucidePlus [size]="18"></svg>
+        <span>Add</span>
+      </app-button>
+    </div>
+  }
+
+  @if (error(); as err) {
+    <app-banner>{{ err }}</app-banner>
+  }
+
+  @if (showForm()) {
+    <app-card>
+      <form class="form" [formGroup]="form" (ngSubmit)="save()">
+        <app-form-field label="Account">
+          <select formControlName="accountId">
+            <option [ngValue]="null" disabled>Select an account</option>
+            @for (a of accounts(); track a.id) {
+              <option [ngValue]="a.id">{{ a.name }} · {{ a.currency }}</option>
+            }
+          </select>
+        </app-form-field>
+        <app-form-field label="Category">
+          <select formControlName="categoryId">
+            <option [ngValue]="null" disabled>Select a category</option>
+            @for (c of categories(); track c.id) {
+              <option [ngValue]="c.id">{{ c.name }} · {{ c.kind }}</option>
+            }
+          </select>
+        </app-form-field>
+        <app-form-field label="Amount" hint="Expense or income is set by the category.">
+          <input type="text" inputmode="decimal" formControlName="amount" placeholder="0.00" class="numeric" />
+        </app-form-field>
+        <app-form-field label="Date">
+          <input type="date" formControlName="postedDate" />
+        </app-form-field>
+        <app-form-field label="Payee (optional)">
+          <input type="text" formControlName="payee" placeholder="e.g. Winners" />
+        </app-form-field>
+        <app-form-field label="Note (optional)">
+          <input type="text" formControlName="note" />
+        </app-form-field>
+        <div class="actions">
+          <app-button variant="ghost" (click)="cancel()" [disabled]="busy()">Cancel</app-button>
+          <app-button type="submit" variant="primary" [disabled]="busy() || form.invalid">
+            {{ busy() ? 'Saving…' : 'Save' }}
+          </app-button>
+        </div>
+      </form>
+    </app-card>
+  }
+
+  @if (loading()) {
+    <p class="muted">Loading…</p>
+  } @else if (!showForm() && transactions().length === 0 && !error()) {
+    <app-empty-state
+      message="No transactions yet."
+      cta="Add your first transaction"
+      (action)="startCreate()"
+    />
+  } @else {
+    @for (group of grouped(); track group.date) {
+      <div class="date-group">
+        <h2 class="date-heading">{{ group.date }}</h2>
+        <ul class="rows">
+          @for (t of group.items; track t.id) {
+            <li
+              app-list-row
+              [name]="t.payee || categoryName(t)"
+              [meta]="categoryName(t) + ' · ' + accountName(t.accountId)"
+            >
+              <span
+                amount
+                class="amount numeric"
+                [class.income]="t.amountMinor > 0"
+                [class.expense]="t.amountMinor < 0"
+                >{{ { amountMinor: t.amountMinor, currency: t.currency } | money }}</span
+              >
+              <app-icon-button actions ariaLabel="Edit" (click)="startEdit(t)" [disabled]="busy()">
+                <svg lucidePencil [size]="18"></svg>
+              </app-icon-button>
+              <app-icon-button actions ariaLabel="Delete" (click)="remove(t)" [disabled]="busy()">
+                <svg lucideTrash2 [size]="18"></svg>
+              </app-icon-button>
+            </li>
+          }
+        </ul>
+      </div>
+    }
+  }
+</section>

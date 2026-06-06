@@ -16,6 +16,9 @@ import type {
   Category,
   NewCategory,
   UpdateCategory,
+  Transaction,
+  NewTransaction,
+  UpdateTransaction,
 } from '../models';
 
 /** Whether we are running inside the Tauri runtime (vs. plain browser `ng serve`). */
@@ -97,4 +100,21 @@ export function updateCategory(category: UpdateCategory): Promise<Category> {
 }
 export function archiveCategory(id: number): Promise<void> {
   return invoke<void>('archive_category', { id });
+}
+
+// ── Transactions (FR-1.1) ──────────────────────────────────────────────────────
+
+/** All transactions, newest first, each with its category splits. */
+export function listTransactions(): Promise<Transaction[]> {
+  return invoke<Transaction[]>('list_transactions');
+}
+/** Create a manual transaction (Rust parses the amount + signs it from the category kind). */
+export function createTransaction(tx: NewTransaction): Promise<Transaction> {
+  return invoke<Transaction>('create_transaction', { tx });
+}
+export function updateTransaction(tx: UpdateTransaction): Promise<Transaction> {
+  return invoke<Transaction>('update_transaction', { tx });
+}
+export function deleteTransaction(id: number): Promise<void> {
+  return invoke<void>('delete_transaction', { id });
 }
