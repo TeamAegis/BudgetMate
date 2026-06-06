@@ -54,10 +54,7 @@
 
           @for (line of splits.controls; track $index) {
             <div class="split-row" [formGroupName]="$index">
-              <app-form-field
-                class="split-category"
-                [label]="splits.length > 1 ? 'Category ' + ($index + 1) : 'Category'"
-              >
+              <app-form-field class="split-category" label="Category">
                 <select formControlName="categoryId">
                   <option [ngValue]="null" disabled>Select a category</option>
                   @for (c of categories(); track c.id) {
