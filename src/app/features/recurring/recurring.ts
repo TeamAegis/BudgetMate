@@ -106,6 +106,15 @@ export class Recurring implements OnInit {
     return this.accounts().find((a) => a.id === r.template.accountId)?.currency ?? '';
   }
 
+  /** Expenses materialise as negative amounts, income/transfers as positive (matches the ledger). */
+  protected isExpense(r: RecurringRule): boolean {
+    return this.categories().find((c) => c.id === r.template.categoryId)?.kind === 'expense';
+  }
+  /** Signed display amount, e.g. "-250 MUR" / "+30000 MUR". */
+  protected amountLabel(r: RecurringRule): string {
+    return `${this.isExpense(r) ? '-' : '+'}${r.template.amount} ${this.accountCurrency(r)}`;
+  }
+
   protected ruleTitle(r: RecurringRule): string {
     return r.template.payee || this.categoryName(r.template.categoryId);
   }
