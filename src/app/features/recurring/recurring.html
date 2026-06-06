@@ -72,7 +72,13 @@
     <ul class="rows">
       @for (r of rules(); track r.id) {
         <li app-list-row [name]="ruleTitle(r)" [meta]="ruleMeta(r)" [class.paused]="!r.active">
-          <span amount class="amount numeric">{{ r.template.amount }} {{ accountCurrency(r) }}</span>
+          <span
+            amount
+            class="amount numeric"
+            [class.income]="!isExpense(r)"
+            [class.expense]="isExpense(r)"
+            >{{ amountLabel(r) }}</span
+          >
           <app-icon-button actions ariaLabel="Edit" (click)="startEdit(r)" [disabled]="busy()">
             <svg lucidePencil [size]="18"></svg>
           </app-icon-button>
