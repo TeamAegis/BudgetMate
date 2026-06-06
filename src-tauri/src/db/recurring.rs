@@ -161,6 +161,8 @@ pub fn materialise_due(conn: &Connection, today: NaiveDate) -> Result<usize, DbE
                 account_id: rule.template.account_id,
                 posted_date: &posted,
                 amount,
+                currency: None,
+                fx_rate: None,
                 splits: &[SplitInput { category_id: rule.template.category_id, amount }],
                 payee: rule.template.payee.as_deref(),
                 note: rule.template.note.as_deref(),

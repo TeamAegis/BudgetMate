@@ -57,6 +57,7 @@ pub fn run() {
             commands::vault::get_settings,
             commands::vault::set_idle_timeout,
             commands::vault::set_biometric_enabled,
+            commands::vault::set_base_currency,
             commands::accounts::list_accounts,
             commands::accounts::create_account,
             commands::accounts::update_account,

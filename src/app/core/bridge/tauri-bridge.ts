@@ -74,6 +74,10 @@ export function setIdleTimeout(secs: number): Promise<VaultSettings> {
 export function setBiometricEnabled(enabled: boolean): Promise<VaultSettings> {
   return invoke<VaultSettings>('set_biometric_enabled', { enabled });
 }
+/** Set the base (reporting) currency (FR-1.4); validated as a 3-letter ISO-4217 code in Rust. */
+export function setBaseCurrency(currency: string): Promise<VaultSettings> {
+  return invoke<VaultSettings>('set_base_currency', { currency });
+}
 
 // ── Accounts ───────────────────────────────────────────────────────────────────
 

@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import {
   LucideWallet,
@@ -6,8 +6,10 @@ import {
   LucideChevronRight,
   LucideLock,
   LucideRepeat,
+  LucideCoins,
 } from '@lucide/angular';
 import { LockService } from '../../core/lock/lock.service';
+import { getSettings, setBaseCurrency, isTauri } from '../../core/bridge';
 import { SelectField, type SelectOption } from '../../shared/ui/select-field/select-field';
 
 @Component({
@@ -19,6 +21,7 @@ import { SelectField, type SelectOption } from '../../shared/ui/select-field/sel
     LucideChevronRight,
     LucideLock,
     LucideRepeat,
+    LucideCoins,
     SelectField,
   ],
   template: `
@@ -50,6 +53,19 @@ import { SelectField, type SelectOption } from '../../shared/ui/select-field/sel
         </li>
       </ul>
 
+      <h2 class="group-title">General</h2>
+      <div class="setting-row">
+        <svg lucideCoins [size]="20" aria-hidden="true"></svg>
+        <span class="label" id="base-currency-label">Base currency</span>
+        <app-select-field
+          [options]="currencyOptions"
+          [value]="baseCurrency()"
+          (valueChange)="onBaseCurrencyChange($event)"
+          ariaLabelledby="base-currency-label"
+        />
+      </div>
+      <p class="setting-hint">Foreign-currency transactions convert to this for reporting.</p>
+
       <h2 class="group-title">Security</h2>
       <div class="setting-row">
         <svg lucideLock [size]="20" aria-hidden="true"></svg>
@@ -64,7 +80,7 @@ import { SelectField, type SelectOption } from '../../shared/ui/select-field/sel
       <p class="setting-hint">Auto-locks the app after this idle time. Backgrounding always locks.</p>
 
       <p class="muted">
-        Base currency, budgets/envelopes, rules, export, and encrypted backup/restore
+        Budgets/envelopes, rules, export, and encrypted backup/restore
         (FR-3.1, FR-4.x, FR-5.x) arrive in later tickets.
       </p>
     </section>
@@ -146,8 +162,10 @@ import { SelectField, type SelectOption } from '../../shared/ui/select-field/sel
     }
   `,
 })
-export class Settings {
+export class Settings implements OnInit {
   protected readonly lock = inject(LockService);
+
+  protected readonly baseCurrency = signal<string>('MUR');
 
   protected readonly timeoutOptions: SelectOption[] = [
     { value: 30, label: '30 seconds' },
@@ -157,7 +175,33 @@ export class Settings {
     { value: 0, label: 'Never' },
   ];
 
+  // A small curated set (no full ISO list — binary/UX size); any 3-letter code is valid in Rust.
+  protected readonly currencyOptions: SelectOption[] = [
+    { value: 'MUR', label: 'MUR · Mauritian rupee' },
+    { value: 'USD', label: 'USD · US dollar' },
+    { value: 'EUR', label: 'EUR · Euro' },
+    { value: 'GBP', label: 'GBP · Pound sterling' },
+    { value: 'INR', label: 'INR · Indian rupee' },
+    { value: 'ZAR', label: 'ZAR · South African rand' },
+    { value: 'AUD', label: 'AUD · Australian dollar' },
+    { value: 'JPY', label: 'JPY · Japanese yen' },
+  ];
+
+  async ngOnInit(): Promise<void> {
+    if (!isTauri()) return;
+    try {
+      this.baseCurrency.set((await getSettings()).baseCurrency);
+    } catch {
+      // Non-fatal: keep the default; the picker still works once the core is reachable.
+    }
+  }
+
   protected onTimeoutChange(value: number | string): void {
     void this.lock.updateIdleTimeout(Number(value));
+  }
+
+  protected async onBaseCurrencyChange(value: number | string): Promise<void> {
+    const settings = await setBaseCurrency(String(value));
+    this.baseCurrency.set(settings.baseCurrency);
   }
 }

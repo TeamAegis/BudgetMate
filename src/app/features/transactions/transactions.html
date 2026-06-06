@@ -24,9 +24,23 @@
           </select>
         </app-form-field>
 
-        <app-form-field label="Amount" hint="Expense or income is set by the category.">
-          <input type="text" inputmode="decimal" formControlName="amount" placeholder="0.00" class="numeric" />
-        </app-form-field>
+        <div class="amount-row">
+          <app-form-field label="Amount" hint="Expense or income is set by the category.">
+            <input type="text" inputmode="decimal" formControlName="amount" placeholder="0.00" class="numeric" />
+          </app-form-field>
+          <app-form-field label="Currency">
+            <input type="text" formControlName="currency" maxlength="3" class="numeric currency" />
+          </app-form-field>
+        </div>
+
+        @if (showFx()) {
+          <app-form-field
+            label="Exchange rate"
+            [hint]="'1 ' + currentCurrency() + ' = ? ' + baseCurrency() + ' (converted for reporting)'"
+          >
+            <input type="text" inputmode="decimal" formControlName="fxRate" placeholder="1.00" class="numeric" />
+          </app-form-field>
+        }
 
         <!-- Split editor (FR-1.2): one line = a simple entry; add lines to split the total. -->
         <div class="splits" formArrayName="splits">
@@ -109,13 +123,19 @@
         <ul class="rows">
           @for (t of group.items; track t.id) {
             <li app-list-row [name]="t.payee || categoryLabel(t)" [meta]="metaLine(t)">
-              <span
-                amount
-                class="amount numeric"
-                [class.income]="t.amountMinor > 0"
-                [class.expense]="t.amountMinor < 0"
-                >{{ { amountMinor: t.amountMinor, currency: t.currency } | money }}</span
-              >
+              <span amount class="amount-cell">
+                <span
+                  class="amount numeric"
+                  [class.income]="t.amountMinor > 0"
+                  [class.expense]="t.amountMinor < 0"
+                  >{{ { amountMinor: t.amountMinor, currency: t.currency } | money }}</span
+                >
+                @if (t.currency !== baseCurrency()) {
+                  <small class="base numeric"
+                    >≈ {{ { amountMinor: t.baseAmountMinor, currency: baseCurrency() } | money }}</small
+                  >
+                }
+              </span>
               <app-icon-button actions ariaLabel="Edit" (click)="startEdit(t)" [disabled]="busy()">
                 <svg lucidePencil [size]="18"></svg>
               </app-icon-button>

@@ -21,12 +21,18 @@ pub struct SplitInput<'a> {
 
 /// Fields for creating/replacing a manual transaction. `amount` is the total (non-negative
 /// major-unit input); `splits` allocate that total across categories (one split = a simple entry,
-/// ≥2 = a split transaction). Amounts are parsed to minor units in the account's currency and
+/// ≥2 = a split transaction). Amounts are parsed to minor units in the transaction `currency` and
 /// signed from the (shared) category kind. The split magnitudes must sum to the total.
+///
+/// `currency` defaults to the account's currency when `None`; `fx_rate` (a decimal string)
+/// converts the amount to the base currency and defaults to "1" — together they implement FR-1.4
+/// foreign-currency entry. `base_amount_minor = round(amount_minor * fx_rate)`.
 pub struct TxInput<'a> {
     pub account_id: i64,
     pub posted_date: &'a str,
     pub amount: &'a str,
+    pub currency: Option<&'a str>,
+    pub fx_rate: Option<&'a str>,
     pub splits: &'a [SplitInput<'a>],
     pub payee: Option<&'a str>,
     pub note: Option<&'a str>,
@@ -120,10 +126,15 @@ struct Prepared {
 
 /// Parse + validate the total and splits, then sign every amount from the (shared) category kind.
 fn prepare(conn: &Connection, input: &TxInput) -> Result<Prepared, DbError> {
-    let currency = account_currency(conn, input.account_id)?;
+    // Transaction currency: caller-supplied (FR-1.4) or the account's by default.
+    let currency = match input.currency.map(str::trim).filter(|c| !c.is_empty()) {
+        Some(c) => c.to_uppercase(),
+        None => account_currency(conn, input.account_id)?,
+    };
+    let fx_rate = input.fx_rate.map(str::trim).filter(|s| !s.is_empty()).unwrap_or("1");
     let total = parse_minor(input.amount, &currency).map_err(|e| DbError::Invalid(e.to_string()))?;
-    // Same-currency entry for now (FR-1.4 adds a user-entered rate); base == amount at rate 1.
-    let rate = validate_transaction(input.posted_date, total, &currency, "1")
+    // base_amount_minor = round(amount_minor * fx_rate); rate "1" for a same-currency entry.
+    let rate = validate_transaction(input.posted_date, total, &currency, fx_rate)
         .map_err(|e| DbError::Invalid(e.to_string()))?;
 
     let mut magnitudes = Vec::with_capacity(input.splits.len());
@@ -275,6 +286,8 @@ mod tests {
             account_id: 1,
             posted_date: "2026-06-06",
             amount,
+            currency: None,
+            fx_rate: None,
             splits: Box::leak(Box::new([SplitInput { category_id, amount }])),
             payee: None,
             note: None,
@@ -306,6 +319,8 @@ mod tests {
             account_id: 1,
             posted_date: "2026-06-06",
             amount: "50.00",
+            currency: None,
+            fx_rate: None,
             splits: &[
                 SplitInput { category_id: 1, amount: "30.00" },
                 SplitInput { category_id: 2, amount: "20.00" },
@@ -327,6 +342,8 @@ mod tests {
             account_id: 1,
             posted_date: "2026-06-06",
             amount: "50.00",
+            currency: None,
+            fx_rate: None,
             splits: &[
                 SplitInput { category_id: 1, amount: "30.00" },
                 SplitInput { category_id: 2, amount: "10.00" },
@@ -341,6 +358,8 @@ mod tests {
             account_id: 1,
             posted_date: "2026-06-06",
             amount: "50.00",
+            currency: None,
+            fx_rate: None,
             splits: &[
                 SplitInput { category_id: 1, amount: "30.00" }, // Groceries (expense)
                 SplitInput { category_id: 9, amount: "20.00" }, // Salary (income)
@@ -349,6 +368,27 @@ mod tests {
             note: None,
         };
         assert!(create(&conn, mixed, "2026-06-06T10:00:00Z").is_err());
+    }
+
+    #[test]
+    fn foreign_currency_derives_base_from_rate() {
+        let conn = db();
+        // 100.00 USD at rate 45.5 → base 455000 minor. Expense (Groceries) → negative.
+        let tx = TxInput {
+            account_id: 1,
+            posted_date: "2026-06-06",
+            amount: "100.00",
+            currency: Some("USD"),
+            fx_rate: Some("45.5"),
+            splits: &[SplitInput { category_id: 1, amount: "100.00" }],
+            payee: None,
+            note: None,
+        };
+        let created = create(&conn, tx, "2026-06-06T10:00:00Z").unwrap();
+        assert_eq!(created.currency, "USD");
+        assert_eq!(created.fx_rate, "45.5");
+        assert_eq!(created.amount_minor, -10_000);
+        assert_eq!(created.base_amount_minor, -455_000);
     }
 
     #[test]
