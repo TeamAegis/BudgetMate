@@ -115,6 +115,7 @@
     <p class="muted">Loading…</p>
   } @else if (!showForm() && transactions().length === 0 && !error()) {
     <app-empty-state
+      image="assets/illustrations/get-started.svg"
       message="No transactions yet."
       cta="Add your first transaction"
       (action)="startCreate()"
