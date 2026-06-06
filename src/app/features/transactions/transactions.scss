@@ -27,16 +27,24 @@
   }
 }
 
-// Amount + currency side by side (FR-1.4); currency is a compact fixed-width field.
+// Amount + currency side by side (FR-1.4). Amount flexes; currency is a compact fixed-width field.
+// Top-align: the Amount field carries a hint line that Currency doesn't, so aligning bottoms would
+// push the Currency box down — align the labels/inputs at the top instead.
 .amount-row {
   display: flex;
+  align-items: flex-start;
   gap: var(--space-3);
 }
-.amount-row app-form-field:first-child {
+.amount-row app-form-field {
+  // Allow the amount field to shrink below its content width instead of overflowing.
+  min-width: 0;
   flex: 1;
 }
+.amount-row .currency-field {
+  flex: 0 0 5.5rem;
+}
 .currency {
-  width: 5ch;
+  text-align: center;
   text-transform: uppercase;
 }
 
@@ -83,12 +91,19 @@
   cursor: default;
 }
 // Category + amount + remove, aligned on one row; the remove button sits at the field baseline.
+// min-width:0 lets both controls shrink to share the row instead of forcing horizontal scroll.
 .split-row {
   display: flex;
   align-items: flex-end;
-  gap: var(--space-3);
+  gap: var(--space-2);
 }
 .split-row app-form-field {
+  min-width: 0;
+}
+.split-row .split-category {
+  flex: 1.4;
+}
+.split-row .split-amount {
   flex: 1;
 }
 .remaining {
