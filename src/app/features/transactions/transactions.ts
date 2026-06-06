@@ -9,6 +9,7 @@ import {
   deleteTransaction,
   listAccounts,
   listCategories,
+  getSettings,
   isTauri,
 } from '../../core/bridge';
 import type { Transaction, Account, Category } from '../../core/models';
@@ -61,6 +62,7 @@ export class Transactions implements OnInit {
   protected readonly transactions = signal<Transaction[]>([]);
   protected readonly accounts = signal<Account[]>([]);
   protected readonly categories = signal<Category[]>([]);
+  protected readonly baseCurrency = signal('MUR');
   protected readonly loading = signal(true);
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
@@ -71,6 +73,11 @@ export class Transactions implements OnInit {
     accountId: this.fb.control<number | null>(null, Validators.required),
     postedDate: this.fb.nonNullable.control(this.today(), Validators.required),
     amount: this.fb.nonNullable.control('', [Validators.required, Validators.pattern(DECIMAL)]),
+    currency: this.fb.nonNullable.control('MUR', [
+      Validators.required,
+      Validators.pattern(/^[A-Za-z]{3}$/),
+    ]),
+    fxRate: this.fb.nonNullable.control('1', [Validators.required, Validators.pattern(DECIMAL)]),
     payee: this.fb.nonNullable.control(''),
     note: this.fb.nonNullable.control(''),
     splits: this.fb.array([this.newSplitGroup()]),
@@ -114,14 +121,16 @@ export class Transactions implements OnInit {
     this.loading.set(true);
     this.error.set(null);
     try {
-      const [txs, accts, cats] = await Promise.all([
+      const [txs, accts, cats, settings] = await Promise.all([
         listTransactions(),
         listAccounts(false),
         listCategories(false),
+        getSettings(),
       ]);
       this.transactions.set(txs);
       this.accounts.set(accts);
       this.categories.set(cats);
+      this.baseCurrency.set(settings.baseCurrency);
     } catch (e) {
       this.error.set(String(e));
     } finally {
@@ -167,9 +176,16 @@ export class Transactions implements OnInit {
     }
   }
 
-  /** Current account currency (drives display + the remaining-to-allocate hint). */
+  /** The transaction currency from the form (drives display + the remaining-to-allocate hint). */
   protected currentCurrency(): string {
+    const c = this.form.controls.currency.value?.trim().toUpperCase();
+    if (c) return c;
     return this.accounts().find((a) => a.id === this.form.controls.accountId.value)?.currency ?? 'MUR';
+  }
+
+  /** Show the fx-rate field only when recording in a currency other than the base (FR-1.4). */
+  protected showFx(): boolean {
+    return this.currentCurrency() !== this.baseCurrency();
   }
 
   /** Remaining-to-allocate in minor units (total − Σ splits). Exact integer math, display only. */
@@ -190,7 +206,8 @@ export class Transactions implements OnInit {
 
   protected startCreate(): void {
     this.editingId.set(null);
-    this.resetForm({ accountId: this.accounts()[0]?.id ?? null });
+    const account = this.accounts()[0] ?? null;
+    this.resetForm({ accountId: account?.id ?? null, currency: account?.currency ?? this.baseCurrency() });
     this.error.set(null);
     this.showForm.set(true);
   }
@@ -199,6 +216,8 @@ export class Transactions implements OnInit {
     this.editingId.set(t.id);
     this.resetForm({
       accountId: t.accountId,
+      currency: t.currency,
+      fxRate: t.fxRate,
       postedDate: t.postedDate,
       amount: this.majorAmount(t.amountMinor, t.currency),
       payee: t.payee ?? '',
@@ -214,6 +233,8 @@ export class Transactions implements OnInit {
 
   private resetForm(opts: {
     accountId?: number | null;
+    currency?: string;
+    fxRate?: string;
     postedDate?: string;
     amount?: string;
     payee?: string;
@@ -229,6 +250,8 @@ export class Transactions implements OnInit {
     }
     this.form.reset({
       accountId: opts.accountId ?? null,
+      currency: opts.currency ?? this.baseCurrency(),
+      fxRate: opts.fxRate ?? '1',
       postedDate: opts.postedDate ?? this.today(),
       amount: opts.amount ?? '',
       payee: opts.payee ?? '',
@@ -251,6 +274,7 @@ export class Transactions implements OnInit {
       categoryId: g.get('categoryId')!.value as number,
       amount: g.get('amount')!.value as string,
     }));
+    const currency = this.currentCurrency();
     this.busy.set(true);
     this.error.set(null);
     try {
@@ -258,6 +282,9 @@ export class Transactions implements OnInit {
         accountId: v.accountId as number,
         postedDate: v.postedDate,
         amount: v.amount,
+        currency,
+        // A foreign-currency entry carries the user rate; same-currency stays at 1.
+        fxRate: currency === this.baseCurrency() ? '1' : v.fxRate,
         splits,
         payee: v.payee.trim() || null,
         note: v.note.trim() || null,

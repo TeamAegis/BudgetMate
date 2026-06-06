@@ -155,6 +155,19 @@ pub fn set_biometric_enabled<R: Runtime>(
     update_settings(&app, |s| s.biometric_enabled = enabled)
 }
 
+/// Set the base (reporting) currency (FR-1.4). Validated as a 3-letter ISO-4217 code.
+#[tauri::command]
+pub fn set_base_currency<R: Runtime>(
+    app: AppHandle<R>,
+    currency: String,
+) -> Result<vault::VaultSettings, String> {
+    let code = currency.trim().to_uppercase();
+    if !crate::domain::account::is_iso4217(&code) {
+        return Err("currency must be a 3-letter ISO-4217 code (e.g. MUR)".to_string());
+    }
+    update_settings(&app, move |s| s.base_currency = code)
+}
+
 fn update_settings<R: Runtime>(
     app: &AppHandle<R>,
     f: impl FnOnce(&mut vault::VaultSettings),

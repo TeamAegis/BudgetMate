@@ -39,6 +39,8 @@ export interface AppState {
 export interface VaultSettings {
   idleTimeoutSecs: number;
   biometricEnabled: boolean;
+  /** Base (reporting) currency; foreign amounts convert to it via a per-transaction rate (FR-1.4). */
+  baseCurrency: Iso4217;
 }
 
 /** Mirrors Rust `Money` (domain::money). */
@@ -153,6 +155,9 @@ export interface NewTransaction {
   accountId: number;
   postedDate: string;
   amount: string;
+  /** Transaction currency (defaults to the account's when omitted) + rate to base (FR-1.4). */
+  currency?: Iso4217 | null;
+  fxRate?: string | null;
   splits: NewSplit[];
   payee?: string | null;
   note?: string | null;

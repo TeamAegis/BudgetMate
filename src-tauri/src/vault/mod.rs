@@ -16,6 +16,12 @@ pub const META_FILENAME: &str = "vault-meta.json";
 pub const DB_FILENAME: &str = "budgetmate.db";
 pub const CURRENT_META_VERSION: u32 = 1;
 pub const DEFAULT_IDLE_TIMEOUT_SECS: u32 = 120;
+/// Default base (reporting) currency — design-system §8 (MUR, "Rs").
+pub const DEFAULT_BASE_CURRENCY: &str = "MUR";
+
+fn default_base_currency() -> String {
+    DEFAULT_BASE_CURRENCY.to_string()
+}
 
 const SALT_LEN: usize = 16;
 const MIN_PASSPHRASE_LEN: usize = 8;
@@ -48,11 +54,19 @@ pub struct VaultSettings {
     pub idle_timeout_secs: u32,
     /// Whether biometric unlock is enrolled/enabled (Android only).
     pub biometric_enabled: bool,
+    /// Base (reporting) currency — foreign-currency amounts convert to this via a per-transaction
+    /// user rate (FR-1.4). `#[serde(default)]` so meta written before this field still loads.
+    #[serde(default = "default_base_currency")]
+    pub base_currency: String,
 }
 
 impl Default for VaultSettings {
     fn default() -> Self {
-        Self { idle_timeout_secs: DEFAULT_IDLE_TIMEOUT_SECS, biometric_enabled: false }
+        Self {
+            idle_timeout_secs: DEFAULT_IDLE_TIMEOUT_SECS,
+            biometric_enabled: false,
+            base_currency: default_base_currency(),
+        }
     }
 }
 

@@ -27,6 +27,29 @@
   }
 }
 
+// Amount + currency side by side (FR-1.4); currency is a compact fixed-width field.
+.amount-row {
+  display: flex;
+  gap: var(--space-3);
+}
+.amount-row app-form-field:first-child {
+  flex: 1;
+}
+.currency {
+  width: 5ch;
+  text-transform: uppercase;
+}
+
+// Stacked original + base amount in a list row.
+.amount-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+.amount-cell .base {
+  color: var(--c-text-muted);
+}
+
 // Split editor (FR-1.2).
 .splits {
   display: flex;
