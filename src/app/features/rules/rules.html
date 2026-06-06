@@ -1,0 +1,126 @@
+<section class="feature-page">
+  @if (!showForm()) {
+    <div class="page-actions">
+      <app-button variant="primary" (click)="startCreate()" [disabled]="busy() || loading()">
+        <svg icon lucidePlus [size]="18"></svg>
+        <span>Add rule</span>
+      </app-button>
+    </div>
+  }
+
+  @if (error(); as err) {
+    <app-banner>{{ err }}</app-banner>
+  }
+
+  @if (showForm()) {
+    <app-card>
+      <form class="form" [formGroup]="form" (ngSubmit)="save()">
+        <p class="form-line">If</p>
+        <app-form-field label="Match field">
+          <select formControlName="matchField">
+            @for (f of fields; track f) {
+              <option [value]="f">{{ f }}</option>
+            }
+          </select>
+        </app-form-field>
+        <app-form-field label="Operator">
+          <select formControlName="matchOp">
+            @for (o of ops; track o) {
+              <option [value]="o">{{ o }}</option>
+            }
+          </select>
+        </app-form-field>
+        <app-form-field label="Value">
+          <input type="text" formControlName="matchValue" placeholder="e.g. uber" />
+        </app-form-field>
+
+        <p class="form-line">then set</p>
+        <app-form-field label="Set field">
+          <select formControlName="setField">
+            @for (f of fields; track f) {
+              <option [value]="f">{{ f }}</option>
+            }
+          </select>
+        </app-form-field>
+        <app-form-field label="To value">
+          <input type="text" formControlName="setValue" placeholder="e.g. Transport" />
+        </app-form-field>
+
+        <div class="actions">
+          <app-button variant="ghost" (click)="cancel()" [disabled]="busy()">Cancel</app-button>
+          <app-button type="submit" variant="primary" [disabled]="busy() || form.invalid">
+            {{ busy() ? 'Saving…' : 'Save' }}
+          </app-button>
+        </div>
+      </form>
+    </app-card>
+  }
+
+  @if (loading()) {
+    <p class="muted">Loading…</p>
+  } @else if (rules().length === 0 && !error()) {
+    <app-empty-state
+      message="No rules yet."
+      cta="Add your first rule"
+      (action)="startCreate()"
+    />
+  } @else if (!showForm()) {
+    <p class="muted hint">Rules run top to bottom; a later rule can override an earlier one.</p>
+    <ul class="rows">
+      @for (r of rules(); track r.id; let i = $index) {
+        <li app-list-row [name]="ruleText(r)" [meta]="ruleEffect(r)" [class.disabled]="!r.active">
+          <div actions class="reorder">
+            <app-icon-button ariaLabel="Move up" (click)="moveUp(i)" [disabled]="busy() || i === 0">
+              <svg lucideChevronUp [size]="18"></svg>
+            </app-icon-button>
+            <app-icon-button
+              ariaLabel="Move down"
+              (click)="moveDown(i)"
+              [disabled]="busy() || i === rules().length - 1"
+            >
+              <svg lucideChevronDown [size]="18"></svg>
+            </app-icon-button>
+          </div>
+          <app-icon-button actions ariaLabel="Edit" (click)="startEdit(r)" [disabled]="busy()">
+            <svg lucidePencil [size]="18"></svg>
+          </app-icon-button>
+          @if (r.active) {
+            <app-icon-button actions ariaLabel="Disable" (click)="toggleActive(r)" [disabled]="busy()">
+              <svg lucidePause [size]="18"></svg>
+            </app-icon-button>
+          } @else {
+            <app-icon-button actions ariaLabel="Enable" (click)="toggleActive(r)" [disabled]="busy()">
+              <svg lucidePlay [size]="18"></svg>
+            </app-icon-button>
+          }
+          <app-icon-button actions ariaLabel="Delete" (click)="remove(r)" [disabled]="busy()">
+            <svg lucideTrash2 [size]="18"></svg>
+          </app-icon-button>
+        </li>
+      }
+    </ul>
+
+    <app-card class="tester">
+      <label class="tester-label" for="rule-test">Test a merchant</label>
+      <input
+        id="rule-test"
+        type="text"
+        placeholder="e.g. UBER *TRIP"
+        [value]="testMerchant()"
+        (input)="onTestInput($any($event.target).value)"
+      />
+      @if (preview(); as p) {
+        @if (p.applied.length) {
+          <p class="result">Result: category = “{{ p.category }}”</p>
+          <ul class="trace">
+            @for (a of p.applied; track $index) {
+              <li>Rule #{{ a.ordinal }} set {{ a.setField }} = “{{ a.setValue }}”</li>
+            }
+          </ul>
+        } @else {
+          <p class="result muted">No rule matches “{{ testMerchant() }}”.</p>
+        }
+      }
+    </app-card>
+  }
+</section>

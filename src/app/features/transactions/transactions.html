@@ -92,8 +92,11 @@
           <input type="date" formControlName="postedDate" />
         </app-form-field>
         <app-form-field label="Payee (optional)">
-          <input type="text" formControlName="payee" placeholder="e.g. Winners" />
+          <input type="text" formControlName="payee" placeholder="e.g. Winners" (blur)="suggestCategory()" />
         </app-form-field>
+        @if (suggestedCategory(); as cat) {
+          <p class="suggested">Category “{{ cat }}” set by a rule — change it above if needed.</p>
+        }
         <app-form-field label="Note (optional)">
           <input type="text" formControlName="note" />
         </app-form-field>

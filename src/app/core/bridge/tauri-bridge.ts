@@ -22,6 +22,11 @@ import type {
   RecurringRule,
   NewRecurringRule,
   UpdateRecurringRule,
+  ImportRule,
+  NewRule,
+  UpdateRule,
+  RulePreview,
+  RulePreviewInput,
 } from '../models';
 
 /** Whether we are running inside the Tauri runtime (vs. plain browser `ng serve`). */
@@ -140,4 +145,30 @@ export function updateRecurringRule(rule: UpdateRecurringRule): Promise<Recurrin
 }
 export function setRecurringActive(id: number, active: boolean): Promise<RecurringRule> {
   return invoke<RecurringRule>('set_recurring_active', { id, active });
+}
+
+// ── Rule engine (FR-2.3) ─────────────────────────────────────────────────────────
+
+export function listRules(): Promise<ImportRule[]> {
+  return invoke<ImportRule[]>('list_rules');
+}
+export function createRule(rule: NewRule): Promise<ImportRule> {
+  return invoke<ImportRule>('create_rule', { rule });
+}
+export function updateRule(rule: UpdateRule): Promise<ImportRule> {
+  return invoke<ImportRule>('update_rule', { rule });
+}
+export function setRuleActive(id: number, active: boolean): Promise<ImportRule> {
+  return invoke<ImportRule>('set_rule_active', { id, active });
+}
+export function deleteRule(id: number): Promise<void> {
+  return invoke<void>('delete_rule', { id });
+}
+/** Reassign rule precedence to match this id order (1-based ordinals). */
+export function reorderRules(ids: number[]): Promise<ImportRule[]> {
+  return invoke<ImportRule[]>('reorder_rules', { ids });
+}
+/** Run the active rules over sample fields; returns the result + which rules fired (the "why"). */
+export function previewRules(input: RulePreviewInput): Promise<RulePreview> {
+  return invoke<RulePreview>('preview_rules', { input });
 }

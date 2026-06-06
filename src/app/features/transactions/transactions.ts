@@ -10,6 +10,7 @@ import {
   listAccounts,
   listCategories,
   getSettings,
+  previewRules,
   isTauri,
 } from '../../core/bridge';
 import type { Transaction, Account, Category } from '../../core/models';
@@ -68,6 +69,8 @@ export class Transactions implements OnInit {
   protected readonly error = signal<string | null>(null);
   protected readonly editingId = signal<number | null>(null);
   protected readonly showForm = signal(false);
+  /** Category name a rule suggested from the payee (shown as an inspectable, overridable hint). */
+  protected readonly suggestedCategory = signal<string | null>(null);
 
   protected readonly form = this.fb.group({
     accountId: this.fb.control<number | null>(null, Validators.required),
@@ -208,6 +211,7 @@ export class Transactions implements OnInit {
     this.editingId.set(null);
     const account = this.accounts()[0] ?? null;
     this.resetForm({ accountId: account?.id ?? null, currency: account?.currency ?? this.baseCurrency() });
+    this.suggestedCategory.set(null);
     this.error.set(null);
     this.showForm.set(true);
   }
@@ -227,6 +231,7 @@ export class Transactions implements OnInit {
         amount: this.majorAmount(s.amountMinor, t.currency),
       })),
     });
+    this.suggestedCategory.set(null);
     this.error.set(null);
     this.showForm.set(true);
   }
@@ -311,6 +316,30 @@ export class Transactions implements OnInit {
       this.error.set(String(e));
     } finally {
       this.busy.set(false);
+    }
+  }
+
+  /**
+   * Suggest a category from the payee via the rule engine (FR-2.3) when the user hasn't picked one
+   * (single-split entry only). Non-destructive + inspectable: it pre-selects the match and shows a
+   * hint the user can override — no hidden categorisation.
+   */
+  protected async suggestCategory(): Promise<void> {
+    if (!isTauri() || this.splits.length !== 1) return;
+    const categoryCtrl = this.splits.at(0).get('categoryId')!;
+    if (categoryCtrl.value != null) return; // respect an explicit choice
+    const payee = this.form.controls.payee.value.trim();
+    if (!payee) return;
+    try {
+      const name = (await previewRules({ merchant: payee })).category;
+      if (!name) return;
+      const match = this.categories().find((c) => c.name.toLowerCase() === name.toLowerCase());
+      if (match) {
+        categoryCtrl.setValue(match.id);
+        this.suggestedCategory.set(match.name);
+      }
+    } catch {
+      // Suggestions are best-effort; never block entry on a preview failure.
     }
   }
 
