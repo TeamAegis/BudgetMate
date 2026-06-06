@@ -9,16 +9,25 @@ use rusqlite::{params, Connection};
 use super::DbError;
 use crate::domain::category::CategoryKind;
 use crate::domain::money::{base_amount_minor, parse_minor};
-use crate::domain::transaction::{signed_amount, validate_transaction, Transaction, TxSplit};
+use crate::domain::transaction::{
+    signed_amount, validate_split_set, validate_transaction, Transaction, TxSplit,
+};
 
-/// Fields for creating/replacing a manual transaction. `amount` is the user's non-negative
-/// major-unit input (e.g. "15.00"); it is parsed to minor units in the account's currency, then
-/// signed from the category's kind.
+/// One category line of a manual transaction. `amount` is the user's non-negative major-unit input.
+pub struct SplitInput<'a> {
+    pub category_id: i64,
+    pub amount: &'a str,
+}
+
+/// Fields for creating/replacing a manual transaction. `amount` is the total (non-negative
+/// major-unit input); `splits` allocate that total across categories (one split = a simple entry,
+/// ≥2 = a split transaction). Amounts are parsed to minor units in the account's currency and
+/// signed from the (shared) category kind. The split magnitudes must sum to the total.
 pub struct TxInput<'a> {
     pub account_id: i64,
     pub posted_date: &'a str,
     pub amount: &'a str,
-    pub category_id: i64,
+    pub splits: &'a [SplitInput<'a>],
     pub payee: Option<&'a str>,
     pub note: Option<&'a str>,
 }
@@ -97,27 +106,65 @@ pub fn list(conn: &Connection) -> Result<Vec<Transaction>, DbError> {
     Ok(txs)
 }
 
-/// Compute the signed amount + base amount for an input, validating along the way. Shared by
+/// Everything needed to persist a transaction + its splits, validated and signed. Shared by
 /// create/update so they stay consistent.
-fn prepare_amounts(conn: &Connection, input: &TxInput) -> Result<(String, i64, String, i64), DbError> {
+struct Prepared {
+    currency: String,
+    /// Signed parent amount (sum of signed splits).
+    amount: i64,
+    fx_text: String,
+    base: i64,
+    /// (category_id, signed amount) per split.
+    splits: Vec<(i64, i64)>,
+}
+
+/// Parse + validate the total and splits, then sign every amount from the (shared) category kind.
+fn prepare(conn: &Connection, input: &TxInput) -> Result<Prepared, DbError> {
     let currency = account_currency(conn, input.account_id)?;
-    let magnitude = parse_minor(input.amount, &currency).map_err(|e| DbError::Invalid(e.to_string()))?;
+    let total = parse_minor(input.amount, &currency).map_err(|e| DbError::Invalid(e.to_string()))?;
     // Same-currency entry for now (FR-1.4 adds a user-entered rate); base == amount at rate 1.
-    let rate = validate_transaction(input.posted_date, magnitude, &currency, "1")
+    let rate = validate_transaction(input.posted_date, total, &currency, "1")
         .map_err(|e| DbError::Invalid(e.to_string()))?;
-    let kind = category_kind(conn, input.category_id)?;
-    let amount = signed_amount(magnitude, kind);
+
+    let mut magnitudes = Vec::with_capacity(input.splits.len());
+    let mut kinds = Vec::with_capacity(input.splits.len());
+    for s in input.splits {
+        magnitudes.push(parse_minor(s.amount, &currency).map_err(|e| DbError::Invalid(e.to_string()))?);
+        kinds.push(category_kind(conn, s.category_id)?);
+    }
+    validate_split_set(total, &magnitudes, &kinds).map_err(|e| DbError::Invalid(e.to_string()))?;
+
+    // All splits share one kind (validated above), so the whole transaction has one direction.
+    let kind = kinds[0];
+    let splits = input
+        .splits
+        .iter()
+        .zip(&magnitudes)
+        .map(|(s, &m)| (s.category_id, signed_amount(m, kind)))
+        .collect::<Vec<_>>();
+    let amount = signed_amount(total, kind);
     let base = base_amount_minor(amount, rate);
-    Ok((currency, amount, rate.to_string(), base))
+    Ok(Prepared { currency, amount, fx_text: rate.to_string(), base, splits })
+}
+
+fn insert_splits(tx: &Connection, transaction_id: i64, splits: &[(i64, i64)]) -> Result<(), DbError> {
+    for (category_id, amount) in splits {
+        tx.execute(
+            "INSERT INTO tx_splits (transaction_id, category_id, amount_minor) VALUES (?1, ?2, ?3)",
+            params![transaction_id, category_id, amount],
+        )?;
+    }
+    Ok(())
 }
 
 fn clean(opt: Option<&str>) -> Option<String> {
     opt.map(str::trim).filter(|s| !s.is_empty()).map(str::to_string)
 }
 
-/// Insert a manual transaction + its single category split, atomically.
+/// Insert a manual transaction + its category splits, atomically. The split magnitudes must sum to
+/// the total (enforced in `prepare`).
 pub fn create(conn: &Connection, input: TxInput, now_iso: &str) -> Result<Transaction, DbError> {
-    let (currency, amount, fx_text, base) = prepare_amounts(conn, &input)?;
+    let p = prepare(conn, &input)?;
 
     let tx = conn.unchecked_transaction()?;
     tx.execute(
@@ -128,28 +175,25 @@ pub fn create(conn: &Connection, input: TxInput, now_iso: &str) -> Result<Transa
         params![
             input.account_id,
             input.posted_date.trim(),
-            amount,
-            currency,
-            fx_text,
-            base,
+            p.amount,
+            p.currency,
+            p.fx_text,
+            p.base,
             clean(input.payee),
             clean(input.note),
             now_iso,
         ],
     )?;
     let id = tx.last_insert_rowid();
-    tx.execute(
-        "INSERT INTO tx_splits (transaction_id, category_id, amount_minor) VALUES (?1, ?2, ?3)",
-        params![id, input.category_id, amount],
-    )?;
+    insert_splits(&tx, id, &p.splits)?;
     tx.commit()?;
     get(conn, id)
 }
 
-/// Update a manual transaction. Replaces its single split (the multi-split editor is FR-1.2).
-/// `source`/`created_at` are preserved. All writes are in one transaction.
+/// Update a manual transaction, replacing its splits wholesale. `source`/`created_at` are
+/// preserved. All writes are in one transaction.
 pub fn update(conn: &Connection, id: i64, input: TxInput) -> Result<Transaction, DbError> {
-    let (currency, amount, fx_text, base) = prepare_amounts(conn, &input)?;
+    let p = prepare(conn, &input)?;
 
     let tx = conn.unchecked_transaction()?;
     let changed = tx.execute(
@@ -161,10 +205,10 @@ pub fn update(conn: &Connection, id: i64, input: TxInput) -> Result<Transaction,
             id,
             input.account_id,
             input.posted_date.trim(),
-            amount,
-            currency,
-            fx_text,
-            base,
+            p.amount,
+            p.currency,
+            p.fx_text,
+            p.base,
             clean(input.payee),
             clean(input.note),
         ],
@@ -173,10 +217,7 @@ pub fn update(conn: &Connection, id: i64, input: TxInput) -> Result<Transaction,
         return Err(DbError::Invalid(format!("transaction {id} not found")));
     }
     tx.execute("DELETE FROM tx_splits WHERE transaction_id = ?1", params![id])?;
-    tx.execute(
-        "INSERT INTO tx_splits (transaction_id, category_id, amount_minor) VALUES (?1, ?2, ?3)",
-        params![id, input.category_id, amount],
-    )?;
+    insert_splits(&tx, id, &p.splits)?;
     tx.commit()?;
     get(conn, id)
 }
@@ -204,14 +245,23 @@ mod tests {
     }
 
     // Seeded defaults: account id 1 = Cash (MUR); category 1 = Groceries (expense), 9 = Salary (income).
-    fn input<'a>(amount: &'a str, category_id: i64) -> TxInput<'a> {
-        TxInput { account_id: 1, posted_date: "2026-06-06", amount, category_id, payee: None, note: None }
+
+    /// A single-category transaction: one split for the whole total (the FR-1.1 simple case).
+    fn single<'a>(amount: &'a str, category_id: i64) -> TxInput<'a> {
+        TxInput {
+            account_id: 1,
+            posted_date: "2026-06-06",
+            amount,
+            splits: Box::leak(Box::new([SplitInput { category_id, amount }])),
+            payee: None,
+            note: None,
+        }
     }
 
     #[test]
     fn create_signs_by_kind_and_persists_one_split() {
         let conn = db();
-        let expense = create(&conn, input("15.00", 1), "2026-06-06T10:00:00Z").unwrap();
+        let expense = create(&conn, single("15.00", 1), "2026-06-06T10:00:00Z").unwrap();
         assert_eq!(expense.amount_minor, -1_500, "expense is negative");
         assert_eq!(expense.currency, "MUR");
         assert_eq!(expense.fx_rate, "1");
@@ -221,17 +271,70 @@ mod tests {
         assert_eq!(expense.splits[0].amount_minor, -1_500);
         assert_eq!(expense.splits[0].category_name, "Groceries");
 
-        let income = create(&conn, input("2000", 9), "2026-06-06T10:00:00Z").unwrap();
+        let income = create(&conn, single("2000", 9), "2026-06-06T10:00:00Z").unwrap();
         assert_eq!(income.amount_minor, 200_000, "income is positive");
+    }
+
+    #[test]
+    fn create_persists_multiple_splits_summing_to_total() {
+        let conn = db();
+        // 50.00 total split across Groceries (30) + Dining (20) — both expense (cat 1 and 2).
+        let tx = TxInput {
+            account_id: 1,
+            posted_date: "2026-06-06",
+            amount: "50.00",
+            splits: &[
+                SplitInput { category_id: 1, amount: "30.00" },
+                SplitInput { category_id: 2, amount: "20.00" },
+            ],
+            payee: Some("Market"),
+            note: None,
+        };
+        let created = create(&conn, tx, "2026-06-06T10:00:00Z").unwrap();
+        assert_eq!(created.amount_minor, -5_000, "parent is the signed sum");
+        assert_eq!(created.splits.len(), 2);
+        assert_eq!(created.splits.iter().map(|s| s.amount_minor).sum::<i64>(), -5_000);
+    }
+
+    #[test]
+    fn rejects_splits_that_dont_sum_or_mix_kinds() {
+        let conn = db();
+        // Magnitudes don't add up to the total.
+        let bad_sum = TxInput {
+            account_id: 1,
+            posted_date: "2026-06-06",
+            amount: "50.00",
+            splits: &[
+                SplitInput { category_id: 1, amount: "30.00" },
+                SplitInput { category_id: 2, amount: "10.00" },
+            ],
+            payee: None,
+            note: None,
+        };
+        assert!(create(&conn, bad_sum, "2026-06-06T10:00:00Z").is_err());
+
+        // Mixed kinds (expense + income) in one transaction.
+        let mixed = TxInput {
+            account_id: 1,
+            posted_date: "2026-06-06",
+            amount: "50.00",
+            splits: &[
+                SplitInput { category_id: 1, amount: "30.00" }, // Groceries (expense)
+                SplitInput { category_id: 9, amount: "20.00" }, // Salary (income)
+            ],
+            payee: None,
+            note: None,
+        };
+        assert!(create(&conn, mixed, "2026-06-06T10:00:00Z").is_err());
     }
 
     #[test]
     fn list_is_newest_first_with_splits() {
         let conn = db();
-        let mut older = input("10.00", 1);
+        let mut older = single("10.00", 1);
         older.posted_date = "2026-06-01";
         create(&conn, older, "2026-06-01T10:00:00Z").unwrap();
-        let mut newer = input("20.00", 1);
+        let mut newer = single("20.00", 1);
         newer.posted_date = "2026-06-05";
         create(&conn, newer, "2026-06-05T10:00:00Z").unwrap();
 
@@ -242,10 +345,10 @@ mod tests {
     }
 
     #[test]
-    fn update_changes_fields_and_split() {
+    fn update_changes_fields_and_replaces_splits() {
         let conn = db();
-        let t = create(&conn, input("15.00", 1), "2026-06-06T10:00:00Z").unwrap();
-        let mut edit = input("25.00", 9); // now income, different amount
+        let t = create(&conn, single("15.00", 1), "2026-06-06T10:00:00Z").unwrap();
+        let mut edit = single("25.00", 9); // now income, different amount
         edit.payee = Some("Employer");
         let updated = update(&conn, t.id, edit).unwrap();
         assert_eq!(updated.amount_minor, 2_500);
@@ -257,7 +360,7 @@ mod tests {
     #[test]
     fn delete_cascades_to_splits() {
         let conn = db();
-        let t = create(&conn, input("15.00", 1), "2026-06-06T10:00:00Z").unwrap();
+        let t = create(&conn, single("15.00", 1), "2026-06-06T10:00:00Z").unwrap();
         delete(&conn, t.id).unwrap();
         assert!(list(&conn).unwrap().is_empty());
         let split_count: i64 = conn
@@ -271,13 +374,13 @@ mod tests {
     #[test]
     fn rejects_unknown_refs_and_bad_amounts() {
         let conn = db();
-        let mut bad_account = input("15.00", 1);
+        let mut bad_account = single("15.00", 1);
         bad_account.account_id = 999;
         assert!(create(&conn, bad_account, "2026-06-06T10:00:00Z").is_err());
 
-        assert!(create(&conn, input("15.00", 999), "2026-06-06T10:00:00Z").is_err());
-        assert!(create(&conn, input("0", 1), "2026-06-06T10:00:00Z").is_err());
-        assert!(create(&conn, input("1.005", 1), "2026-06-06T10:00:00Z").is_err());
-        assert!(update(&conn, 4242, input("15.00", 1)).is_err());
+        assert!(create(&conn, single("15.00", 999), "2026-06-06T10:00:00Z").is_err());
+        assert!(create(&conn, single("0", 1), "2026-06-06T10:00:00Z").is_err());
+        assert!(create(&conn, single("1.005", 1), "2026-06-06T10:00:00Z").is_err());
+        assert!(update(&conn, 4242, single("15.00", 1)).is_err());
     }
 }

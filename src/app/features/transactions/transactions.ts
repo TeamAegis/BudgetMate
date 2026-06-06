@@ -1,6 +1,7 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { LucidePlus, LucidePencil, LucideTrash2 } from '@lucide/angular';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { LucidePlus, LucidePencil, LucideTrash2, LucideX } from '@lucide/angular';
 import {
   listTransactions,
   createTransaction,
@@ -26,10 +27,13 @@ interface DateGroup {
   items: Transaction[];
 }
 
+const DECIMAL = /^\d+(\.\d+)?$/;
+
 /**
- * Manual transaction entry + list (FR-1.1). Smart component: it reads accounts/categories/
- * transactions through the bridge and renders with shared/ui. All money parsing, signing, and
- * `base_amount_minor` derivation happen in Rust — TS only formats (the `money` pipe) and presents.
+ * Manual transaction entry + list (FR-1.1) with split support (FR-1.2). Smart component: it reads
+ * accounts/categories/transactions through the bridge and renders with shared/ui. All money
+ * parsing, signing, the split-sum invariant, and `base_amount_minor` happen in Rust — TS only
+ * formats (the `money` pipe) and shows a live "remaining to allocate" hint (Rust re-validates).
  */
 @Component({
   selector: 'app-transactions',
@@ -39,6 +43,7 @@ interface DateGroup {
     LucidePlus,
     LucidePencil,
     LucideTrash2,
+    LucideX,
     Button,
     IconButton,
     Card,
@@ -62,15 +67,28 @@ export class Transactions implements OnInit {
   protected readonly editingId = signal<number | null>(null);
   protected readonly showForm = signal(false);
 
-  protected readonly form = this.fb.nonNullable.group({
-    accountId: [null as number | null, Validators.required],
-    categoryId: [null as number | null, Validators.required],
-    postedDate: [this.today(), Validators.required],
-    // A non-negative decimal; Rust is the authority on precision/scale per currency.
-    amount: ['', [Validators.required, Validators.pattern(/^\d+(\.\d+)?$/)]],
-    payee: [''],
-    note: [''],
+  protected readonly form = this.fb.group({
+    accountId: this.fb.control<number | null>(null, Validators.required),
+    postedDate: this.fb.nonNullable.control(this.today(), Validators.required),
+    amount: this.fb.nonNullable.control('', [Validators.required, Validators.pattern(DECIMAL)]),
+    payee: this.fb.nonNullable.control(''),
+    note: this.fb.nonNullable.control(''),
+    splits: this.fb.array([this.newSplitGroup()]),
   });
+
+  constructor() {
+    // With a single split the amount IS the total — keep them in lock-step so the simple case
+    // needs no per-split entry. With ≥2 splits the user allocates each line explicitly.
+    this.form.controls.amount.valueChanges.pipe(takeUntilDestroyed()).subscribe((v) => {
+      if (this.splits.length === 1) {
+        this.splits.at(0).get('amount')!.setValue(v ?? '', { emitEvent: false });
+      }
+    });
+  }
+
+  protected get splits(): FormArray {
+    return this.form.controls.splits;
+  }
 
   /** Transactions grouped into consecutive runs by posted date (list is newest-first from Rust). */
   protected readonly grouped = computed<DateGroup[]>(() => {
@@ -115,37 +133,107 @@ export class Transactions implements OnInit {
     return this.accounts().find((a) => a.id === id)?.name ?? '—';
   }
 
-  /** First split's category is the row's category (a manual entry has exactly one). */
-  protected categoryName(t: Transaction): string {
-    return t.splits[0]?.categoryName ?? '—';
+  /** Category label for a list row: the single category, or each split's category for ≥2. */
+  protected categoryLabel(t: Transaction): string {
+    if (t.splits.length <= 1) return t.splits[0]?.categoryName ?? '—';
+    return t.splits.map((s) => s.categoryName).join(', ');
+  }
+
+  protected metaLine(t: Transaction): string {
+    const cats = t.splits.length > 1 ? `${t.splits.length} splits` : this.categoryLabel(t);
+    return `${cats} · ${this.accountName(t.accountId)}`;
+  }
+
+  // ── Split editor ──────────────────────────────────────────────────────────────
+
+  private newSplitGroup(amount = ''): FormGroup {
+    return this.fb.group({
+      categoryId: this.fb.control<number | null>(null, Validators.required),
+      amount: this.fb.nonNullable.control(amount, [Validators.required, Validators.pattern(DECIMAL)]),
+    });
+  }
+
+  protected addSplit(): void {
+    // Leaving single mode: clear the first line so the user allocates both against the total.
+    if (this.splits.length === 1) this.splits.at(0).get('amount')!.setValue('');
+    this.splits.push(this.newSplitGroup());
+  }
+
+  protected removeSplit(i: number): void {
+    this.splits.removeAt(i);
+    if (this.splits.length === 1) {
+      // Back to single mode: the lone split tracks the total again.
+      this.splits.at(0).get('amount')!.setValue(this.form.controls.amount.value);
+    }
+  }
+
+  /** Current account currency (drives display + the remaining-to-allocate hint). */
+  protected currentCurrency(): string {
+    return this.accounts().find((a) => a.id === this.form.controls.accountId.value)?.currency ?? 'MUR';
+  }
+
+  /** Remaining-to-allocate in minor units (total − Σ splits). Exact integer math, display only. */
+  protected remainingMinor(): number {
+    const currency = this.currentCurrency();
+    const total = this.toMinor(this.form.controls.amount.value, currency) ?? 0;
+    const allocated = this.splits.controls.reduce(
+      (sum, g) => sum + (this.toMinor(g.get('amount')!.value as string, currency) ?? 0),
+      0,
+    );
+    return total - allocated;
+  }
+
+  /** True when splits don't yet add up to the total (only meaningful with ≥2 splits). */
+  protected unbalanced(): boolean {
+    return this.splits.length > 1 && this.remainingMinor() !== 0;
   }
 
   protected startCreate(): void {
     this.editingId.set(null);
-    this.form.reset({
-      accountId: this.accounts()[0]?.id ?? null,
-      categoryId: null,
-      postedDate: this.today(),
-      amount: '',
-      payee: '',
-      note: '',
-    });
+    this.resetForm({ accountId: this.accounts()[0]?.id ?? null });
     this.error.set(null);
     this.showForm.set(true);
   }
 
   protected startEdit(t: Transaction): void {
     this.editingId.set(t.id);
-    this.form.reset({
+    this.resetForm({
       accountId: t.accountId,
-      categoryId: t.splits[0]?.categoryId ?? null,
       postedDate: t.postedDate,
       amount: this.majorAmount(t.amountMinor, t.currency),
       payee: t.payee ?? '',
       note: t.note ?? '',
+      splits: t.splits.map((s) => ({
+        categoryId: s.categoryId,
+        amount: this.majorAmount(s.amountMinor, t.currency),
+      })),
     });
     this.error.set(null);
     this.showForm.set(true);
+  }
+
+  private resetForm(opts: {
+    accountId?: number | null;
+    postedDate?: string;
+    amount?: string;
+    payee?: string;
+    note?: string;
+    splits?: { categoryId: number; amount: string }[];
+  }): void {
+    const splitData = opts.splits?.length ? opts.splits : [{ categoryId: null, amount: opts.amount ?? '' }];
+    this.splits.clear();
+    for (const s of splitData) {
+      const g = this.newSplitGroup(s.amount);
+      g.get('categoryId')!.setValue(s.categoryId);
+      this.splits.push(g);
+    }
+    this.form.reset({
+      accountId: opts.accountId ?? null,
+      postedDate: opts.postedDate ?? this.today(),
+      amount: opts.amount ?? '',
+      payee: opts.payee ?? '',
+      note: opts.note ?? '',
+    });
   }
 
   protected cancel(): void {
@@ -154,19 +242,23 @@ export class Transactions implements OnInit {
   }
 
   protected async save(): Promise<void> {
-    if (this.form.invalid) {
+    if (this.form.invalid || this.unbalanced()) {
       this.form.markAllAsTouched();
       return;
     }
     const v = this.form.getRawValue();
+    const splits = this.splits.controls.map((g) => ({
+      categoryId: g.get('categoryId')!.value as number,
+      amount: g.get('amount')!.value as string,
+    }));
     this.busy.set(true);
     this.error.set(null);
     try {
       const input = {
         accountId: v.accountId as number,
-        categoryId: v.categoryId as number,
         postedDate: v.postedDate,
         amount: v.amount,
+        splits,
         payee: v.payee.trim() || null,
         note: v.note.trim() || null,
       };
@@ -200,14 +292,27 @@ export class Transactions implements OnInit {
     return new Date().toISOString().slice(0, 10);
   }
 
-  /**
-   * Stored signed minor units → a positive major-unit string for the edit field, using the
-   * currency's fraction digits (the same Intl-derived scale the money pipe uses for display).
-   */
-  private majorAmount(amountMinor: number, currency: string): string {
-    const digits =
+  /** Minor-unit digits for a currency (same Intl-derived scale the money pipe uses for display). */
+  private fractionDigits(currency: string): number {
+    return (
       new Intl.NumberFormat(undefined, { style: 'currency', currency }).resolvedOptions()
-        .maximumFractionDigits ?? 2;
+        .maximumFractionDigits ?? 2
+    );
+  }
+
+  /** Exact integer parse of a major-unit string → minor units for display math; null if invalid. */
+  private toMinor(s: string, currency: string): number | null {
+    if (!DECIMAL.test(s.trim())) return null;
+    const digits = this.fractionDigits(currency);
+    const [intPart, fracRaw = ''] = s.trim().split('.');
+    if (fracRaw.length > digits) return null;
+    const frac = (fracRaw + '0'.repeat(digits)).slice(0, digits);
+    return Number(intPart) * Math.pow(10, digits) + Number(frac || '0');
+  }
+
+  /** Stored signed minor units → a positive major-unit string for the edit fields. */
+  private majorAmount(amountMinor: number, currency: string): string {
+    const digits = this.fractionDigits(currency);
     return (Math.abs(amountMinor) / Math.pow(10, digits)).toFixed(digits);
   }
 }
