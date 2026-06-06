@@ -28,9 +28,11 @@
 }
 
 // Amount + currency side by side (FR-1.4). Amount flexes; currency is a compact fixed-width field.
+// Top-align: the Amount field carries a hint line that Currency doesn't, so aligning bottoms would
+// push the Currency box down — align the labels/inputs at the top instead.
 .amount-row {
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   gap: var(--space-3);
 }
 .amount-row app-form-field {
