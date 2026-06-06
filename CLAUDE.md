@@ -63,8 +63,9 @@ only (WebView2); **iOS is deferred** (macOS/Xcode-only build). See `docs/archite
 - Full local gate before PR: `npm run lint && npm test && cargo test ... && cargo clippy ...`
 
 ## Repo map
-- `src/` — Angular app (`core/`, `features/`, `shared/`). See `.claude/rules/frontend.md` and,
-  for UI/styling, `.claude/rules/design.md`.
+- `src/` — Angular app (`core/`, `features/`, `shared/` — reusable UI components live in
+  `shared/ui/`; build new ones with the `ui-component` skill, never inline). See
+  `.claude/rules/frontend.md` and, for UI/styling, `.claude/rules/design.md`.
 - `src/styles/_tokens.scss` + `design-tokens.json` — design tokens (mirror
   `docs/design/design-system.md`). Use tokens only; never hardcode hex/px/radii in components.
 - `src-tauri/src/` — Rust core (`db/`, `import/`, `rules/`, `export/`, `crypto/`). See

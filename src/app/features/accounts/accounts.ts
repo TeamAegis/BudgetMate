@@ -10,12 +10,32 @@ import {
 } from '../../core/bridge';
 import type { Account, AccountKind } from '../../core/models';
 import { MoneyPipe } from '../../shared/pipes/money.pipe';
+import { Button } from '../../shared/ui/button/button';
+import { IconButton } from '../../shared/ui/icon-button/icon-button';
+import { Card } from '../../shared/ui/card/card';
+import { Banner } from '../../shared/ui/banner/banner';
+import { EmptyState } from '../../shared/ui/empty-state/empty-state';
+import { ListRow } from '../../shared/ui/list-row/list-row';
+import { FormField } from '../../shared/ui/form-field/form-field';
 
 const KINDS: AccountKind[] = ['cash', 'bank', 'card', 'wallet', 'other'];
 
 @Component({
   selector: 'app-accounts',
-  imports: [ReactiveFormsModule, MoneyPipe, LucideArchive, LucidePencil, LucidePlus],
+  imports: [
+    ReactiveFormsModule,
+    MoneyPipe,
+    LucideArchive,
+    LucidePencil,
+    LucidePlus,
+    Button,
+    IconButton,
+    Card,
+    Banner,
+    EmptyState,
+    ListRow,
+    FormField,
+  ],
   templateUrl: './accounts.html',
   styleUrl: './accounts.scss',
 })

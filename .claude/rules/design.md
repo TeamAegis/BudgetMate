@@ -37,8 +37,13 @@ spec: `docs/design/` (README, design-system, ux-blueprint, screens).
   name→icon mapping.
 
 ## Components
+- **Reusable UI elements are components, never inlined.** Any button, card, form field, list
+  row, banner, empty state, icon button, header/nav, etc. lives as a dumb/presentational
+  standalone component in **`src/app/shared/ui/`** — reuse or extend an existing one before
+  adding markup/SCSS to a feature template. Follow the **`ui-component`** skill
+  (`.claude/skills/ui-component/`) for the convention.
 - Build the components named in `design-system.md` §7; keep them dumb/presentational in
-  `shared/` and feed data from feature components (which call `core/bridge`).
+  `shared/ui/` and feed data from feature components (which call `core/bridge`).
 - **Charts:** bundled **Chart.js (canvas)** only — never a remote chart script, never static
   image charts. (TrendChart, pie, line.)
 - BottomNav canonical tabs: **Home · Expenses · Goals · Analytics** (one label set — do not

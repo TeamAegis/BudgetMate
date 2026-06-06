@@ -9,12 +9,31 @@ import {
   isTauri,
 } from '../../core/bridge';
 import type { Category, CategoryKind } from '../../core/models';
+import { Button } from '../../shared/ui/button/button';
+import { IconButton } from '../../shared/ui/icon-button/icon-button';
+import { Card } from '../../shared/ui/card/card';
+import { Banner } from '../../shared/ui/banner/banner';
+import { EmptyState } from '../../shared/ui/empty-state/empty-state';
+import { ListRow } from '../../shared/ui/list-row/list-row';
+import { FormField } from '../../shared/ui/form-field/form-field';
 
 const KINDS: CategoryKind[] = ['expense', 'income', 'transfer'];
 
 @Component({
   selector: 'app-categories',
-  imports: [ReactiveFormsModule, LucideArchive, LucidePencil, LucidePlus],
+  imports: [
+    ReactiveFormsModule,
+    LucideArchive,
+    LucidePencil,
+    LucidePlus,
+    Button,
+    IconButton,
+    Card,
+    Banner,
+    EmptyState,
+    ListRow,
+    FormField,
+  ],
   templateUrl: './categories.html',
   styleUrl: './categories.scss',
 })
