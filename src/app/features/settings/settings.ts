@@ -1,12 +1,26 @@
 import { Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { LucideWallet, LucideTags, LucideChevronRight, LucideLock } from '@lucide/angular';
+import {
+  LucideWallet,
+  LucideTags,
+  LucideChevronRight,
+  LucideLock,
+  LucideRepeat,
+} from '@lucide/angular';
 import { LockService } from '../../core/lock/lock.service';
 import { SelectField, type SelectOption } from '../../shared/ui/select-field/select-field';
 
 @Component({
   selector: 'app-settings',
-  imports: [RouterLink, LucideWallet, LucideTags, LucideChevronRight, LucideLock, SelectField],
+  imports: [
+    RouterLink,
+    LucideWallet,
+    LucideTags,
+    LucideChevronRight,
+    LucideLock,
+    LucideRepeat,
+    SelectField,
+  ],
   template: `
     <section class="feature-page">
       <ul class="settings-list">
@@ -23,6 +37,14 @@ import { SelectField, type SelectOption } from '../../shared/ui/select-field/sel
             <svg lucideTags [size]="20"></svg>
             <span class="label">Categories</span>
             <span class="hint">Organise spending &amp; income</span>
+            <svg lucideChevronRight [size]="18" class="chevron"></svg>
+          </a>
+        </li>
+        <li>
+          <a routerLink="/settings/recurring">
+            <svg lucideRepeat [size]="20"></svg>
+            <span class="label">Recurring</span>
+            <span class="hint">Scheduled, auto-materialised transactions</span>
             <svg lucideChevronRight [size]="18" class="chevron"></svg>
           </a>
         </li>

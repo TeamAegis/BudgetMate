@@ -161,17 +161,21 @@ fn clean(opt: Option<&str>) -> Option<String> {
     opt.map(str::trim).filter(|s| !s.is_empty()).map(str::to_string)
 }
 
-/// Insert a manual transaction + its category splits, atomically. The split magnitudes must sum to
-/// the total (enforced in `prepare`).
-pub fn create(conn: &Connection, input: TxInput, now_iso: &str) -> Result<Transaction, DbError> {
-    let p = prepare(conn, &input)?;
-
-    let tx = conn.unchecked_transaction()?;
-    tx.execute(
+/// Insert a manual transaction + its splits on `conn` WITHOUT managing a transaction — the caller
+/// owns the surrounding `BEGIN`/`COMMIT`. `source_ref` carries provenance (e.g. a recurring-rule
+/// occurrence key); it is `NULL` for a plain manual entry. Returns the new row id.
+pub(crate) fn insert_in_tx(
+    conn: &Connection,
+    input: &TxInput,
+    source_ref: Option<&str>,
+    now_iso: &str,
+) -> Result<i64, DbError> {
+    let p = prepare(conn, input)?;
+    conn.execute(
         "INSERT INTO transactions
            (account_id, posted_date, amount_minor, currency, fx_rate, base_amount_minor,
             payee, note, source, source_ref, pending_review, created_at)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 'manual', NULL, 0, ?9)",
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 'manual', ?9, 0, ?10)",
         params![
             input.account_id,
             input.posted_date.trim(),
@@ -181,11 +185,30 @@ pub fn create(conn: &Connection, input: TxInput, now_iso: &str) -> Result<Transa
             p.base,
             clean(input.payee),
             clean(input.note),
+            source_ref,
             now_iso,
         ],
     )?;
-    let id = tx.last_insert_rowid();
-    insert_splits(&tx, id, &p.splits)?;
+    let id = conn.last_insert_rowid();
+    insert_splits(conn, id, &p.splits)?;
+    Ok(id)
+}
+
+/// True if a transaction with this `source_ref` already exists (recurring idempotency key).
+pub(crate) fn exists_with_source_ref(conn: &Connection, source_ref: &str) -> Result<bool, DbError> {
+    let n: i64 = conn.query_row(
+        "SELECT count(*) FROM transactions WHERE source_ref = ?1",
+        params![source_ref],
+        |r| r.get(0),
+    )?;
+    Ok(n > 0)
+}
+
+/// Insert a manual transaction + its category splits, atomically. The split magnitudes must sum to
+/// the total (enforced in `prepare`).
+pub fn create(conn: &Connection, input: TxInput, now_iso: &str) -> Result<Transaction, DbError> {
+    let tx = conn.unchecked_transaction()?;
+    let id = insert_in_tx(&tx, &input, None, now_iso)?;
     tx.commit()?;
     get(conn, id)
 }

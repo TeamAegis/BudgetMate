@@ -55,6 +55,11 @@ fn open_and_unlock(
     let now = chrono::Utc::now().to_rfc3339();
     let conn = db::open_and_migrate(&vault::db_path(dir), &key_hex, &now)
         .map_err(|_| "Incorrect passphrase".to_string())?;
+    // Materialise any due recurring occurrences lazily on app open (FR-1.3) — no background
+    // scheduler. Idempotent, so a failure here must never block unlock; log-and-continue.
+    if let Err(e) = db::recurring::materialise_due(&conn, chrono::Utc::now().date_naive()) {
+        log::warn!("recurring materialisation skipped: {e}");
+    }
     db.unlock(conn)
 }
 

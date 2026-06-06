@@ -65,6 +65,12 @@ export const routes: Routes = [
     data: { title: 'Categories', back: true },
     loadComponent: () => import('./features/categories/categories').then((m) => m.Categories),
   },
+  {
+    path: 'settings/recurring',
+    canActivate: [unlockGuard],
+    data: { title: 'Recurring', back: true },
+    loadComponent: () => import('./features/recurring/recurring').then((m) => m.Recurring),
+  },
   // Nested actions (not in the bottom nav).
   {
     path: 'budgets',

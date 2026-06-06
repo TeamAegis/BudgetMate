@@ -19,6 +19,9 @@ import type {
   Transaction,
   NewTransaction,
   UpdateTransaction,
+  RecurringRule,
+  NewRecurringRule,
+  UpdateRecurringRule,
 } from '../models';
 
 /** Whether we are running inside the Tauri runtime (vs. plain browser `ng serve`). */
@@ -117,4 +120,20 @@ export function updateTransaction(tx: UpdateTransaction): Promise<Transaction> {
 }
 export function deleteTransaction(id: number): Promise<void> {
   return invoke<void>('delete_transaction', { id });
+}
+
+// ── Recurring rules (FR-1.3) ────────────────────────────────────────────────────
+// Materialisation runs server-side on unlock; these manage the rules themselves.
+
+export function listRecurringRules(): Promise<RecurringRule[]> {
+  return invoke<RecurringRule[]>('list_recurring_rules');
+}
+export function createRecurringRule(rule: NewRecurringRule): Promise<RecurringRule> {
+  return invoke<RecurringRule>('create_recurring_rule', { rule });
+}
+export function updateRecurringRule(rule: UpdateRecurringRule): Promise<RecurringRule> {
+  return invoke<RecurringRule>('update_recurring_rule', { rule });
+}
+export function setRecurringActive(id: number, active: boolean): Promise<RecurringRule> {
+  return invoke<RecurringRule>('set_recurring_active', { id, active });
 }
