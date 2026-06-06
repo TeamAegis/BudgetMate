@@ -1,18 +1,11 @@
 <div class="app-shell">
   @if (!chromeless()) {
-    <header class="app-header">
-      @if (hasBack()) {
-        <button type="button" class="back" (click)="goBack()" aria-label="Back" title="Back">
-          <svg lucideArrowLeft [size]="24"></svg>
-        </button>
-      }
-      <span class="brand" [class.titled]="!isBrand()">{{ pageTitle() }}</span>
-      @if (!hasBack()) {
-        <a class="settings-link" routerLink="/settings" aria-label="Settings" title="Settings">
-          <svg lucideSettings [size]="24"></svg>
-        </a>
-      }
-    </header>
+    <app-header
+      [title]="pageTitle()"
+      [isBrand]="isBrand()"
+      [hasBack]="hasBack()"
+      (back)="goBack()"
+    />
 
     @if (appInfo() || health() || coreError()) {
       <div class="core-status">
@@ -37,24 +30,6 @@
   </main>
 
   @if (!chromeless()) {
-    <!-- Canonical bottom nav (docs/design/design-system.md §7): icon + label, active = coral. -->
-    <nav class="app-nav">
-      <a routerLink="/home" routerLinkActive="active">
-        <svg lucideHouse [size]="22"></svg>
-        <span>Home</span>
-      </a>
-      <a routerLink="/expenses" routerLinkActive="active">
-        <svg lucideWallet [size]="22"></svg>
-        <span>Expenses</span>
-      </a>
-      <a routerLink="/goals" routerLinkActive="active">
-        <svg lucideTarget [size]="22"></svg>
-        <span>Goals</span>
-      </a>
-      <a routerLink="/analytics" routerLinkActive="active">
-        <svg lucidePieChart [size]="22"></svg>
-        <span>Analytics</span>
-      </a>
-    </nav>
+    <app-bottom-nav />
   }
 </div>

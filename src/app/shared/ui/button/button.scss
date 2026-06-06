@@ -1,0 +1,39 @@
+// The host stays inline-flex so a button sits inline with its siblings; consumers can override
+// (e.g. full-width) by targeting the `app-button` element.
+:host {
+  display: inline-flex;
+}
+:host(.block) {
+  display: block;
+  width: 100%;
+}
+:host(.block) .btn {
+  width: 100%;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  min-height: var(--tap-target-min);
+  border-radius: var(--radius-pill);
+  border: 1px solid transparent;
+  font: inherit;
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+}
+.btn.primary {
+  background: var(--c-primary-700);
+  color: var(--c-bg);
+}
+.btn.ghost {
+  background: transparent;
+  border-color: var(--c-border);
+  color: var(--c-text);
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

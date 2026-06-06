@@ -1,0 +1,29 @@
+// The row is its own card surface plus the horizontal row layout.
+:host {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+
+.row-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+.name {
+  font-weight: var(--fw-medium);
+}
+.meta {
+  font-size: var(--t-caption);
+  color: var(--c-text-muted);
+  text-transform: capitalize;
+}
+.row-actions {
+  display: flex;
+  gap: var(--space-1);
+}

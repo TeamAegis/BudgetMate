@@ -160,6 +160,11 @@ Subtle and fast (supports the <800ms-feel goal; nothing that delays first paint)
 Each component lists its origin (Figma node or "new" if required by FRs but absent in Figma)
 and the tokens it consumes. Components are dumb/presentational (`shared/`) unless noted.
 
+> **Built so far** (`src/app/shared/ui/`): AppHeader, BottomNav, EmptyState, Button, Card,
+> plus FormField, IconButton, Banner, ListRow, SelectField. Reuse/extend these rather than
+> re-inlining markup — see the `ui-component` skill. The remaining entries below are still to
+> be built as they're needed.
+
 ### Present in Figma
 - **AppHeader** — leading back affordance (pushed screens) + title/wordmark + trailing icon.
   Variants: brand (home, `--t-wordmark`) / titled (sub-screens, `--t-screen-title`). It is the

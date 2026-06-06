@@ -1,0 +1,14 @@
+:host {
+  display: block;
+}
+
+.banner {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  font-size: var(--t-body);
+}
+.banner.error {
+  background: var(--c-primary-05);
+  color: var(--c-danger);
+}
