@@ -1,6 +1,8 @@
 //! Money types and invariants. Money is ALWAYS integer minor units (e.g. cents) + a currency
 //! code. `rust_decimal` is used only for fx-rate arithmetic. NEVER f32/f64 for money.
 
+use std::str::FromStr;
+
 use rust_decimal::prelude::ToPrimitive;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -37,6 +39,39 @@ pub fn splits_sum_to_parent(parent_minor: i64, split_minors: &[i64]) -> bool {
     split_minors.iter().try_fold(0i64, |acc, &m| acc.checked_add(m)) == Some(parent_minor)
 }
 
+#[derive(Debug, thiserror::Error, PartialEq, Eq)]
+pub enum MoneyParseError {
+    #[error("amount is not a valid number")]
+    Malformed,
+    #[error("amount has more decimal places than the currency allows")]
+    TooPrecise,
+    #[error("amount is out of range")]
+    Overflow,
+}
+
+/// Minor-unit digits for a currency (the ISO-4217 "exponent"). Defaults to 2 and covers the common
+/// 0- and 3-digit exceptions; extend as needed. Kept deliberately small (no full code list — binary
+/// size). Money parsing/scaling lives in Rust, never TS.
+pub fn minor_unit_digits(currency: &str) -> u32 {
+    match currency {
+        "JPY" | "KRW" | "VND" | "CLP" | "ISK" | "HUF" | "UGX" | "XAF" | "XOF" => 0,
+        "BHD" | "KWD" | "OMR" | "TND" | "IQD" | "JOD" | "LYD" => 3,
+        _ => 2,
+    }
+}
+
+/// Parse a user-entered major-unit amount (e.g. "15.00") into integer minor units for `currency`.
+/// Rejects malformed input or finer precision than the currency allows. Sign is preserved; callers
+/// validate the magnitude separately.
+pub fn parse_minor(amount: &str, currency: &str) -> Result<i64, MoneyParseError> {
+    let value = Decimal::from_str(amount.trim()).map_err(|_| MoneyParseError::Malformed)?;
+    let scaled = value * Decimal::from(10_i64.pow(minor_unit_digits(currency)));
+    if scaled.fract() != Decimal::ZERO {
+        return Err(MoneyParseError::TooPrecise);
+    }
+    scaled.round_dp(0).to_i64().ok_or(MoneyParseError::Overflow)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -61,5 +96,23 @@ mod tests {
         assert!(splits_sum_to_parent(1_000, &[1_000]));
         assert!(!splits_sum_to_parent(1_000, &[600, 401]));
         assert!(!splits_sum_to_parent(1_000, &[600]));
+    }
+
+    #[test]
+    fn parses_major_to_minor_by_currency_scale() {
+        assert_eq!(parse_minor("15.00", "MUR"), Ok(1_500));
+        assert_eq!(parse_minor("15", "MUR"), Ok(1_500));
+        assert_eq!(parse_minor("0.99", "USD"), Ok(99));
+        // Zero-decimal currency: no minor units.
+        assert_eq!(parse_minor("1500", "JPY"), Ok(1_500));
+        // Three-decimal currency.
+        assert_eq!(parse_minor("1.234", "BHD"), Ok(1_234));
+    }
+
+    #[test]
+    fn rejects_bad_or_too_precise_amounts() {
+        assert_eq!(parse_minor("abc", "MUR"), Err(MoneyParseError::Malformed));
+        assert_eq!(parse_minor("1.005", "MUR"), Err(MoneyParseError::TooPrecise));
+        assert_eq!(parse_minor("1.5", "JPY"), Err(MoneyParseError::TooPrecise));
     }
 }
