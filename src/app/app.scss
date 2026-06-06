@@ -30,4 +30,7 @@
   flex: 1 1 auto;
   overflow-y: auto;
   padding: var(--space-6);
+  // Flex column so a routed screen can opt to fill the height (e.g. a centred empty state).
+  display: flex;
+  flex-direction: column;
 }
