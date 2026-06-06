@@ -28,7 +28,7 @@
           <app-form-field label="Amount" hint="Expense or income is set by the category.">
             <input type="text" inputmode="decimal" formControlName="amount" placeholder="0.00" class="numeric" />
           </app-form-field>
-          <app-form-field label="Currency">
+          <app-form-field label="Currency" class="currency-field">
             <input type="text" formControlName="currency" maxlength="3" class="numeric currency" />
           </app-form-field>
         </div>
@@ -54,7 +54,10 @@
 
           @for (line of splits.controls; track $index) {
             <div class="split-row" [formGroupName]="$index">
-              <app-form-field [label]="splits.length > 1 ? 'Category ' + ($index + 1) : 'Category'">
+              <app-form-field
+                class="split-category"
+                [label]="splits.length > 1 ? 'Category ' + ($index + 1) : 'Category'"
+              >
                 <select formControlName="categoryId">
                   <option [ngValue]="null" disabled>Select a category</option>
                   @for (c of categories(); track c.id) {
@@ -64,7 +67,7 @@
               </app-form-field>
 
               @if (splits.length > 1) {
-                <app-form-field label="Amount">
+                <app-form-field class="split-amount" label="Amount">
                   <input type="text" inputmode="decimal" formControlName="amount" placeholder="0.00" class="numeric" />
                 </app-form-field>
                 <app-icon-button ariaLabel="Remove split" (click)="removeSplit($index)" [disabled]="busy()">

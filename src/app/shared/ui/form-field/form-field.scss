@@ -12,6 +12,10 @@
 }
 .form-field input,
 .form-field select {
+  // Fill the field; border-box so padding/border never overflow the allotted width (lets the
+  // control shrink inside flex rows instead of forcing horizontal scroll).
+  box-sizing: border-box;
+  width: 100%;
   padding: var(--space-3);
   border: 1px solid var(--c-border);
   border-radius: var(--radius-sm);
