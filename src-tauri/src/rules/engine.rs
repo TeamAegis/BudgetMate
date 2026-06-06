@@ -4,11 +4,34 @@
 //! Skeleton: the type surface is defined and unit-tested; persistence (`import_rules` table) and
 //! full field/operator coverage are wired in a later change via the new-feature skill.
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum MatchOp {
     Contains,
     Equals,
 }
+
+impl MatchOp {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            MatchOp::Contains => "contains",
+            MatchOp::Equals => "equals",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        match s {
+            "contains" => Some(MatchOp::Contains),
+            "equals" => Some(MatchOp::Equals),
+            _ => None,
+        }
+    }
+}
+
+/// The transaction fields a rule may read (match) or write (set). Kept in sync with `RuleFields`.
+pub const RULE_FIELDS: &[&str] = &["merchant", "category", "account"];
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Rule {
@@ -58,16 +81,35 @@ fn matches(rule: &Rule, fields: &RuleFields) -> bool {
     }
 }
 
-/// Apply ordered rules top-down. Each matching rule sets a field; later rules can override.
-pub fn apply_rules(rules: &[Rule], mut fields: RuleFields) -> RuleFields {
+/// A rule that fired, recorded so the result is inspectable (which rule set which field, NFR-Rel3).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Applied {
+    pub ordinal: i64,
+    pub set_field: String,
+    pub set_value: String,
+}
+
+/// Apply ordered rules top-down, recording each one that fires. Later rules can override earlier.
+pub fn apply_rules_traced(rules: &[Rule], mut fields: RuleFields) -> (RuleFields, Vec<Applied>) {
     let mut ordered: Vec<&Rule> = rules.iter().filter(|r| r.active).collect();
     ordered.sort_by_key(|r| r.ordinal);
+    let mut applied = Vec::new();
     for rule in ordered {
         if matches(rule, &fields) {
             fields.set(&rule.set_field, &rule.set_value);
+            applied.push(Applied {
+                ordinal: rule.ordinal,
+                set_field: rule.set_field.clone(),
+                set_value: rule.set_value.clone(),
+            });
         }
     }
-    fields
+    (fields, applied)
+}
+
+/// Apply ordered rules top-down. Each matching rule sets a field; later rules can override.
+pub fn apply_rules(rules: &[Rule], fields: RuleFields) -> RuleFields {
+    apply_rules_traced(rules, fields).0
 }
 
 #[cfg(test)]
@@ -108,5 +150,30 @@ mod tests {
         );
         // Both match; the higher ordinal wins.
         assert_eq!(out.category.as_deref(), Some("Cafe"));
+    }
+
+    #[test]
+    fn trace_records_which_rules_fired() {
+        let rules = vec![
+            rule(1, "merchant", "coffee", "category", "Cafe"),
+            rule(2, "merchant", "tea", "category", "Tea"), // does not match
+        ];
+        let (out, applied) = apply_rules_traced(
+            &rules,
+            RuleFields { merchant: Some("Coffee Shop".into()), ..Default::default() },
+        );
+        assert_eq!(out.category.as_deref(), Some("Cafe"));
+        assert_eq!(applied.len(), 1);
+        assert_eq!(applied[0].ordinal, 1);
+        assert_eq!(applied[0].set_field, "category");
+        assert_eq!(applied[0].set_value, "Cafe");
+    }
+
+    #[test]
+    fn match_op_roundtrips() {
+        for op in [MatchOp::Contains, MatchOp::Equals] {
+            assert_eq!(MatchOp::parse(op.as_str()), Some(op));
+        }
+        assert_eq!(MatchOp::parse("regex"), None);
     }
 }

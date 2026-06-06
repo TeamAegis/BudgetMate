@@ -204,3 +204,60 @@ export interface NewRecurringRule {
 export interface UpdateRecurringRule extends NewRecurringRule {
   id: number;
 }
+
+// ── Rule engine (mirror db::rules / rules::engine) ─────────────────────────────────
+
+/** How a rule matches. Mirrors Rust `MatchOp`. */
+export type MatchOp = 'contains' | 'equals';
+
+/** Transaction fields a rule can read/write. Mirrors Rust `RULE_FIELDS`. */
+export type RuleField = 'merchant' | 'category' | 'account';
+
+/** A persisted if-then rule (mirrors Rust `ImportRule`). Evaluated top-down by `ordinal`. */
+export interface ImportRule {
+  id: number;
+  ordinal: number;
+  matchField: RuleField;
+  matchOp: MatchOp;
+  matchValue: string;
+  setField: RuleField;
+  setValue: string;
+  active: boolean;
+}
+
+/** Input for create_rule (mirrors Rust `NewRule`). */
+export interface NewRule {
+  matchField: RuleField;
+  matchOp: MatchOp;
+  matchValue: string;
+  setField: RuleField;
+  setValue: string;
+  active: boolean;
+}
+
+/** Input for update_rule (mirrors Rust `UpdateRule`). */
+export interface UpdateRule extends NewRule {
+  id: number;
+}
+
+/** One rule that fired during a preview (mirrors Rust `AppliedRule`). */
+export interface AppliedRule {
+  ordinal: number;
+  setField: RuleField;
+  setValue: string;
+}
+
+/** Result of previewing the active rules over sample fields (mirrors Rust `RulePreview`). */
+export interface RulePreview {
+  merchant: string | null;
+  category: string | null;
+  account: string | null;
+  applied: AppliedRule[];
+}
+
+/** Sample fields to preview rules against (mirrors Rust `PreviewInput`). */
+export interface RulePreviewInput {
+  merchant?: string | null;
+  category?: string | null;
+  account?: string | null;
+}

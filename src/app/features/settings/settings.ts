@@ -7,6 +7,7 @@ import {
   LucideLock,
   LucideRepeat,
   LucideCoins,
+  LucideFunnel,
 } from '@lucide/angular';
 import { LockService } from '../../core/lock/lock.service';
 import { getSettings, setBaseCurrency, isTauri } from '../../core/bridge';
@@ -22,6 +23,7 @@ import { SelectField, type SelectOption } from '../../shared/ui/select-field/sel
     LucideLock,
     LucideRepeat,
     LucideCoins,
+    LucideFunnel,
     SelectField,
   ],
   template: `
@@ -48,6 +50,14 @@ import { SelectField, type SelectOption } from '../../shared/ui/select-field/sel
             <svg lucideRepeat [size]="20"></svg>
             <span class="label">Recurring</span>
             <span class="hint">Scheduled, auto-materialised transactions</span>
+            <svg lucideChevronRight [size]="18" class="chevron"></svg>
+          </a>
+        </li>
+        <li>
+          <a routerLink="/settings/rules">
+            <svg lucideFunnel [size]="20"></svg>
+            <span class="label">Rules</span>
+            <span class="hint">Auto-categorise by if-then rules</span>
             <svg lucideChevronRight [size]="18" class="chevron"></svg>
           </a>
         </li>

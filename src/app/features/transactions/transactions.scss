@@ -115,6 +115,13 @@
   color: var(--c-positive);
 }
 
+// Inspectable rule suggestion (FR-2.3) shown after the payee auto-fills a category.
+.suggested {
+  margin: 0;
+  font-size: var(--t-caption);
+  color: var(--c-primary-700);
+}
+
 .date-group {
   display: flex;
   flex-direction: column;
