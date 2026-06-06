@@ -5,18 +5,26 @@
 use serde::Deserialize;
 use tauri::State;
 
-use crate::db::transactions::{self, TxInput};
+use crate::db::transactions::{self, SplitInput, TxInput};
 use crate::domain::transaction::Transaction;
 use crate::state::DbState;
+
+/// One category line (mirrors TS `NewSplit`). `amount` is the user's non-negative major-unit input.
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NewSplit {
+    pub category_id: i64,
+    pub amount: String,
+}
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NewTransaction {
     pub account_id: i64,
     pub posted_date: String,
-    /// Non-negative major-unit amount as entered (e.g. "15.00"); Rust parses + signs it.
+    /// Total (non-negative major-unit) amount; the splits must add up to it. Rust parses + signs.
     pub amount: String,
-    pub category_id: i64,
+    pub splits: Vec<NewSplit>,
     pub payee: Option<String>,
     pub note: Option<String>,
 }
@@ -28,9 +36,16 @@ pub struct UpdateTransaction {
     pub account_id: i64,
     pub posted_date: String,
     pub amount: String,
-    pub category_id: i64,
+    pub splits: Vec<NewSplit>,
     pub payee: Option<String>,
     pub note: Option<String>,
+}
+
+fn split_inputs(splits: &[NewSplit]) -> Vec<SplitInput<'_>> {
+    splits
+        .iter()
+        .map(|s| SplitInput { category_id: s.category_id, amount: &s.amount })
+        .collect()
 }
 
 #[tauri::command]
@@ -44,6 +59,7 @@ pub fn create_transaction(
     tx: NewTransaction,
 ) -> Result<Transaction, String> {
     let now = chrono::Utc::now().to_rfc3339();
+    let splits = split_inputs(&tx.splits);
     state.with(|c| {
         transactions::create(
             c,
@@ -51,7 +67,7 @@ pub fn create_transaction(
                 account_id: tx.account_id,
                 posted_date: &tx.posted_date,
                 amount: &tx.amount,
-                category_id: tx.category_id,
+                splits: &splits,
                 payee: tx.payee.as_deref(),
                 note: tx.note.as_deref(),
             },
@@ -65,6 +81,7 @@ pub fn update_transaction(
     state: State<'_, DbState>,
     tx: UpdateTransaction,
 ) -> Result<Transaction, String> {
+    let splits = split_inputs(&tx.splits);
     state.with(|c| {
         transactions::update(
             c,
@@ -73,7 +90,7 @@ pub fn update_transaction(
                 account_id: tx.account_id,
                 posted_date: &tx.posted_date,
                 amount: &tx.amount,
-                category_id: tx.category_id,
+                splits: &splits,
                 payee: tx.payee.as_deref(),
                 note: tx.note.as_deref(),
             },

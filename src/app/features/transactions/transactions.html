@@ -23,17 +23,57 @@
             }
           </select>
         </app-form-field>
-        <app-form-field label="Category">
-          <select formControlName="categoryId">
-            <option [ngValue]="null" disabled>Select a category</option>
-            @for (c of categories(); track c.id) {
-              <option [ngValue]="c.id">{{ c.name }} · {{ c.kind }}</option>
-            }
-          </select>
-        </app-form-field>
+
         <app-form-field label="Amount" hint="Expense or income is set by the category.">
           <input type="text" inputmode="decimal" formControlName="amount" placeholder="0.00" class="numeric" />
         </app-form-field>
+
+        <!-- Split editor (FR-1.2): one line = a simple entry; add lines to split the total. -->
+        <div class="splits" formArrayName="splits">
+          <div class="splits-head">
+            <span class="splits-title">{{ splits.length > 1 ? 'Splits' : 'Category' }}</span>
+            <button type="button" class="add-split" (click)="addSplit()" [disabled]="busy()">
+              <svg lucidePlus [size]="16"></svg>
+              <span>Add split</span>
+            </button>
+          </div>
+
+          @for (line of splits.controls; track $index) {
+            <div class="split-row" [formGroupName]="$index">
+              <app-form-field [label]="splits.length > 1 ? 'Category ' + ($index + 1) : 'Category'">
+                <select formControlName="categoryId">
+                  <option [ngValue]="null" disabled>Select a category</option>
+                  @for (c of categories(); track c.id) {
+                    <option [ngValue]="c.id">{{ c.name }} · {{ c.kind }}</option>
+                  }
+                </select>
+              </app-form-field>
+
+              @if (splits.length > 1) {
+                <app-form-field label="Amount">
+                  <input type="text" inputmode="decimal" formControlName="amount" placeholder="0.00" class="numeric" />
+                </app-form-field>
+                <app-icon-button ariaLabel="Remove split" (click)="removeSplit($index)" [disabled]="busy()">
+                  <svg lucideX [size]="18"></svg>
+                </app-icon-button>
+              }
+            </div>
+          }
+
+          @if (splits.length > 1) {
+            <p class="remaining" [class.balanced]="remainingMinor() === 0">
+              @if (remainingMinor() === 0) {
+                <span>Fully allocated.</span>
+              } @else {
+                <span
+                  >Remaining to allocate:
+                  {{ { amountMinor: remainingMinor(), currency: currentCurrency() } | money }}</span
+                >
+              }
+            </p>
+          }
+        </div>
+
         <app-form-field label="Date">
           <input type="date" formControlName="postedDate" />
         </app-form-field>
@@ -43,9 +83,10 @@
         <app-form-field label="Note (optional)">
           <input type="text" formControlName="note" />
         </app-form-field>
+
         <div class="actions">
           <app-button variant="ghost" (click)="cancel()" [disabled]="busy()">Cancel</app-button>
-          <app-button type="submit" variant="primary" [disabled]="busy() || form.invalid">
+          <app-button type="submit" variant="primary" [disabled]="busy() || form.invalid || unbalanced()">
             {{ busy() ? 'Saving…' : 'Save' }}
           </app-button>
         </div>
@@ -67,11 +108,7 @@
         <h2 class="date-heading">{{ group.date }}</h2>
         <ul class="rows">
           @for (t of group.items; track t.id) {
-            <li
-              app-list-row
-              [name]="t.payee || categoryName(t)"
-              [meta]="categoryName(t) + ' · ' + accountName(t.accountId)"
-            >
+            <li app-list-row [name]="t.payee || categoryLabel(t)" [meta]="metaLine(t)">
               <span
                 amount
                 class="amount numeric"

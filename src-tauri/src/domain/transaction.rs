@@ -14,6 +14,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::domain::account::is_iso4217;
 use crate::domain::category::CategoryKind;
+use crate::domain::money::splits_sum_to_parent;
 
 /// A ledger transaction with its category splits (mirrors TS `Transaction`).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -57,6 +58,12 @@ pub enum TxValidationError {
     BadCurrency,
     #[error("fx rate must be a positive decimal")]
     BadFxRate,
+    #[error("a transaction needs at least one split")]
+    EmptySplits,
+    #[error("all splits must be the same type (all expense or all income)")]
+    MixedSplitKinds,
+    #[error("splits must add up to the transaction total")]
+    SplitsDontSumToTotal,
 }
 
 /// Signed ledger amount from a non-negative magnitude + the category kind: expenses reduce the
@@ -91,6 +98,30 @@ pub fn validate_transaction(
         return Err(TxValidationError::BadFxRate);
     }
     Ok(rate)
+}
+
+/// Validate the split set of a transaction (FR-1.2): at least one split, every split positive, all
+/// splits the same kind (a transaction is a single income/expense), and the split magnitudes adding
+/// up EXACTLY to the transaction total. `kinds[i]` is the kind of `split_magnitudes[i]`'s category.
+pub fn validate_split_set(
+    total_magnitude: i64,
+    split_magnitudes: &[i64],
+    kinds: &[CategoryKind],
+) -> Result<(), TxValidationError> {
+    debug_assert_eq!(split_magnitudes.len(), kinds.len());
+    if split_magnitudes.is_empty() {
+        return Err(TxValidationError::EmptySplits);
+    }
+    if split_magnitudes.iter().any(|&m| m <= 0) {
+        return Err(TxValidationError::NonPositiveAmount);
+    }
+    if kinds.windows(2).any(|w| w[0] != w[1]) {
+        return Err(TxValidationError::MixedSplitKinds);
+    }
+    if !splits_sum_to_parent(total_magnitude, split_magnitudes) {
+        return Err(TxValidationError::SplitsDontSumToTotal);
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -138,6 +169,31 @@ mod tests {
         assert_eq!(
             validate_transaction("2026-06-06", 1_500, "MUR", "nope"),
             Err(TxValidationError::BadFxRate)
+        );
+    }
+
+    #[test]
+    fn valid_split_set_passes() {
+        use CategoryKind::Expense;
+        assert_eq!(validate_split_set(1_000, &[600, 400], &[Expense, Expense]), Ok(()));
+        assert_eq!(validate_split_set(1_000, &[1_000], &[Expense]), Ok(()));
+    }
+
+    #[test]
+    fn split_set_rejects_bad_shapes() {
+        use CategoryKind::{Expense, Income};
+        assert_eq!(validate_split_set(1_000, &[], &[]), Err(TxValidationError::EmptySplits));
+        assert_eq!(
+            validate_split_set(1_000, &[1_000, 0], &[Expense, Expense]),
+            Err(TxValidationError::NonPositiveAmount)
+        );
+        assert_eq!(
+            validate_split_set(1_000, &[600, 400], &[Expense, Income]),
+            Err(TxValidationError::MixedSplitKinds)
+        );
+        assert_eq!(
+            validate_split_set(1_000, &[600, 401], &[Expense, Expense]),
+            Err(TxValidationError::SplitsDontSumToTotal)
         );
     }
 }

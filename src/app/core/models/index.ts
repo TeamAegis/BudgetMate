@@ -135,16 +135,25 @@ export interface Transaction {
   splits: TxSplit[];
 }
 
+/** One category line of a new/updated transaction (mirrors Rust `NewSplit`). */
+export interface NewSplit {
+  categoryId: number;
+  /** Non-negative major-unit string (e.g. "30.00"); Rust parses + signs it. */
+  amount: string;
+}
+
 /**
- * Input for create_transaction (mirrors Rust `NewTransaction`). `amount` is the user's
- * NON-NEGATIVE major-unit string (e.g. "15.00"); Rust parses it to minor units in the account's
- * currency and applies the sign from the category kind. No money math in TS.
+ * Input for create_transaction (mirrors Rust `NewTransaction`). `amount` is the NON-NEGATIVE
+ * major-unit total (e.g. "15.00"); `splits` allocate it across categories (one split for a simple
+ * entry, ≥2 for a split transaction) and must sum to the total. Rust parses to minor units in the
+ * account's currency, validates the sum, and applies the sign from the (shared) category kind. No
+ * money math in TS.
  */
 export interface NewTransaction {
   accountId: number;
   postedDate: string;
   amount: string;
-  categoryId: number;
+  splits: NewSplit[];
   payee?: string | null;
   note?: string | null;
 }
