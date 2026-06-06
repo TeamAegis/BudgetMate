@@ -56,7 +56,7 @@
             <div class="split-row" [formGroupName]="$index">
               <app-form-field class="split-category" label="Category">
                 <select formControlName="categoryId">
-                  <option [ngValue]="null" disabled>Select a category</option>
+                  <option [ngValue]="null" disabled>Category</option>
                   @for (c of categories(); track c.id) {
                     <option [ngValue]="c.id">{{ c.name }} · {{ c.kind }}</option>
                   }
