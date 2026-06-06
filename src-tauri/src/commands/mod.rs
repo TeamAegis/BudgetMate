@@ -3,6 +3,7 @@
 
 pub mod accounts;
 pub mod categories;
+pub mod recurring;
 pub mod transactions;
 pub mod vault;
 

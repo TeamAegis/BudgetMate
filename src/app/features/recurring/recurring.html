@@ -1,0 +1,92 @@
+<section class="feature-page">
+  @if (!showForm()) {
+    <div class="page-actions">
+      <app-button variant="primary" (click)="startCreate()" [disabled]="busy() || loading()">
+        <svg icon lucidePlus [size]="18"></svg>
+        <span>Add</span>
+      </app-button>
+    </div>
+  }
+
+  @if (error(); as err) {
+    <app-banner>{{ err }}</app-banner>
+  }
+
+  @if (showForm()) {
+    <app-card>
+      <form class="form" [formGroup]="form" (ngSubmit)="save()">
+        <app-form-field label="Schedule">
+          <select formControlName="schedule">
+            @for (s of schedules; track s) {
+              <option [value]="s">{{ s }}</option>
+            }
+          </select>
+        </app-form-field>
+        <app-form-field label="Next run date" hint="The first (or next) occurrence to materialise.">
+          <input type="date" formControlName="nextRunDate" />
+        </app-form-field>
+        <app-form-field label="Account">
+          <select formControlName="accountId">
+            <option [ngValue]="null" disabled>Select an account</option>
+            @for (a of accounts(); track a.id) {
+              <option [ngValue]="a.id">{{ a.name }} · {{ a.currency }}</option>
+            }
+          </select>
+        </app-form-field>
+        <app-form-field label="Category">
+          <select formControlName="categoryId">
+            <option [ngValue]="null" disabled>Select a category</option>
+            @for (c of categories(); track c.id) {
+              <option [ngValue]="c.id">{{ c.name }} · {{ c.kind }}</option>
+            }
+          </select>
+        </app-form-field>
+        <app-form-field label="Amount" hint="Expense or income is set by the category.">
+          <input type="text" inputmode="decimal" formControlName="amount" placeholder="0.00" class="numeric" />
+        </app-form-field>
+        <app-form-field label="Payee (optional)">
+          <input type="text" formControlName="payee" placeholder="e.g. Landlord" />
+        </app-form-field>
+        <app-form-field label="Note (optional)">
+          <input type="text" formControlName="note" />
+        </app-form-field>
+        <div class="actions">
+          <app-button variant="ghost" (click)="cancel()" [disabled]="busy()">Cancel</app-button>
+          <app-button type="submit" variant="primary" [disabled]="busy() || form.invalid">
+            {{ busy() ? 'Saving…' : 'Save' }}
+          </app-button>
+        </div>
+      </form>
+    </app-card>
+  }
+
+  @if (loading()) {
+    <p class="muted">Loading…</p>
+  } @else if (!showForm() && rules().length === 0 && !error()) {
+    <app-empty-state
+      message="No recurring rules yet."
+      cta="Add your first rule"
+      (action)="startCreate()"
+    />
+  } @else {
+    <ul class="rows">
+      @for (r of rules(); track r.id) {
+        <li app-list-row [name]="ruleTitle(r)" [meta]="ruleMeta(r)" [class.paused]="!r.active">
+          <span amount class="amount numeric">{{ r.template.amount }} {{ accountCurrency(r) }}</span>
+          <app-icon-button actions ariaLabel="Edit" (click)="startEdit(r)" [disabled]="busy()">
+            <svg lucidePencil [size]="18"></svg>
+          </app-icon-button>
+          @if (r.active) {
+            <app-icon-button actions ariaLabel="Pause" (click)="toggleActive(r)" [disabled]="busy()">
+              <svg lucidePause [size]="18"></svg>
+            </app-icon-button>
+          } @else {
+            <app-icon-button actions ariaLabel="Resume" (click)="toggleActive(r)" [disabled]="busy()">
+              <svg lucidePlay [size]="18"></svg>
+            </app-icon-button>
+          }
+        </li>
+      }
+    </ul>
+  }
+</section>

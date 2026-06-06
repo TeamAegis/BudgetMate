@@ -162,3 +162,40 @@ export interface NewTransaction {
 export interface UpdateTransaction extends NewTransaction {
   id: number;
 }
+
+// ── Recurring rules (mirror db::recurring) ─────────────────────────────────────────
+
+/** How often a recurring transaction repeats. Mirrors Rust `Schedule`. */
+export type Schedule = 'daily' | 'weekly' | 'monthly';
+
+/** The fixed transaction a rule stamps out (mirrors Rust `RecurringTemplate`). One category. */
+export interface RecurringTemplate {
+  accountId: number;
+  categoryId: number;
+  /** Non-negative major-unit string (e.g. "1500.00"); Rust parses + signs it on materialisation. */
+  amount: string;
+  payee: string | null;
+  note: string | null;
+}
+
+/** A recurring rule (mirrors Rust `RecurringRule`). Occurrences materialise lazily on app open. */
+export interface RecurringRule {
+  id: number;
+  schedule: Schedule;
+  nextRunDate: string;
+  lastMaterialisedDate: string | null;
+  active: boolean;
+  template: RecurringTemplate;
+}
+
+/** Input for create_recurring_rule (mirrors Rust `NewRecurringRule`). */
+export interface NewRecurringRule {
+  schedule: Schedule;
+  nextRunDate: string;
+  template: RecurringTemplate;
+}
+
+/** Input for update_recurring_rule (mirrors Rust `UpdateRecurringRule`). */
+export interface UpdateRecurringRule extends NewRecurringRule {
+  id: number;
+}

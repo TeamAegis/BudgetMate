@@ -7,6 +7,7 @@ use std::path::Path;
 
 pub mod accounts;
 pub mod categories;
+pub mod recurring;
 pub mod transactions;
 
 #[derive(Debug, thiserror::Error)]

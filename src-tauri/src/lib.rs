@@ -69,6 +69,10 @@ pub fn run() {
             commands::transactions::create_transaction,
             commands::transactions::update_transaction,
             commands::transactions::delete_transaction,
+            commands::recurring::list_recurring_rules,
+            commands::recurring::create_recurring_rule,
+            commands::recurring::update_recurring_rule,
+            commands::recurring::set_recurring_active,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
