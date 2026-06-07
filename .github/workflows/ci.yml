@@ -42,6 +42,15 @@ jobs:
         run: npm test
       - name: Guards (no-network / no-telemetry / no-float-money)
         run: npm run guards
+      # Production build is part of the gate: AOT/template/budget errors that unit tests don't hit
+      # would otherwise slip through. It also produces dist/ for the size metric below.
+      - name: Production build
+        run: npm run build
+      # Records the initial web payload (raw + gzip) to the run summary and fails on a budget
+      # breach — the cold-start proxy (NFR-Perf2). The Android APK/AAB size (NFR-Perf1) is the
+      # deferred job below.
+      - name: Bundle size metric
+        run: npm run size
 
   rust:
     name: rust
@@ -81,6 +90,7 @@ jobs:
         run: cargo test --manifest-path src-tauri/Cargo.toml
 
   # ── Deferred: Android bundle-size metric (issue #5) ──
-  # Recording the APK/AAB size against the budget (NFR-Perf1: <=25 MB) needs the Android
-  # SDK/NDK + signing, which aren't wired yet (see issue #4 / run-app). Add a job here that runs
-  # `npm run tauri android build` and reports the artifact size once Android tooling lands.
+  # The web initial-payload metric (cold-start proxy, NFR-Perf2) now runs in the `frontend` job
+  # via `npm run size`. The INSTALL-size budget (NFR-Perf1: <=25 MB) is the Android APK/AAB, which
+  # needs the Android SDK/NDK + signing — not wired yet (see issue #4 / run-app). Add a job here
+  # that runs `npm run tauri android build` and reports the artifact size once Android tooling lands.

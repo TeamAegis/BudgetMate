@@ -11,7 +11,8 @@
     "test": "ng test --watch=false --browsers=ChromeHeadless",
     "lint": "eslint .",
     "tauri": "tauri",
-    "guards": "node scripts/guards.mjs"
+    "guards": "node scripts/guards.mjs",
+    "size": "node scripts/bundle-size.mjs"
   },
   "prettier": {
     "printWidth": 100,

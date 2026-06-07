@@ -345,7 +345,10 @@ uses coroutines (NFR-Rel2).
    minor units).
 4. Rust `cargo test` + `cargo clippy -D warnings`; Angular `ng test` + lint.
 5. Build the actual mobile bundles and record their size as a tracked metric (regression
-   gate).
+   gate). *Status:* the **web** initial-payload size (cold-start proxy) is tracked per build by
+   `scripts/bundle-size.mjs` (`npm run size`, reported to the CI run summary, fails on budget
+   breach). The **Android APK/AAB** install-size metric (the NFR-Perf1 ≤25 MB number) lands with
+   the Android toolchain (issue #4).
 
 ---
 
