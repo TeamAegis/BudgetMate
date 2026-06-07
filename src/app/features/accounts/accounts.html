@@ -30,8 +30,8 @@
         </app-form-field>
         <div class="actions">
           <app-button variant="ghost" (click)="cancel()" [disabled]="busy()">Cancel</app-button>
-          <app-button type="submit" variant="primary" [disabled]="busy() || form.invalid">
-            {{ busy() ? 'Saving…' : 'Save' }}
+          <app-button type="submit" variant="primary" [loading]="busy()" [disabled]="form.invalid">
+            Save
           </app-button>
         </div>
       </form>
@@ -39,7 +39,14 @@
   }
 
   @if (loading()) {
-    <p class="muted">Loading…</p>
+    <ul class="rows" aria-busy="true">
+      @for (i of skeletonRows; track i) {
+        <li class="skeleton-row">
+          <app-skeleton variant="text" width="45%" />
+          <app-skeleton variant="text" width="22%" />
+        </li>
+      }
+    </ul>
   } @else if (!showForm() && accounts().length === 0 && !error()) {
     <app-empty-state
       message="No accounts yet."
@@ -48,8 +55,14 @@
     />
   } @else {
     <ul class="rows">
-      @for (a of accounts(); track a.id) {
-        <li app-list-row [name]="a.name" [meta]="a.accountType + ' · ' + a.currency">
+      @for (a of accounts(); track a.id; let i = $index) {
+        <li
+          app-list-row
+          animate.enter="list-item-enter"
+          [style.animation-delay]="(i < 12 ? i * 40 : 0) + 'ms'"
+          [name]="a.name"
+          [meta]="a.accountType + ' · ' + a.currency"
+        >
           <span amount class="amount numeric">{{
             { amountMinor: a.openingBalanceMinor, currency: a.currency } | money
           }}</span>

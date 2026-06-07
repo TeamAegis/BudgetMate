@@ -1,0 +1,21 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.bone {
+  display: block;
+  height: 1rem; // text-line default; block/circle override via inline style
+  background-color: var(--c-skeleton);
+  border-radius: var(--radius-sm);
+  // Keyframe + reduced-motion guard live in src/styles/_animations.scss.
+  animation: skeleton-pulse var(--motion-slow) var(--easing) infinite;
+  // Loop the pulse over a calmer ~1.4s cycle rather than the 300ms token base.
+  animation-duration: calc(var(--motion-slow) * 4 + 200ms);
+}
+
+.bone.circle {
+  border-radius: var(--radius-pill);
+  flex: 0 0 auto;
+}

@@ -1,0 +1,65 @@
+// Global keyframes + enter/leave classes — see docs/design/design-system.md §6 (subtle, fast,
+// progressive). We use Angular's native CSS animation hooks (animate.enter / animate.leave,
+// Angular 20.2+) instead of the deprecated @angular/animations DSL — lighter bundle, hardware
+// accelerated, and reduced-motion is honoured by the @media guard below (no JS engine needed).
+//
+// Durations reference the motion tokens, which are zeroed under prefers-reduced-motion; the guard
+// at the bottom additionally cancels infinite keyframes (skeleton pulse, spinner) so nothing loops.
+
+// ---- Keyframes ----
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    background-color: var(--c-skeleton);
+  }
+  50% {
+    background-color: var(--c-skeleton-sheen);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+// ---- Enter classes (for [animate.enter]) ----
+// Routed page content cross-fades in; list items rise-and-fade. List rows can stagger by setting
+//   [style.animation-delay]="'calc(' + $index + ' * 40ms)'"  (capped by the consumer for long lists).
+.page-enter {
+  animation: fade-in var(--motion-standard) var(--easing) both;
+}
+
+.list-item-enter {
+  animation: fade-in-up var(--motion-standard) var(--easing) both;
+}
+
+// ---- Reduced motion: no breathing, no spin, no entrance movement ----
+@media (prefers-reduced-motion: reduce) {
+  .anim-skeleton-pulse,
+  .anim-spin,
+  .page-enter,
+  .list-item-enter {
+    animation: none !important;
+  }
+}

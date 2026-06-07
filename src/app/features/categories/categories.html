@@ -35,8 +35,8 @@
         </app-form-field>
         <div class="actions">
           <app-button variant="ghost" (click)="cancel()" [disabled]="busy()">Cancel</app-button>
-          <app-button type="submit" variant="primary" [disabled]="busy() || form.invalid">
-            {{ busy() ? 'Saving…' : 'Save' }}
+          <app-button type="submit" variant="primary" [loading]="busy()" [disabled]="form.invalid">
+            Save
           </app-button>
         </div>
       </form>
@@ -44,7 +44,14 @@
   }
 
   @if (loading()) {
-    <p class="muted">Loading…</p>
+    <ul class="rows" aria-busy="true">
+      @for (i of skeletonRows; track i) {
+        <li class="skeleton-row">
+          <app-skeleton variant="text" width="50%" />
+          <app-skeleton variant="text" width="18%" />
+        </li>
+      }
+    </ul>
   } @else if (!showForm() && categories().length === 0 && !error()) {
     <app-empty-state
       message="No categories yet."
@@ -53,8 +60,14 @@
     />
   } @else {
     <ul class="rows">
-      @for (c of categories(); track c.id) {
-        <li app-list-row [name]="c.name" [meta]="c.kind + ' · parent: ' + parentName(c.parentId)">
+      @for (c of categories(); track c.id; let i = $index) {
+        <li
+          app-list-row
+          animate.enter="list-item-enter"
+          [style.animation-delay]="(i < 12 ? i * 40 : 0) + 'ms'"
+          [name]="c.name"
+          [meta]="c.kind + ' · parent: ' + parentName(c.parentId)"
+        >
           <app-icon-button actions ariaLabel="Edit" (click)="startEdit(c)" [disabled]="busy()">
             <svg lucidePencil [size]="18"></svg>
           </app-icon-button>

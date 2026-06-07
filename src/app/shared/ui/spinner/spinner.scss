@@ -1,0 +1,13 @@
+:host {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+}
+
+.anim-spin {
+  // Keyframe + reduced-motion guard live in src/styles/_animations.scss.
+  animation: spin var(--motion-slow) linear infinite;
+  // --motion-slow (300ms) feels brisk; loop it a touch slower for a calmer spin.
+  animation-duration: calc(var(--motion-slow) * 3);
+}

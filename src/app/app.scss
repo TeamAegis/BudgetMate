@@ -33,4 +33,17 @@
   // Flex column so a routed screen can opt to fill the height (e.g. a centred empty state).
   display: flex;
   flex-direction: column;
+
+  // Subtle page cross-fade: the routed component renders as the sibling after <router-outlet>
+  // and is recreated on each navigation, so this entrance keyframe re-runs per route. Pure CSS —
+  // honours prefers-reduced-motion via the guard in styles/_animations.scss.
+  > router-outlet + * {
+    animation: fade-in var(--motion-standard) var(--easing) both;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-content > router-outlet + * {
+    animation: none;
+  }
 }

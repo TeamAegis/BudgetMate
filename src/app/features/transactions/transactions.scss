@@ -144,6 +144,18 @@
   gap: var(--space-2);
 }
 
+// Loading placeholder shaped like a transaction row.
+.skeleton-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: var(--tap-target-min);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
+}
+
 // Right-aligned amount; the sign already conveys direction — colour is a secondary cue.
 .amount {
   color: var(--c-text);
