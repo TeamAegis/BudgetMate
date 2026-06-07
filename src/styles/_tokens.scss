@@ -20,6 +20,7 @@
   --c-text: #000000;
   --c-text-muted: #5a5a5a;
   --c-border: #ececec;
+  --c-scrim: rgba(0, 0, 0, 0.40);  // modal backdrop dim (paired with --backdrop-blur)
 
   // ---- Color: semantic (required by FR-3.1 / FR-2.4 / states) ----
   --c-positive: #2e9e6b;
@@ -74,6 +75,13 @@
   --layout-bottomnav-h: 80px;
   --layout-fab-size: 60px;
   --tap-target-min: 44px;   // accessibility minimum
+
+  // ---- Z-index scale (keep stacking explicit; only these layers float) ----
+  --z-dropdown: 20;         // select-field listbox menu
+  --z-modal: 1000;          // modal scrim + dialog (above everything in-page)
+
+  // ---- Backdrop ----
+  --backdrop-blur: 6px;     // modal scrim blur (backdrop-filter); paired with --c-scrim
 
   // ---- Motion ----
   --motion-fast: 150ms;

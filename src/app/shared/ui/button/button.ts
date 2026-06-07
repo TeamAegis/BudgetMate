@@ -26,6 +26,7 @@ import { Spinner } from '../spinner/spinner';
       class="btn"
       [class.primary]="variant() === 'primary'"
       [class.ghost]="variant() === 'ghost'"
+      [class.danger]="variant() === 'danger'"
       [disabled]="isDisabled()"
       [attr.aria-busy]="loading() || null"
     >
@@ -40,7 +41,7 @@ import { Spinner } from '../spinner/spinner';
   styleUrl: './button.scss',
 })
 export class Button {
-  readonly variant = input<'primary' | 'ghost'>('primary');
+  readonly variant = input<'primary' | 'ghost' | 'danger'>('primary');
   readonly type = input<'button' | 'submit'>('button');
   readonly disabled = input(false);
   /** In-flight action: shows a spinner and disables the button. */

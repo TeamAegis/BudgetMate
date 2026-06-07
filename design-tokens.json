@@ -19,7 +19,8 @@
     "warning": "#E8A13A",
     "danger": "#D8453B",
     "info": "#3A86C8",
-    "shadowPink": "rgba(255,203,203,0.29)"
+    "shadowPink": "rgba(255,203,203,0.29)",
+    "scrim": "rgba(0,0,0,0.40)"
   },
   "elevation": {
     "card": "5px 5px 0px 0px rgba(255,203,203,0.29)",
@@ -50,6 +51,8 @@
     "cardPadding": 20
   },
   "motion": { "fast": 150, "standard": 200, "slow": 300, "easing": "cubic-bezier(0.2,0,0,1)" },
+  "zIndex": { "dropdown": 20, "modal": 1000 },
+  "backdrop": { "blur": 6 },
   "skeleton": { "base": "#ECECEC", "sheen": "#F5F5F5" },
   "currency": { "default": "MUR", "symbol": "Rs", "format": "Rs #,##0" },
   "icons": {

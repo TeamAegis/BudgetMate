@@ -17,17 +17,7 @@
   font-size: var(--t-caption);
 }
 
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-
-  .actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: var(--space-3);
-  }
-}
+// "If" / "Then" section labels inside the rule-builder modal.
 .form-line {
   margin: 0;
   font-weight: var(--fw-medium);

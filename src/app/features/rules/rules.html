@@ -13,47 +13,67 @@
   }
 
   @if (showForm()) {
-    <app-card>
-      <form class="form" [formGroup]="form" (ngSubmit)="save()">
-        <p class="form-line">If</p>
-        <app-form-field label="Match field">
-          <select formControlName="matchField">
-            @for (f of fields; track f) {
-              <option [value]="f">{{ f }}</option>
-            }
-          </select>
-        </app-form-field>
-        <app-form-field label="Operator">
-          <select formControlName="matchOp">
-            @for (o of ops; track o) {
-              <option [value]="o">{{ o }}</option>
-            }
-          </select>
-        </app-form-field>
-        <app-form-field label="Value">
-          <input type="text" formControlName="matchValue" placeholder="e.g. uber" />
-        </app-form-field>
+    <app-modal [title]="editing() ? 'Modify a Rule' : 'Add a Rule'" [busy]="busy()" (dismiss)="cancel()">
+      <form class="modal-form" [formGroup]="form" (ngSubmit)="save()">
+        <div class="modal-body">
+          <p class="form-line">If</p>
+          <app-form-field label="Field">
+            <app-select-field
+              ariaLabel="Match field"
+              [options]="fieldOptions"
+              [value]="form.controls.matchField.value"
+              (valueChange)="setMatchField($event)"
+            />
+          </app-form-field>
+          <app-form-field label="Operator">
+            <app-select-field
+              ariaLabel="Operator"
+              [options]="opOptions"
+              [value]="form.controls.matchOp.value"
+              (valueChange)="setMatchOp($event)"
+            />
+          </app-form-field>
+          <app-form-field label="Value">
+            <input type="text" formControlName="matchValue" placeholder="e.g. uber" />
+          </app-form-field>
 
-        <p class="form-line">then set</p>
-        <app-form-field label="Set field">
-          <select formControlName="setField">
-            @for (f of fields; track f) {
-              <option [value]="f">{{ f }}</option>
-            }
-          </select>
-        </app-form-field>
-        <app-form-field label="To value">
-          <input type="text" formControlName="setValue" placeholder="e.g. Transport" />
-        </app-form-field>
+          <p class="form-line">Then</p>
+          <app-form-field label="Set field">
+            <app-select-field
+              ariaLabel="Set field"
+              [options]="fieldOptions"
+              [value]="form.controls.setField.value"
+              (valueChange)="setSetField($event)"
+            />
+          </app-form-field>
+          <app-form-field label="To value">
+            <input type="text" formControlName="setValue" placeholder="e.g. Transport" />
+          </app-form-field>
+        </div>
 
-        <div class="actions">
+        <div class="modal-footer">
+          @if (editing()) {
+            <app-icon-button ariaLabel="Delete rule" (click)="confirmingDelete.set(true)" [disabled]="busy()">
+              <svg lucideTrash2 [size]="18"></svg>
+            </app-icon-button>
+          }
+          <span class="modal-footer-spacer"></span>
           <app-button variant="ghost" (click)="cancel()" [disabled]="busy()">Cancel</app-button>
-          <app-button type="submit" variant="primary" [disabled]="busy() || form.invalid">
-            {{ busy() ? 'Saving…' : 'Save' }}
-          </app-button>
+          <app-button type="submit" variant="primary" [loading]="busy()" [disabled]="form.invalid">Save</app-button>
         </div>
       </form>
-    </app-card>
+    </app-modal>
+  }
+
+  @if (confirmingDelete()) {
+    <app-confirm-dialog
+      title="Delete rule?"
+      message="This removes the rule from the engine. Existing transactions keep their categories."
+      confirmLabel="Delete"
+      [busy]="busy()"
+      (confirm)="deleteConfirmed()"
+      (cancelled)="confirmingDelete.set(false)"
+    />
   }
 
   @if (loading()) {
@@ -93,9 +113,6 @@
               <svg lucidePlay [size]="18"></svg>
             </app-icon-button>
           }
-          <app-icon-button actions ariaLabel="Delete" (click)="remove(r)" [disabled]="busy()">
-            <svg lucideTrash2 [size]="18"></svg>
-          </app-icon-button>
         </li>
       }
     </ul>

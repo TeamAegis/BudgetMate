@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import {
   LucidePlus,
@@ -27,6 +27,9 @@ import { Banner } from '../../shared/ui/banner/banner';
 import { EmptyState } from '../../shared/ui/empty-state/empty-state';
 import { ListRow } from '../../shared/ui/list-row/list-row';
 import { FormField } from '../../shared/ui/form-field/form-field';
+import { Modal } from '../../shared/ui/modal/modal';
+import { ConfirmDialog } from '../../shared/ui/confirm-dialog/confirm-dialog';
+import { SelectField, type SelectOption } from '../../shared/ui/select-field/select-field';
 
 const FIELDS: RuleField[] = ['merchant', 'category', 'account'];
 const OPS: MatchOp[] = ['contains', 'equals'];
@@ -54,6 +57,9 @@ const OPS: MatchOp[] = ['contains', 'equals'];
     EmptyState,
     ListRow,
     FormField,
+    Modal,
+    ConfirmDialog,
+    SelectField,
   ],
   templateUrl: './rules.html',
   styleUrl: './rules.scss',
@@ -61,14 +67,17 @@ const OPS: MatchOp[] = ['contains', 'equals'];
 export class Rules implements OnInit {
   private readonly fb = inject(FormBuilder);
 
-  protected readonly fields = FIELDS;
-  protected readonly ops = OPS;
+  /** Themed-dropdown options for the rule builder (rule fields/operators are fixed enums). */
+  protected readonly fieldOptions: SelectOption[] = FIELDS.map((f) => ({ value: f, label: f }));
+  protected readonly opOptions: SelectOption[] = OPS.map((o) => ({ value: o, label: o }));
   protected readonly rules = signal<ImportRule[]>([]);
   protected readonly loading = signal(true);
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly editingId = signal<number | null>(null);
   protected readonly showForm = signal(false);
+  protected readonly editing = computed(() => this.editingId() !== null);
+  protected readonly confirmingDelete = signal(false);
 
   // Inspectable preview: type a sample merchant, see the resulting fields + which rules fired.
   protected readonly testMerchant = signal('');
@@ -139,7 +148,19 @@ export class Rules implements OnInit {
 
   protected cancel(): void {
     this.showForm.set(false);
+    this.confirmingDelete.set(false);
     this.error.set(null);
+  }
+
+  /** Bind a SelectField's emitted value back onto a form control (custom listbox → reactive form). */
+  protected setMatchField(v: number | string): void {
+    this.form.controls.matchField.setValue(v as RuleField);
+  }
+  protected setMatchOp(v: number | string): void {
+    this.form.controls.matchOp.setValue(v as MatchOp);
+  }
+  protected setSetField(v: number | string): void {
+    this.form.controls.setField.setValue(v as RuleField);
   }
 
   protected async save(): Promise<void> {
@@ -170,8 +191,13 @@ export class Rules implements OnInit {
     await this.mutate(() => setRuleActive(r.id, !r.active));
   }
 
-  protected async remove(r: ImportRule): Promise<void> {
-    await this.mutate(() => deleteRule(r.id));
+  /** Delete the rule currently open in the edit modal (after footer-trash confirmation). */
+  protected async deleteConfirmed(): Promise<void> {
+    const id = this.editingId();
+    if (id === null) return;
+    await this.mutate(() => deleteRule(id));
+    this.confirmingDelete.set(false);
+    this.showForm.set(false);
   }
 
   protected moveUp(i: number): void {

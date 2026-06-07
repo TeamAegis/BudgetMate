@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { LucideArchive, LucidePencil, LucidePlus } from '@lucide/angular';
 import {
@@ -12,12 +12,13 @@ import type { Account, AccountKind } from '../../core/models';
 import { MoneyPipe } from '../../shared/pipes/money.pipe';
 import { Button } from '../../shared/ui/button/button';
 import { IconButton } from '../../shared/ui/icon-button/icon-button';
-import { Card } from '../../shared/ui/card/card';
 import { Banner } from '../../shared/ui/banner/banner';
 import { EmptyState } from '../../shared/ui/empty-state/empty-state';
 import { ListRow } from '../../shared/ui/list-row/list-row';
 import { FormField } from '../../shared/ui/form-field/form-field';
 import { Skeleton } from '../../shared/ui/skeleton/skeleton';
+import { Modal } from '../../shared/ui/modal/modal';
+import { SelectField, type SelectOption } from '../../shared/ui/select-field/select-field';
 
 const KINDS: AccountKind[] = ['cash', 'bank', 'card', 'wallet', 'other'];
 
@@ -31,19 +32,21 @@ const KINDS: AccountKind[] = ['cash', 'bank', 'card', 'wallet', 'other'];
     LucidePlus,
     Button,
     IconButton,
-    Card,
     Banner,
     EmptyState,
     ListRow,
     FormField,
     Skeleton,
+    Modal,
+    SelectField,
   ],
   templateUrl: './accounts.html',
   styleUrl: './accounts.scss',
 })
 export class Accounts implements OnInit {
   private readonly fb = inject(FormBuilder);
-  protected readonly kinds = KINDS;
+  /** Themed-dropdown options for the account type (native <select> can't be styled in the WebView). */
+  protected readonly kindOptions: SelectOption[] = KINDS.map((k) => ({ value: k, label: k }));
   /** Placeholder row count shown while the list loads. */
   protected readonly skeletonRows = [0, 1, 2, 3];
   protected readonly accounts = signal<Account[]>([]);
@@ -52,6 +55,7 @@ export class Accounts implements OnInit {
   protected readonly error = signal<string | null>(null);
   protected readonly editingId = signal<number | null>(null);
   protected readonly showForm = signal(false);
+  protected readonly editing = computed(() => this.editingId() !== null);
 
   protected readonly form = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.maxLength(60)]],
@@ -95,6 +99,11 @@ export class Accounts implements OnInit {
   protected cancel(): void {
     this.showForm.set(false);
     this.error.set(null);
+  }
+
+  /** Bind the SelectField's emitted value back onto the form control. */
+  protected setKind(v: number | string): void {
+    this.form.controls.accountType.setValue(v as AccountKind);
   }
 
   protected async save(): Promise<void> {

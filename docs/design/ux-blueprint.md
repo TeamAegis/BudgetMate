@@ -63,9 +63,14 @@ Onboarding (first run, before the shell): intro → income setup → first goal 
 - **Header trailing icon** opens Settings (and, from sub-screens, contextual actions).
 - **FAB** appears on Expenses (Add Transaction) and Goals (Add Goal); long-press or a small
   menu can expose Scan Receipt / Import on Expenses.
-- **Back** affordance on all pushed screens (add/edit, scan, import, detail, settings), rendered in
-  the AppHeader's leading slot; it navigates back through history (origin-aware).
-- Modals (TransactionPopup, confirm dialogs) overlay; dismiss returns to origin.
+- **Back** affordance on pushed screens (scan, import, detail, settings), rendered in the
+  AppHeader's leading slot; it navigates back through history (origin-aware).
+- **All add/edit forms are Modals**, not pushed routes: a centred card over a dimmed + blurred
+  backdrop (the screen behind stays visible but de-emphasised). This is the canonical pattern for
+  Transaction, Rule, Recurring, Account, Category, and Goal forms. Dismiss (Escape, backdrop click,
+  or *Cancel*) returns to origin unchanged; a destructive footer action routes through a
+  ConfirmDialog. Focus is trapped while open and restored on close; background scroll is locked.
+  See `design-system.md` §7 (Modal) and `screens.md` §8.0.
 
 ---
 

@@ -100,7 +100,18 @@ FAB).
 ### 4.4 Elevation
 - `--elev-card: 5px 5px 0px 0px rgba(255,203,203,0.29)` — the signature offset pink shadow
   (hero card).
-- `--elev-float: 0 6px 16px rgba(0,0,0,0.12)` — FAB / modals (added; Figma had none).
+- `--elev-float: 0 6px 16px rgba(0,0,0,0.12)` — FAB / modal dialog (added; Figma had none).
+
+### 4.5 Overlay & stacking
+- `--c-scrim: rgba(0,0,0,0.40)` — modal backdrop dim.
+- `--backdrop-blur: 6px` — modal backdrop blur (`backdrop-filter: blur(var(--backdrop-blur))`),
+  so the screen behind a form is legibly de-emphasised without going fully opaque.
+- **Z-index scale** (only these layers float; everything else is in flow):
+  `--z-dropdown: 20` (SelectField listbox) · `--z-modal: 1000` (modal scrim + dialog).
+- **Scrollbars are hidden app-wide** (native-app feel — it's an app, not a website): content still
+  scrolls, but no scrollbar track is drawn, on every scroll container (page, modal body, dropdown).
+  A SelectField opened **inside a modal** expands the dialog in-flow (not an overlay) so every
+  option stays reachable as the body scrolls.
 
 ---
 
@@ -160,10 +171,11 @@ Subtle and fast (supports the <800ms-feel goal; nothing that delays first paint)
 Each component lists its origin (Figma node or "new" if required by FRs but absent in Figma)
 and the tokens it consumes. Components are dumb/presentational (`shared/`) unless noted.
 
-> **Built so far** (`src/app/shared/ui/`): AppHeader, BottomNav, EmptyState, Button, Card,
-> plus FormField, IconButton, Banner, ListRow, SelectField. Reuse/extend these rather than
-> re-inlining markup — see the `ui-component` skill. The remaining entries below are still to
-> be built as they're needed.
+> **Built so far** (`src/app/shared/ui/`): AppHeader, BottomNav, EmptyState, Button (primary /
+> ghost / **danger** variants), Card, FormField, IconButton, Banner, ListRow, SelectField,
+> Skeleton, Spinner, **Modal**, **ConfirmDialog**. Reuse/extend these rather than re-inlining
+> markup — see the `ui-component` skill. The remaining entries below are still to be built as
+> they're needed.
 
 ### Present in Figma
 - **AppHeader** — leading back affordance (pushed screens) + title/wordmark + trailing icon.
@@ -189,7 +201,18 @@ and the tokens it consumes. Components are dumb/presentational (`shared/`) unles
 - **SegmentedToggle** — Daily/Weekly/Monthly and Ongoing/Completed. Pill, active segment
   `--c-primary`.
 - **FAB** — 60px coral circle, `+` icon, `--elev-float`. For add-transaction / add-goal.
-- **TransactionPopup** — modal card: title, body, *Back* + *Modify* buttons.
+- **Modal** (`app-modal`) — the app-wide form/dialog container. Centred card (`--radius-lg`,
+  `--elev-float`, `max-width 420px`, `max-height 90vh`) over a dimmed + blurred scrim (`--c-scrim`
+  + `--backdrop-blur`, `--z-modal`). **Every form in the app is a modal** — it renders via `@if`
+  and projects a `<form class="modal-form">` with a scrollable `.modal-body` and a pinned
+  `.modal-footer`. Footer convention: optional leading **trash** `IconButton` (edit mode only) ·
+  `.modal-footer-spacer` · ghost *Cancel* · primary *Save* (`type="submit"`, kept inside the form
+  so Enter saves). Behaviour: `role="dialog"`/`aria-modal`, labelled by its title, focus trap +
+  restore, body scroll-lock, dismiss on Escape / backdrop-click (suppressed while `busy`), enter
+  animation `modal-enter` (reduced-motion honoured). Replaces the old Figma "TransactionPopup".
+- **ConfirmDialog** (`app-confirm-dialog`) — two-button destructive confirm built on Modal
+  (title, message, danger confirm + ghost cancel). Used before delete / restore-replace /
+  over-budget acknowledgement (§8.2). Emits `confirm` / `cancelled`.
 - **EmptyState** — centred illustration + message + CTA ("No goals? Create one!",
   "Tap the Button below…", "No Data").
 - **TextField (underline)** — income/type inputs: label, value, bottom rule. For amounts use

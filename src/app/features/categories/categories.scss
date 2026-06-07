@@ -14,18 +14,7 @@
   color: var(--c-text-muted);
 }
 
-// Lays out the stacked form fields (each an <app-form-field>) and the action row.
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-
-  .actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: var(--space-3);
-  }
-}
+// Form layout (stacked fields, scrollable body, pinned footer) is owned by app-modal.
 
 .rows {
   list-style: none;

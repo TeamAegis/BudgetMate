@@ -35,6 +35,7 @@ export interface SelectOption {
       aria-haspopup="listbox"
       [attr.aria-expanded]="open()"
       [attr.aria-labelledby]="ariaLabelledby()"
+      [attr.aria-label]="ariaLabel()"
     >
       <span>{{ selectedLabel() }}</span>
       <svg lucideChevronDown [size]="18" class="chevron" [class.up]="open()" aria-hidden="true"></svg>
@@ -73,6 +74,8 @@ export class SelectField {
   readonly options = input.required<SelectOption[]>();
   readonly value = input<number | string | null>(null);
   readonly ariaLabelledby = input<string | undefined>(undefined);
+  /** Accessible name when there is no labelledby element (e.g. inside an app-form-field). */
+  readonly ariaLabel = input<string | undefined>(undefined);
   readonly valueChange = output<number | string>();
 
   protected readonly open = signal(false);

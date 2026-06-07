@@ -13,29 +13,31 @@
   }
 
   @if (showForm()) {
-    <app-card>
-      <form class="form" [formGroup]="form" (ngSubmit)="save()">
-        <app-form-field label="Name">
-          <input type="text" formControlName="name" placeholder="e.g. Cash, Main Bank" />
-        </app-form-field>
-        <app-form-field label="Type">
-          <select formControlName="accountType">
-            @for (k of kinds; track k) {
-              <option [value]="k">{{ k }}</option>
-            }
-          </select>
-        </app-form-field>
-        <app-form-field label="Currency" hint="3-letter ISO code, e.g. MUR">
-          <input type="text" formControlName="currency" maxlength="3" class="numeric" />
-        </app-form-field>
-        <div class="actions">
+    <app-modal [title]="editing() ? 'Modify an Account' : 'Add an Account'" [busy]="busy()" (dismiss)="cancel()">
+      <form class="modal-form" [formGroup]="form" (ngSubmit)="save()">
+        <div class="modal-body">
+          <app-form-field label="Name">
+            <input type="text" formControlName="name" placeholder="e.g. Cash, Main Bank" />
+          </app-form-field>
+          <app-form-field label="Type">
+            <app-select-field
+              ariaLabel="Type"
+              [options]="kindOptions"
+              [value]="form.controls.accountType.value"
+              (valueChange)="setKind($event)"
+            />
+          </app-form-field>
+          <app-form-field label="Currency" hint="3-letter ISO code, e.g. MUR">
+            <input type="text" formControlName="currency" maxlength="3" class="numeric" />
+          </app-form-field>
+        </div>
+        <div class="modal-footer">
+          <span class="modal-footer-spacer"></span>
           <app-button variant="ghost" (click)="cancel()" [disabled]="busy()">Cancel</app-button>
-          <app-button type="submit" variant="primary" [loading]="busy()" [disabled]="form.invalid">
-            Save
-          </app-button>
+          <app-button type="submit" variant="primary" [loading]="busy()" [disabled]="form.invalid">Save</app-button>
         </div>
       </form>
-    </app-card>
+    </app-modal>
   }
 
   @if (loading()) {

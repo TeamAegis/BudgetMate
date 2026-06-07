@@ -13,34 +13,36 @@
   }
 
   @if (showForm()) {
-    <app-card>
-      <form class="form" [formGroup]="form" (ngSubmit)="save()">
-        <app-form-field label="Name">
-          <input type="text" formControlName="name" placeholder="e.g. Groceries" />
-        </app-form-field>
-        <app-form-field label="Kind">
-          <select formControlName="kind">
-            @for (k of kinds; track k) {
-              <option [value]="k">{{ k }}</option>
-            }
-          </select>
-        </app-form-field>
-        <app-form-field label="Parent (optional)">
-          <select formControlName="parentId">
-            <option [ngValue]="null">— None —</option>
-            @for (p of parentOptions(); track p.id) {
-              <option [ngValue]="p.id">{{ p.name }}</option>
-            }
-          </select>
-        </app-form-field>
-        <div class="actions">
+    <app-modal [title]="editing() ? 'Modify a Category' : 'Add a Category'" [busy]="busy()" (dismiss)="cancel()">
+      <form class="modal-form" [formGroup]="form" (ngSubmit)="save()">
+        <div class="modal-body">
+          <app-form-field label="Name">
+            <input type="text" formControlName="name" placeholder="e.g. Groceries" />
+          </app-form-field>
+          <app-form-field label="Kind">
+            <app-select-field
+              ariaLabel="Kind"
+              [options]="kindOptions"
+              [value]="form.controls.kind.value"
+              (valueChange)="setKind($event)"
+            />
+          </app-form-field>
+          <app-form-field label="Parent (optional)">
+            <app-select-field
+              ariaLabel="Parent category"
+              [options]="parentOptions()"
+              [value]="parentValue()"
+              (valueChange)="setParent($event)"
+            />
+          </app-form-field>
+        </div>
+        <div class="modal-footer">
+          <span class="modal-footer-spacer"></span>
           <app-button variant="ghost" (click)="cancel()" [disabled]="busy()">Cancel</app-button>
-          <app-button type="submit" variant="primary" [loading]="busy()" [disabled]="form.invalid">
-            Save
-          </app-button>
+          <app-button type="submit" variant="primary" [loading]="busy()" [disabled]="form.invalid">Save</app-button>
         </div>
       </form>
-    </app-card>
+    </app-modal>
   }
 
   @if (loading()) {
