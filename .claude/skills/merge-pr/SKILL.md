@@ -22,8 +22,9 @@ gh pr checks <pr> --watch --fail-fast
 gh run view --log-failed           # failed steps of the latest run
 gh run view <run-id> --log         # full log for a specific run
 ```
-Diagnose → fix **on the PR branch** → commit → `git push` → re-run step 1. Repeat until green.
-Never edit `main` to "work around" a red branch.
+Diagnose → fix **on the PR branch** → **pause and let the user review the fix** (show the diff +
+proposed message; wait for explicit approval — never commit unprompted) → commit → `git push` →
+re-run step 1. Repeat until green. Never edit `main` to "work around" a red branch.
 
 ## 3. Merge only when green
 ```sh

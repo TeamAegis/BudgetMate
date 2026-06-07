@@ -24,6 +24,10 @@ git switch -c <type>/<issue#>-<slug>
   `fix/14-rule-ordering`, `chore/git-github-skills`.
 
 ## Commit (Conventional Commits + required trailer)
+- **Pause for review before every commit.** Never run `git commit` unprompted. First show the
+  user the change to be committed (`git status` + `git --no-pager diff`, or a concise summary of the
+  staged diff) and the proposed commit message, then **wait for their explicit approval**. Only
+  commit once they confirm. This applies to every commit, including follow-up/fixup commits.
 - Message: `type(scope): summary` — e.g. `feat(transactions): add manual entry form`. Body
   explains the *why*; keep PRs small and focused.
 - **Every commit ends with** the mandated trailer:
