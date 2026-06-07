@@ -103,8 +103,8 @@
 
         <div class="actions">
           <app-button variant="ghost" (click)="cancel()" [disabled]="busy()">Cancel</app-button>
-          <app-button type="submit" variant="primary" [disabled]="busy() || form.invalid || unbalanced()">
-            {{ busy() ? 'Saving…' : 'Save' }}
+          <app-button type="submit" variant="primary" [loading]="busy()" [disabled]="form.invalid || unbalanced()">
+            Save
           </app-button>
         </div>
       </form>
@@ -112,7 +112,17 @@
   }
 
   @if (loading()) {
-    <p class="muted">Loading…</p>
+    <div class="date-group" aria-busy="true">
+      <app-skeleton variant="text" width="30%" />
+      <ul class="rows">
+        @for (i of skeletonRows; track i) {
+          <li class="skeleton-row">
+            <app-skeleton variant="text" width="55%" />
+            <app-skeleton variant="text" width="20%" />
+          </li>
+        }
+      </ul>
+    </div>
   } @else if (!showForm() && transactions().length === 0 && !error()) {
     <app-empty-state
       image="assets/illustrations/get-started.svg"
@@ -125,8 +135,14 @@
       <div class="date-group">
         <h2 class="date-heading">{{ group.date }}</h2>
         <ul class="rows">
-          @for (t of group.items; track t.id) {
-            <li app-list-row [name]="t.payee || categoryLabel(t)" [meta]="metaLine(t)">
+          @for (t of group.items; track t.id; let i = $index) {
+            <li
+              app-list-row
+              animate.enter="list-item-enter"
+              [style.animation-delay]="(i < 12 ? i * 40 : 0) + 'ms'"
+              [name]="t.payee || categoryLabel(t)"
+              [meta]="metaLine(t)"
+            >
               <span amount class="amount-cell">
                 <span
                   class="amount numeric"

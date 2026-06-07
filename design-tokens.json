@@ -49,7 +49,8 @@
     "screenGutter": 24,
     "cardPadding": 20
   },
-  "motion": { "fast": 150, "standard": 200, "easing": "cubic-bezier(0.2,0,0,1)" },
+  "motion": { "fast": 150, "standard": 200, "slow": 300, "easing": "cubic-bezier(0.2,0,0,1)" },
+  "skeleton": { "base": "#ECECEC", "sheen": "#F5F5F5" },
   "currency": { "default": "MUR", "symbol": "Rs", "format": "Rs #,##0" },
   "icons": {
     "library": "@lucide/angular",

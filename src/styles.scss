@@ -2,6 +2,7 @@
 // Tokens are plain CSS custom properties (no SCSS mixins). See docs/design/design-system.md.
 @use 'styles/tokens';
 @use 'styles/fonts';
+@use 'styles/animations';
 
 * {
   box-sizing: border-box;

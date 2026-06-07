@@ -22,6 +22,7 @@ import { Banner } from '../../shared/ui/banner/banner';
 import { EmptyState } from '../../shared/ui/empty-state/empty-state';
 import { ListRow } from '../../shared/ui/list-row/list-row';
 import { FormField } from '../../shared/ui/form-field/form-field';
+import { Skeleton } from '../../shared/ui/skeleton/skeleton';
 
 /** A run of transactions sharing one posted date, for the grouped list. */
 interface DateGroup {
@@ -53,12 +54,15 @@ const DECIMAL = /^\d+(\.\d+)?$/;
     EmptyState,
     ListRow,
     FormField,
+    Skeleton,
   ],
   templateUrl: './transactions.html',
   styleUrl: './transactions.scss',
 })
 export class Transactions implements OnInit {
   private readonly fb = inject(FormBuilder);
+  /** Placeholder row count shown while the list loads. */
+  protected readonly skeletonRows = [0, 1, 2, 3, 4];
 
   protected readonly transactions = signal<Transaction[]>([]);
   protected readonly accounts = signal<Account[]>([]);

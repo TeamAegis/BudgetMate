@@ -16,6 +16,7 @@ import { Banner } from '../../shared/ui/banner/banner';
 import { EmptyState } from '../../shared/ui/empty-state/empty-state';
 import { ListRow } from '../../shared/ui/list-row/list-row';
 import { FormField } from '../../shared/ui/form-field/form-field';
+import { Skeleton } from '../../shared/ui/skeleton/skeleton';
 
 const KINDS: CategoryKind[] = ['expense', 'income', 'transfer'];
 
@@ -33,6 +34,7 @@ const KINDS: CategoryKind[] = ['expense', 'income', 'transfer'];
     EmptyState,
     ListRow,
     FormField,
+    Skeleton,
   ],
   templateUrl: './categories.html',
   styleUrl: './categories.scss',
@@ -40,6 +42,8 @@ const KINDS: CategoryKind[] = ['expense', 'income', 'transfer'];
 export class Categories implements OnInit {
   private readonly fb = inject(FormBuilder);
   protected readonly kinds = KINDS;
+  /** Placeholder row count shown while the list loads. */
+  protected readonly skeletonRows = [0, 1, 2, 3];
   protected readonly categories = signal<Category[]>([]);
   protected readonly loading = signal(true);
   protected readonly busy = signal(false);

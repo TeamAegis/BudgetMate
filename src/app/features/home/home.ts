@@ -15,15 +15,25 @@ import { LucidePlus, LucideTarget, LucideScanLine } from '@lucide/angular';
       </div>
 
       <div class="quick-actions">
-        <a class="chip" routerLink="/expenses">
+        <a class="chip" routerLink="/expenses" animate.enter="list-item-enter">
           <svg lucidePlus [size]="20"></svg>
           <span>Transaction</span>
         </a>
-        <a class="chip" routerLink="/goals">
+        <a
+          class="chip"
+          routerLink="/goals"
+          animate.enter="list-item-enter"
+          style="animation-delay: 40ms"
+        >
           <svg lucideTarget [size]="20"></svg>
           <span>Goal</span>
         </a>
-        <a class="chip" routerLink="/import">
+        <a
+          class="chip"
+          routerLink="/import"
+          animate.enter="list-item-enter"
+          style="animation-delay: 80ms"
+        >
           <svg lucideScanLine [size]="20"></svg>
           <span>Scan / Import</span>
         </a>

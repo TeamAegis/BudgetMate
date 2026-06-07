@@ -78,12 +78,18 @@
   // ---- Motion ----
   --motion-fast: 150ms;
   --motion-standard: 200ms;
+  --motion-slow: 300ms;            // progress-bar fill, skeleton pulse cycle (design-system §6)
   --easing: cubic-bezier(0.2, 0, 0, 1);
+
+  // ---- Skeleton (loading placeholders) ----
+  --c-skeleton: #ececec;           // placeholder base (matches --c-border neutral)
+  --c-skeleton-sheen: #f5f5f5;     // pulse highlight
 }
 
 @media (prefers-reduced-motion: reduce) {
   :root {
     --motion-fast: 0ms;
     --motion-standard: 0ms;
+    --motion-slow: 0ms;
   }
 }
