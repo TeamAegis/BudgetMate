@@ -123,20 +123,23 @@ in the current Figma — design them to this spec.
 
 ## 5. Goals
 
-### 5.1 Goals — Ongoing / Completed
+### 5.1 Goals — Ongoing / Completed **[built]**
 - **Figma:** `132:237` (Ongoing), `137:3` (Completed), empty `133:557`.
 - **FR:** FR-3.2.
-- **Components:** AppHeader ("Goals"), SegmentedToggle (Ongoing/Completed `133:545`),
-  GoalProgressRow ×N (`136:2` cards / `133:530`), FAB (`133:552`), BottomNav.
-- **Data:** goals with current/target/date, status.
-- **Commands:** `list_goals(status)`.
-- **States:** loading, empty (`133:557` illustration + CTA), ongoing list, completed list.
+- **Components:** AppHeader ("Goals"), `GoalProgressRow` ×N (tap to edit), Add button, BottomNav.
+  Active goals list before completed; completed rows show a full track + check + strikethrough.
+- **Data:** goals with `currentMinor`/`targetMinor`/`currency`/`targetDate`; `completed` derived.
+- **Commands:** `list_goals`, `create_goal`, `update_goal`, `delete_goal`.
+- **States:** loading (skeleton blocks), empty (illustration + CTA), populated, error, busy.
 
-### 5.2 Add / Edit Goal
+### 5.2 Add / Edit Goal **[built]**
 - **FR:** FR-3.2.
-- **Components:** TextField (name), CurrencyField (target), optional date, *Save*/*Back*.
-- **Commands:** `save_goal(dto)`.
-- **States:** validation, save error.
+- **Presentation:** a **Modal** (§8.0), not a pushed route.
+- **Components:** FormField name, target + currency (amount row), "Saved so far", optional target
+  date; modal footer *Cancel* / *Save* (+ trash on edit → ConfirmDialog).
+- **Commands:** `create_goal` / `update_goal` (major-unit `target`/`current` parsed to minor units
+  in Rust), `delete_goal`.
+- **States:** validation (name required, target > 0), save error, busy.
 
 ### 5.3 Goal detail / progress
 - **Figma:** `133:530` (Goal List Progress), `130:90` (Frame 13 goal cards).

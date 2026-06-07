@@ -1,0 +1,95 @@
+<section class="feature-page">
+  @if (!showForm()) {
+    <div class="page-actions">
+      <app-button variant="primary" (click)="startCreate()" [disabled]="busy() || loading()">
+        <svg icon lucidePlus [size]="18"></svg>
+        <span>Add</span>
+      </app-button>
+    </div>
+  }
+
+  @if (error(); as err) {
+    <app-banner>{{ err }}</app-banner>
+  }
+
+  @if (showForm()) {
+    <app-modal [title]="editing() ? 'Modify a Goal' : 'Add a Goal'" [busy]="busy()" (dismiss)="cancel()">
+      <form class="modal-form" [formGroup]="form" (ngSubmit)="save()">
+        <div class="modal-body">
+          <app-form-field label="Name">
+            <input type="text" formControlName="name" placeholder="e.g. Vacation" />
+          </app-form-field>
+          <div class="amount-row">
+            <app-form-field label="Target" class="grow">
+              <input type="text" inputmode="decimal" formControlName="target" placeholder="0.00" class="numeric" />
+            </app-form-field>
+            <app-form-field label="Currency" class="currency-field">
+              <input type="text" formControlName="currency" maxlength="3" class="numeric currency" />
+            </app-form-field>
+          </div>
+          <app-form-field label="Saved so far" hint="How much you've put aside toward this goal.">
+            <input type="text" inputmode="decimal" formControlName="current" placeholder="0.00" class="numeric" />
+          </app-form-field>
+          <app-form-field label="Target date (optional)">
+            <input type="date" formControlName="targetDate" />
+          </app-form-field>
+        </div>
+        <div class="modal-footer">
+          @if (editing()) {
+            <app-icon-button ariaLabel="Delete goal" (click)="confirmingDelete.set(true)" [disabled]="busy()">
+              <svg lucideTrash2 [size]="18"></svg>
+            </app-icon-button>
+          }
+          <span class="modal-footer-spacer"></span>
+          <app-button variant="ghost" (click)="cancel()" [disabled]="busy()">Cancel</app-button>
+          <app-button type="submit" variant="primary" [loading]="busy()" [disabled]="form.invalid">Save</app-button>
+        </div>
+      </form>
+    </app-modal>
+  }
+
+  @if (confirmingDelete()) {
+    <app-confirm-dialog
+      title="Delete goal?"
+      message="This permanently removes the goal. This can't be undone."
+      confirmLabel="Delete"
+      [busy]="busy()"
+      (confirm)="deleteConfirmed()"
+      (cancelled)="confirmingDelete.set(false)"
+    />
+  }
+
+  @if (loading()) {
+    <ul class="rows" aria-busy="true">
+      @for (i of skeletonRows; track i) {
+        <li><app-skeleton variant="block" height="84px" /></li>
+      }
+    </ul>
+  } @else if (!showForm() && goals().length === 0 && !error()) {
+    <app-empty-state
+      [fill]="true"
+      image="assets/illustrations/get-started.svg"
+      message="No goals yet — set a savings target and track your progress."
+      cta="Add your first goal"
+      (action)="startCreate()"
+    />
+  } @else {
+    <ul class="rows">
+      @for (g of goals(); track g.id; let i = $index) {
+        <li
+          animate.enter="list-item-enter"
+          [style.animation-delay]="(i < 12 ? i * 40 : 0) + 'ms'"
+        >
+          <app-goal-progress-row
+            [name]="g.name"
+            [currentMinor]="g.currentMinor"
+            [targetMinor]="g.targetMinor"
+            [currency]="g.currency"
+            [completed]="g.completed"
+            (edit)="startEdit(g)"
+          />
+        </li>
+      }
+    </ul>
+  }
+</section>

@@ -1,0 +1,99 @@
+// GoalProgressRow — pill track (--c-primary-10 bg, --c-primary fill + knob), animated fill.
+// Tokens only. The whole row is a single tappable button (≥44px target).
+
+:host {
+  display: block;
+}
+
+.goal-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: var(--tap-target-min);
+  padding: var(--space-4);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
+  background: var(--c-bg);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.goal-row:focus-visible {
+  outline: 2px solid var(--c-primary-700);
+  outline-offset: 1px;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.name {
+  font-size: var(--t-title);
+  font-weight: var(--fw-medium);
+  color: var(--c-text);
+}
+.name.done {
+  text-decoration: line-through;
+  color: var(--c-text-muted);
+}
+.check {
+  color: var(--c-positive);
+  flex: none;
+}
+
+// Pill progress track + animated fill with a knob at the leading edge.
+.track {
+  position: relative;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--c-primary-10);
+}
+.fill {
+  position: relative;
+  height: 100%;
+  min-width: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--c-primary);
+  transition: width var(--motion-slow) var(--easing);
+}
+.knob {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  transform: translate(50%, -50%);
+  border-radius: var(--radius-pill);
+  background: var(--c-primary);
+  box-shadow: var(--elev-float);
+}
+.track.done .fill {
+  background: var(--c-positive);
+}
+.track.done .knob {
+  display: none; // a full bar + check already signals completion
+}
+
+.amounts {
+  display: flex;
+  gap: var(--space-1);
+  font-size: var(--t-body);
+}
+.amounts .current {
+  color: var(--c-text);
+}
+.amounts .sep,
+.amounts .target {
+  color: var(--c-primary-700); // AA coral for the small target figure
+}
+.amounts.done {
+  text-decoration: line-through;
+  color: var(--c-text-muted);
+}
+.amounts.done .sep,
+.amounts.done .target {
+  color: var(--c-text-muted);
+}

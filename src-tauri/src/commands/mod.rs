@@ -3,6 +3,7 @@
 
 pub mod accounts;
 pub mod categories;
+pub mod goals;
 pub mod recurring;
 pub mod rules;
 pub mod transactions;

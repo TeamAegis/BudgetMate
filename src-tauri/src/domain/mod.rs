@@ -3,12 +3,14 @@
 
 pub mod account;
 pub mod category;
+pub mod goal;
 pub mod money;
 pub mod recurring;
 pub mod transaction;
 
 pub use account::{Account, AccountKind};
 pub use category::{Category, CategoryKind};
+pub use goal::Goal;
 pub use money::{base_amount_minor, splits_sum_to_parent, Money};
 pub use recurring::{plan, Schedule};
 pub use transaction::{Transaction, TxSplit};

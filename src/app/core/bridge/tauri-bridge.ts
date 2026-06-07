@@ -27,6 +27,9 @@ import type {
   UpdateRule,
   RulePreview,
   RulePreviewInput,
+  Goal,
+  NewGoal,
+  UpdateGoal,
 } from '../models';
 
 /** Whether we are running inside the Tauri runtime (vs. plain browser `ng serve`). */
@@ -171,4 +174,20 @@ export function reorderRules(ids: number[]): Promise<ImportRule[]> {
 /** Run the active rules over sample fields; returns the result + which rules fired (the "why"). */
 export function previewRules(input: RulePreviewInput): Promise<RulePreview> {
   return invoke<RulePreview>('preview_rules', { input });
+}
+
+// ── Goals (FR-3.2) ───────────────────────────────────────────────────────────────
+// Active goals first, then completed. Rust parses major-unit amounts + derives `completed`.
+
+export function listGoals(): Promise<Goal[]> {
+  return invoke<Goal[]>('list_goals');
+}
+export function createGoal(goal: NewGoal): Promise<Goal> {
+  return invoke<Goal>('create_goal', { goal });
+}
+export function updateGoal(goal: UpdateGoal): Promise<Goal> {
+  return invoke<Goal>('update_goal', { goal });
+}
+export function deleteGoal(id: number): Promise<void> {
+  return invoke<void>('delete_goal', { id });
 }

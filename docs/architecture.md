@@ -135,7 +135,7 @@ transactions(id, account_id, posted_date, amount_minor, currency,
 tx_splits(id, transaction_id, category_id, amount_minor) -- sum == parent amount (FR-1.2)
 recurring_rules(id, template_json, schedule, next_run_date, last_materialised_date, active)
 budgets(id, category_id, period, cap_minor)             -- envelope caps (FR-3.1)
-goals(id, name, target_minor, current_minor, target_date)
+goals(id, name, target_minor, current_minor, currency, target_date) -- savings goals (FR-3.2); `currency` added in migration 0003
 import_rules(id, ordinal, match_field, match_op, match_value, set_field, set_value, active)
 imports(id, filename, format, imported_at, row_count)   -- audit of file imports
 schema_migrations(version, applied_at)
