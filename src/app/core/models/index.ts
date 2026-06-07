@@ -261,3 +261,32 @@ export interface RulePreviewInput {
   category?: string | null;
   account?: string | null;
 }
+
+// ── Goals (FR-3.2) ───────────────────────────────────────────────────────────────
+
+/** A savings goal (mirrors Rust `Goal`). `currentMinor` is the amount saved so far; `completed`
+ *  is derived in Rust (currentMinor >= targetMinor). Amounts are integer minor units. */
+export interface Goal {
+  id: number;
+  name: string;
+  targetMinor: number;
+  currentMinor: number;
+  currency: string;
+  targetDate: string | null;
+  completed: boolean;
+}
+
+/** Input for create_goal (mirrors Rust `NewGoal`). `target`/`current` are major-unit strings
+ *  (e.g. "10000.00"); Rust parses them to minor units. `current` defaults to "0". */
+export interface NewGoal {
+  name: string;
+  target: string;
+  current?: string;
+  currency: string;
+  targetDate?: string | null;
+}
+
+/** Input for update_goal (mirrors Rust `UpdateGoal`). */
+export interface UpdateGoal extends NewGoal {
+  id: number;
+}

@@ -173,7 +173,7 @@ and the tokens it consumes. Components are dumb/presentational (`shared/`) unles
 
 > **Built so far** (`src/app/shared/ui/`): AppHeader, BottomNav, EmptyState, Button (primary /
 > ghost / **danger** variants), Card, FormField, IconButton, Banner, ListRow, SelectField,
-> Skeleton, Spinner, **Modal**, **ConfirmDialog**. Reuse/extend these rather than re-inlining
+> Skeleton, Spinner, **Modal**, **ConfirmDialog**, **GoalProgressRow**. Reuse/extend these rather than re-inlining
 > markup — see the `ui-component` skill. The remaining entries below are still to be built as
 > they're needed.
 
@@ -192,8 +192,12 @@ and the tokens it consumes. Components are dumb/presentational (`shared/`) unles
 - **QuickActionChip** — 90×60 tile, `--c-primary-05`, `--radius-sm`, icon + caption.
   ⚠️ Figma shows duplicate "Transaction" labels — placeholder; real actions: *Add
   Transaction*, *Add Goal*, *Scan Receipt*.
-- **GoalProgressRow** — label, current amount, pill progress track with knob, target amount.
-  Track uses `--c-primary-10`, fill `--c-primary`, knob `--c-primary`.
+- **GoalProgressRow** (`app-goal-progress-row`, **built**) — label, pill progress track with knob,
+  `current / target` amounts (via the money pipe). Track `--c-primary-10`, fill + knob
+  `--c-primary`; fill animates from 0 on mount (`--motion-slow`, reduced-motion honoured).
+  **Completed** state: full `--c-positive` track (knob hidden), trailing check icon, strikethrough
+  title/amounts — completion is shown by icon + text, never colour alone (a11y). Display-only
+  (progress derived from the saved amount); the whole row is a button that emits `edit`.
 - **TrendChart** — bar series + line overlay, "Usable Balance Trend". Bars `--c-primary`,
   `--radius-sm` top. **Implement with bundled Chart.js (canvas)**, not static images.
 - **TransactionListItem** — leading icon tile, title, date, trailing signed amount
