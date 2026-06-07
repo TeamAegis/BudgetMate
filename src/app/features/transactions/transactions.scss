@@ -14,18 +14,8 @@
   color: var(--c-text-muted);
 }
 
-// Lays out the stacked form fields (each an <app-form-field>) and the action row.
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-
-  .actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: var(--space-3);
-  }
-}
+// The form layout (stacked fields, scrollable body, pinned footer) is owned by app-modal; this
+// feature only styles its own field groupings below.
 
 // Amount + currency side by side (FR-1.4). Amount flexes; currency is a compact fixed-width field.
 // Top-align: the Amount field carries a hint line that Currency doesn't, so aligning bottoms would

@@ -83,8 +83,10 @@ in the current Figma — design them to this spec.
 
 ### 4.2 Add / Edit Transaction **[partly NEW]**
 - **FR:** FR-1.1 (+ FR-1.2/1.3/1.4 via sub-editors).
-- **Components:** CurrencyField (amount + currency + rate), date picker, category picker,
-  account picker, note; toggles → SplitEditor, RecurringRuleForm; *Save*/*Back*.
+- **Presentation:** a **Modal** (§8.0), not a pushed route.
+- **Components:** CurrencyField (amount + currency + rate), date picker, category picker
+  (SelectField), account picker (SelectField), note; inline split editor ("+ Split"); modal
+  footer *Cancel* / *Save* (+ trash on edit, → ConfirmDialog).
 - **Data:** draft transaction; categories; accounts; applicable rule preview.
 - **Commands:** `save_transaction(dto)` (ACID), `preview_rules(draft)`.
 - **States:** validation (amount>0, split sum=0 remaining), rule-applied indicator, save error.
@@ -216,14 +218,28 @@ in the current Figma — design them to this spec.
 
 ## 8. Modals & shared
 
-### 8.1 Transaction popup
-- **Figma:** `133:517` (POP-UP – Transaction).
-- **Components:** TransactionPopup (title, body, *Back* + *Modify*).
-- **Usage:** quick view/edit entry point from list/detail.
+### 8.0 Forms are modals (canonical pattern)
+- **Every add/edit form in the app is a `Modal`** (`app-modal`) — a centred card over a dimmed +
+  blurred backdrop — **not** a pushed full-screen route. This covers Add/Edit **Transaction**
+  (incl. Split editor), **Rule**, **Recurring rule**, **Account**, **Category**, and **Goal**
+  (FR-3.2). The list/screen behind stays visible-but-blurred; dismiss (Escape, backdrop click, or
+  *Cancel*) returns to it unchanged.
+- **Footer convention:** ghost *Cancel* (left of the primary) + primary *Save* (right). On an
+  **edit** modal a **trash** icon-button sits at the far left and deletes via a ConfirmDialog
+  (§8.2); add modals omit it. Features with only a reversible *archive* (Accounts, Categories)
+  keep archive on the list row; Recurring has no delete (managed by pause/resume).
+- **Dropdowns** inside modals use `SelectField` (themed listbox — native `<select>` can't be
+  styled in the WebView). An open dropdown expands the dialog (in-flow) so every option is
+  reachable; the body scrolls with the scrollbar hidden (native-app feel).
 
-### 8.2 Confirm / destructive dialog **[NEW]**
-- Used for delete, restore-replace, over-budget acknowledgement. Two-button, danger styling
-  on the destructive action.
+### 8.1 Transaction popup
+- **Figma:** `133:517` (POP-UP – Transaction). Superseded by the §8.0 Modal pattern above; the
+  Add/Edit Transaction modal is the canonical entry point from the list.
+
+### 8.2 Confirm / destructive dialog
+- **Built:** `ConfirmDialog` (`app-confirm-dialog`), built on `Modal`. Used for delete,
+  restore-replace, over-budget acknowledgement. Two-button, danger styling on the destructive
+  action; emits `confirm` / `cancelled`.
 
 ### 8.3 Banner / Toast **[NEW]**
 - Success (saved, exported, backup written), warning (approaching cap, duplicates found),

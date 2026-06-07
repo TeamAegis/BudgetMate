@@ -17,12 +17,14 @@ import type { Transaction, Account, Category } from '../../core/models';
 import { MoneyPipe } from '../../shared/pipes/money.pipe';
 import { Button } from '../../shared/ui/button/button';
 import { IconButton } from '../../shared/ui/icon-button/icon-button';
-import { Card } from '../../shared/ui/card/card';
 import { Banner } from '../../shared/ui/banner/banner';
 import { EmptyState } from '../../shared/ui/empty-state/empty-state';
 import { ListRow } from '../../shared/ui/list-row/list-row';
 import { FormField } from '../../shared/ui/form-field/form-field';
 import { Skeleton } from '../../shared/ui/skeleton/skeleton';
+import { Modal } from '../../shared/ui/modal/modal';
+import { ConfirmDialog } from '../../shared/ui/confirm-dialog/confirm-dialog';
+import { SelectField, type SelectOption } from '../../shared/ui/select-field/select-field';
 
 /** A run of transactions sharing one posted date, for the grouped list. */
 interface DateGroup {
@@ -49,12 +51,14 @@ const DECIMAL = /^\d+(\.\d+)?$/;
     LucideX,
     Button,
     IconButton,
-    Card,
     Banner,
     EmptyState,
     ListRow,
     FormField,
     Skeleton,
+    Modal,
+    ConfirmDialog,
+    SelectField,
   ],
   templateUrl: './transactions.html',
   styleUrl: './transactions.scss',
@@ -73,8 +77,20 @@ export class Transactions implements OnInit {
   protected readonly error = signal<string | null>(null);
   protected readonly editingId = signal<number | null>(null);
   protected readonly showForm = signal(false);
+  /** True while the modal is editing an existing transaction (vs adding) — drives the footer trash. */
+  protected readonly editing = computed(() => this.editingId() !== null);
+  /** Set while the delete-confirm dialog is open over the edit modal. */
+  protected readonly confirmingDelete = signal(false);
   /** Category name a rule suggested from the payee (shown as an inspectable, overridable hint). */
   protected readonly suggestedCategory = signal<string | null>(null);
+
+  /** Themed-dropdown options (native <select> can't be styled in the WebView — see SelectField). */
+  protected readonly accountOptions = computed<SelectOption[]>(() =>
+    this.accounts().map((a) => ({ value: a.id, label: `${a.name} · ${a.currency}` })),
+  );
+  protected readonly categoryOptions = computed<SelectOption[]>(() =>
+    this.categories().map((c) => ({ value: c.id, label: `${c.name} · ${c.kind}` })),
+  );
 
   protected readonly form = this.fb.group({
     accountId: this.fb.control<number | null>(null, Validators.required),
@@ -270,7 +286,16 @@ export class Transactions implements OnInit {
 
   protected cancel(): void {
     this.showForm.set(false);
+    this.confirmingDelete.set(false);
     this.error.set(null);
+  }
+
+  /** Bind a SelectField's emitted value back onto a form control (custom listbox → reactive form). */
+  protected setAccount(v: number | string): void {
+    this.form.controls.accountId.setValue(Number(v));
+  }
+  protected setSplitCategory(i: number, v: number | string): void {
+    this.splits.at(i).get('categoryId')!.setValue(Number(v));
   }
 
   protected async save(): Promise<void> {
@@ -310,11 +335,16 @@ export class Transactions implements OnInit {
     }
   }
 
-  protected async remove(t: Transaction): Promise<void> {
+  /** Delete the transaction currently open in the edit modal (after footer-trash confirmation). */
+  protected async deleteConfirmed(): Promise<void> {
+    const id = this.editingId();
+    if (id === null) return;
     this.busy.set(true);
     this.error.set(null);
     try {
-      await deleteTransaction(t.id);
+      await deleteTransaction(id);
+      this.confirmingDelete.set(false);
+      this.showForm.set(false);
       await this.reload();
     } catch (e) {
       this.error.set(String(e));

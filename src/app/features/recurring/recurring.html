@@ -13,51 +13,57 @@
   }
 
   @if (showForm()) {
-    <app-card>
-      <form class="form" [formGroup]="form" (ngSubmit)="save()">
-        <app-form-field label="Schedule">
-          <select formControlName="schedule">
-            @for (s of schedules; track s) {
-              <option [value]="s">{{ s }}</option>
-            }
-          </select>
-        </app-form-field>
-        <app-form-field label="Next run date" hint="The first (or next) occurrence to materialise.">
-          <input type="date" formControlName="nextRunDate" />
-        </app-form-field>
-        <app-form-field label="Account">
-          <select formControlName="accountId">
-            <option [ngValue]="null" disabled>Select an account</option>
-            @for (a of accounts(); track a.id) {
-              <option [ngValue]="a.id">{{ a.name }} · {{ a.currency }}</option>
-            }
-          </select>
-        </app-form-field>
-        <app-form-field label="Category">
-          <select formControlName="categoryId">
-            <option [ngValue]="null" disabled>Select a category</option>
-            @for (c of categories(); track c.id) {
-              <option [ngValue]="c.id">{{ c.name }} · {{ c.kind }}</option>
-            }
-          </select>
-        </app-form-field>
-        <app-form-field label="Amount" hint="Expense or income is set by the category.">
-          <input type="text" inputmode="decimal" formControlName="amount" placeholder="0.00" class="numeric" />
-        </app-form-field>
-        <app-form-field label="Payee (optional)">
-          <input type="text" formControlName="payee" placeholder="e.g. Landlord" />
-        </app-form-field>
-        <app-form-field label="Note (optional)">
-          <input type="text" formControlName="note" />
-        </app-form-field>
-        <div class="actions">
+    <app-modal
+      [title]="editing() ? 'Modify a Recurring Rule' : 'Add a Recurring Rule'"
+      [busy]="busy()"
+      (dismiss)="cancel()"
+    >
+      <form class="modal-form" [formGroup]="form" (ngSubmit)="save()">
+        <div class="modal-body">
+          <app-form-field label="Schedule">
+            <app-select-field
+              ariaLabel="Schedule"
+              [options]="scheduleOptions"
+              [value]="form.controls.schedule.value"
+              (valueChange)="setSchedule($event)"
+            />
+          </app-form-field>
+          <app-form-field label="Next run date" hint="The first (or next) occurrence to materialise.">
+            <input type="date" formControlName="nextRunDate" />
+          </app-form-field>
+          <app-form-field label="Account">
+            <app-select-field
+              ariaLabel="Account"
+              [options]="accountOptions()"
+              [value]="form.controls.accountId.value"
+              (valueChange)="setAccount($event)"
+            />
+          </app-form-field>
+          <app-form-field label="Category">
+            <app-select-field
+              ariaLabel="Category"
+              [options]="categoryOptions()"
+              [value]="form.controls.categoryId.value"
+              (valueChange)="setCategory($event)"
+            />
+          </app-form-field>
+          <app-form-field label="Amount" hint="Expense or income is set by the category.">
+            <input type="text" inputmode="decimal" formControlName="amount" placeholder="0.00" class="numeric" />
+          </app-form-field>
+          <app-form-field label="Payee (optional)">
+            <input type="text" formControlName="payee" placeholder="e.g. Landlord" />
+          </app-form-field>
+          <app-form-field label="Note (optional)">
+            <input type="text" formControlName="note" />
+          </app-form-field>
+        </div>
+        <div class="modal-footer">
+          <span class="modal-footer-spacer"></span>
           <app-button variant="ghost" (click)="cancel()" [disabled]="busy()">Cancel</app-button>
-          <app-button type="submit" variant="primary" [disabled]="busy() || form.invalid">
-            {{ busy() ? 'Saving…' : 'Save' }}
-          </app-button>
+          <app-button type="submit" variant="primary" [loading]="busy()" [disabled]="form.invalid">Save</app-button>
         </div>
       </form>
-    </app-card>
+    </app-modal>
   }
 
   @if (loading()) {

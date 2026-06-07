@@ -43,6 +43,27 @@
   }
 }
 
+// Modal scrim cross-fades in; the dialog card rises + scales slightly (see app-modal).
+@keyframes scrim-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modal-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 // ---- Enter classes (for [animate.enter]) ----
 // Routed page content cross-fades in; list items rise-and-fade. List rows can stagger by setting
 //   [style.animation-delay]="'calc(' + $index + ' * 40ms)'"  (capped by the consumer for long lists).

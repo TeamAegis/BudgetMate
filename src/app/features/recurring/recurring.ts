@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { LucidePlus, LucidePencil, LucidePlay, LucidePause } from '@lucide/angular';
 import {
@@ -13,11 +13,12 @@ import {
 import type { RecurringRule, Account, Category, Schedule } from '../../core/models';
 import { Button } from '../../shared/ui/button/button';
 import { IconButton } from '../../shared/ui/icon-button/icon-button';
-import { Card } from '../../shared/ui/card/card';
 import { Banner } from '../../shared/ui/banner/banner';
 import { EmptyState } from '../../shared/ui/empty-state/empty-state';
 import { ListRow } from '../../shared/ui/list-row/list-row';
 import { FormField } from '../../shared/ui/form-field/form-field';
+import { Modal } from '../../shared/ui/modal/modal';
+import { SelectField, type SelectOption } from '../../shared/ui/select-field/select-field';
 
 const SCHEDULES: Schedule[] = ['daily', 'weekly', 'monthly'];
 const DECIMAL = /^\d+(\.\d+)?$/;
@@ -36,11 +37,12 @@ const DECIMAL = /^\d+(\.\d+)?$/;
     LucidePause,
     Button,
     IconButton,
-    Card,
     Banner,
     EmptyState,
     ListRow,
     FormField,
+    Modal,
+    SelectField,
   ],
   templateUrl: './recurring.html',
   styleUrl: './recurring.scss',
@@ -48,7 +50,6 @@ const DECIMAL = /^\d+(\.\d+)?$/;
 export class Recurring implements OnInit {
   private readonly fb = inject(FormBuilder);
 
-  protected readonly schedules = SCHEDULES;
   protected readonly rules = signal<RecurringRule[]>([]);
   protected readonly accounts = signal<Account[]>([]);
   protected readonly categories = signal<Category[]>([]);
@@ -57,6 +58,16 @@ export class Recurring implements OnInit {
   protected readonly error = signal<string | null>(null);
   protected readonly editingId = signal<number | null>(null);
   protected readonly showForm = signal(false);
+  protected readonly editing = computed(() => this.editingId() !== null);
+
+  /** Themed-dropdown options (native <select> can't be styled in the WebView — see SelectField). */
+  protected readonly scheduleOptions: SelectOption[] = SCHEDULES.map((s) => ({ value: s, label: s }));
+  protected readonly accountOptions = computed<SelectOption[]>(() =>
+    this.accounts().map((a) => ({ value: a.id, label: `${a.name} · ${a.currency}` })),
+  );
+  protected readonly categoryOptions = computed<SelectOption[]>(() =>
+    this.categories().map((c) => ({ value: c.id, label: `${c.name} · ${c.kind}` })),
+  );
 
   protected readonly form = this.fb.group({
     schedule: this.fb.nonNullable.control<Schedule>('monthly', Validators.required),
@@ -119,7 +130,7 @@ export class Recurring implements OnInit {
     return r.template.payee || this.categoryName(r.template.categoryId);
   }
   protected ruleMeta(r: RecurringRule): string {
-    const status = r.active ? `next ${r.nextRunDate}` : 'paused';
+    const status = r.active ? `Next: ${r.nextRunDate}` : 'Paused';
     return `${r.schedule} · ${status}`;
   }
 
@@ -156,6 +167,17 @@ export class Recurring implements OnInit {
   protected cancel(): void {
     this.showForm.set(false);
     this.error.set(null);
+  }
+
+  /** Bind a SelectField's emitted value back onto a form control (custom listbox → reactive form). */
+  protected setSchedule(v: number | string): void {
+    this.form.controls.schedule.setValue(v as Schedule);
+  }
+  protected setAccount(v: number | string): void {
+    this.form.controls.accountId.setValue(Number(v));
+  }
+  protected setCategory(v: number | string): void {
+    this.form.controls.categoryId.setValue(Number(v));
   }
 
   protected async save(): Promise<void> {

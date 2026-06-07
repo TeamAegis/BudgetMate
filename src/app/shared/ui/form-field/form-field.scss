@@ -28,6 +28,13 @@
   outline: 2px solid var(--c-secondary, var(--c-primary-700));
   outline-offset: 1px;
 }
+// A projected SelectField (themed dropdown) fills the field width like the native inputs do.
+.form-field app-select-field {
+  display: block;
+}
+.form-field app-select-field .trigger {
+  width: 100%;
+}
 .form-field .hint {
   font-weight: var(--fw-regular);
   color: var(--c-text-muted);

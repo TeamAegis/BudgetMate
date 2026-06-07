@@ -13,102 +13,121 @@
   }
 
   @if (showForm()) {
-    <app-card>
-      <form class="form" [formGroup]="form" (ngSubmit)="save()">
-        <app-form-field label="Account">
-          <select formControlName="accountId">
-            <option [ngValue]="null" disabled>Select an account</option>
-            @for (a of accounts(); track a.id) {
-              <option [ngValue]="a.id">{{ a.name }} · {{ a.currency }}</option>
-            }
-          </select>
-        </app-form-field>
-
-        <div class="amount-row">
-          <app-form-field label="Amount" hint="Expense or income is set by the category.">
-            <input type="text" inputmode="decimal" formControlName="amount" placeholder="0.00" class="numeric" />
+    <app-modal [title]="editing() ? 'Modify a Transaction' : 'Add a Transaction'" [busy]="busy()" (dismiss)="cancel()">
+      <form class="modal-form" [formGroup]="form" (ngSubmit)="save()">
+        <div class="modal-body">
+          <app-form-field label="Account">
+            <app-select-field
+              ariaLabel="Account"
+              [options]="accountOptions()"
+              [value]="form.controls.accountId.value"
+              (valueChange)="setAccount($event)"
+            />
           </app-form-field>
-          <app-form-field label="Currency" class="currency-field">
-            <input type="text" formControlName="currency" maxlength="3" class="numeric currency" />
-          </app-form-field>
-        </div>
 
-        @if (showFx()) {
-          <app-form-field
-            label="Exchange rate"
-            [hint]="'1 ' + currentCurrency() + ' = ? ' + baseCurrency() + ' (converted for reporting)'"
-          >
-            <input type="text" inputmode="decimal" formControlName="fxRate" placeholder="1.00" class="numeric" />
-          </app-form-field>
-        }
-
-        <!-- Split editor (FR-1.2): one line = a simple entry; add lines to split the total. -->
-        <div class="splits" formArrayName="splits">
-          <div class="splits-head">
-            <span class="splits-title">{{ splits.length > 1 ? 'Splits' : 'Category' }}</span>
-            <button type="button" class="add-split" (click)="addSplit()" [disabled]="busy()">
-              <svg lucidePlus [size]="16"></svg>
-              <span>Add split</span>
-            </button>
+          <div class="amount-row">
+            <app-form-field label="Amount" hint="Expense or income is set by the category.">
+              <input type="text" inputmode="decimal" formControlName="amount" placeholder="0.00" class="numeric" />
+            </app-form-field>
+            <app-form-field label="Currency" class="currency-field">
+              <input type="text" formControlName="currency" maxlength="3" class="numeric currency" />
+            </app-form-field>
           </div>
 
-          @for (line of splits.controls; track $index) {
-            <div class="split-row" [formGroupName]="$index">
-              <app-form-field class="split-category" label="Category">
-                <select formControlName="categoryId">
-                  <option [ngValue]="null" disabled>Category</option>
-                  @for (c of categories(); track c.id) {
-                    <option [ngValue]="c.id">{{ c.name }} · {{ c.kind }}</option>
-                  }
-                </select>
-              </app-form-field>
+          @if (showFx()) {
+            <app-form-field
+              label="Exchange rate"
+              [hint]="'1 ' + currentCurrency() + ' = ? ' + baseCurrency() + ' (converted for reporting)'"
+            >
+              <input type="text" inputmode="decimal" formControlName="fxRate" placeholder="1.00" class="numeric" />
+            </app-form-field>
+          }
 
-              @if (splits.length > 1) {
-                <app-form-field class="split-amount" label="Amount">
-                  <input type="text" inputmode="decimal" formControlName="amount" placeholder="0.00" class="numeric" />
-                </app-form-field>
-                <app-icon-button ariaLabel="Remove split" (click)="removeSplit($index)" [disabled]="busy()">
-                  <svg lucideX [size]="18"></svg>
-                </app-icon-button>
-              }
+          <!-- Split editor (FR-1.2): one line = a simple entry; add lines to split the total. -->
+          <div class="splits" formArrayName="splits">
+            <div class="splits-head">
+              <span class="splits-title">{{ splits.length > 1 ? 'Splits' : 'Category' }}</span>
+              <button type="button" class="add-split" (click)="addSplit()" [disabled]="busy()">
+                <svg lucidePlus [size]="16"></svg>
+                <span>Split</span>
+              </button>
             </div>
-          }
 
-          @if (splits.length > 1) {
-            <p class="remaining" [class.balanced]="remainingMinor() === 0">
-              @if (remainingMinor() === 0) {
-                <span>Fully allocated.</span>
-              } @else {
-                <span
-                  >Remaining to allocate:
-                  {{ { amountMinor: remainingMinor(), currency: currentCurrency() } | money }}</span
-                >
-              }
-            </p>
+            @for (line of splits.controls; track $index) {
+              <div class="split-row" [formGroupName]="$index">
+                <app-form-field class="split-category" label="Category">
+                  <app-select-field
+                    ariaLabel="Category"
+                    [options]="categoryOptions()"
+                    [value]="line.get('categoryId')!.value"
+                    (valueChange)="setSplitCategory($index, $event)"
+                  />
+                </app-form-field>
+
+                @if (splits.length > 1) {
+                  <app-form-field class="split-amount" label="Amount">
+                    <input type="text" inputmode="decimal" formControlName="amount" placeholder="0.00" class="numeric" />
+                  </app-form-field>
+                  <app-icon-button ariaLabel="Remove split" (click)="removeSplit($index)" [disabled]="busy()">
+                    <svg lucideX [size]="18"></svg>
+                  </app-icon-button>
+                }
+              </div>
+            }
+
+            @if (splits.length > 1) {
+              <p class="remaining" [class.balanced]="remainingMinor() === 0">
+                @if (remainingMinor() === 0) {
+                  <span>Fully allocated.</span>
+                } @else {
+                  <span
+                    >Remaining to allocate:
+                    {{ { amountMinor: remainingMinor(), currency: currentCurrency() } | money }}</span
+                  >
+                }
+              </p>
+            }
+          </div>
+
+          <app-form-field label="Date">
+            <input type="date" formControlName="postedDate" />
+          </app-form-field>
+          <app-form-field label="Payee (optional)">
+            <input type="text" formControlName="payee" placeholder="e.g. Winners" (blur)="suggestCategory()" />
+          </app-form-field>
+          @if (suggestedCategory(); as cat) {
+            <p class="suggested">Category “{{ cat }}” set by a rule — change it above if needed.</p>
           }
+          <app-form-field label="Note (optional)">
+            <input type="text" formControlName="note" />
+          </app-form-field>
         </div>
 
-        <app-form-field label="Date">
-          <input type="date" formControlName="postedDate" />
-        </app-form-field>
-        <app-form-field label="Payee (optional)">
-          <input type="text" formControlName="payee" placeholder="e.g. Winners" (blur)="suggestCategory()" />
-        </app-form-field>
-        @if (suggestedCategory(); as cat) {
-          <p class="suggested">Category “{{ cat }}” set by a rule — change it above if needed.</p>
-        }
-        <app-form-field label="Note (optional)">
-          <input type="text" formControlName="note" />
-        </app-form-field>
-
-        <div class="actions">
+        <div class="modal-footer">
+          @if (editing()) {
+            <app-icon-button ariaLabel="Delete transaction" (click)="confirmingDelete.set(true)" [disabled]="busy()">
+              <svg lucideTrash2 [size]="18"></svg>
+            </app-icon-button>
+          }
+          <span class="modal-footer-spacer"></span>
           <app-button variant="ghost" (click)="cancel()" [disabled]="busy()">Cancel</app-button>
           <app-button type="submit" variant="primary" [loading]="busy()" [disabled]="form.invalid || unbalanced()">
             Save
           </app-button>
         </div>
       </form>
-    </app-card>
+    </app-modal>
+  }
+
+  @if (confirmingDelete()) {
+    <app-confirm-dialog
+      title="Delete transaction?"
+      message="This permanently removes the transaction and its splits. This can't be undone."
+      confirmLabel="Delete"
+      [busy]="busy()"
+      (confirm)="deleteConfirmed()"
+      (cancelled)="confirmingDelete.set(false)"
+    />
   }
 
   @if (loading()) {
@@ -158,9 +177,6 @@
               </span>
               <app-icon-button actions ariaLabel="Edit" (click)="startEdit(t)" [disabled]="busy()">
                 <svg lucidePencil [size]="18"></svg>
-              </app-icon-button>
-              <app-icon-button actions ariaLabel="Delete" (click)="remove(t)" [disabled]="busy()">
-                <svg lucideTrash2 [size]="18"></svg>
               </app-icon-button>
             </li>
           }
