@@ -19,6 +19,14 @@ scope on this Windows machine. See `docs/architecture.md` §11 (platform scope).
 - **Android:** Android Studio → SDK + Build-Tools + **NDK 28+** (16 KB page alignment) +
   Command-line Tools; set `ANDROID_HOME`, `NDK_HOME`, `JAVA_HOME` (Android Studio JBR); install
   Rust targets: `rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android`.
+- **Android builds must run under WSL2 (Linux), NOT the Windows host.** The
+  `bundled-sqlcipher-vendored-openssl` feature compiles OpenSSL from source, and OpenSSL's
+  `./Configure` **rejects Windows (Strawberry) Perl** when cross-compiling to Android —
+  *"this perl doesn't produce Unix-like paths"* — so `tauri android build` fails in `openssl-sys`
+  on Windows even though the **desktop** (MSVC) build works fine there. Build Android in WSL2; see
+  `scripts/wsl-setup-*.sh` (deps/rustup, JDK+SDK+NDK) and `scripts/wsl-build-apk.sh` (isolated
+  WSL-native copy so the Windows `node_modules` is untouched). The Windows emulator is reachable
+  from the WSL-built APK via `adb install`.
 
 ## Common commands
 - Frontend only (browser preview): `npm run start` → http://localhost:4200
@@ -45,6 +53,10 @@ policy by **omitting `android.permission.INTERNET`** (verify this after init; th
 - **SQLCipher/OpenSSL build fails:** confirm Perl + NASM (desktop) and the NDK/C toolchain
   (Android) are visible; confirm the Rust target is installed. Do **not** switch off bundled
   SQLCipher.
+- **`openssl-sys` fails cross-compiling to Android with *"this perl doesn't produce Unix-like
+  paths"*:** you're building on the Windows host. Vendored OpenSSL can't be configured by
+  Strawberry Perl for an Android target — build under **WSL2** instead (see Prerequisites →
+  Android). Do not switch off vendored SQLCipher/OpenSSL to dodge this.
 - **White screen / slow start on Android:** WebView init; check the splash and that heavy routes
   (`import`/`analytics`) stay lazy-loaded.
 - **Native command freezes UI on Android:** the call is on the main thread — move it to a
