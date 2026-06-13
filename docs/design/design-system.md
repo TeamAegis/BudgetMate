@@ -158,11 +158,46 @@ Success `circle-check` · Duplicate/review `copy`.
 ---
 
 ## 6. Motion
-Subtle and fast (supports the <800ms-feel goal; nothing that delays first paint):
-- Standard transition: 150–200ms ease-out (taps, toggles, chip press).
-- Progress bars animate fill on mount: 300ms ease-out.
-- Respect `prefers-reduced-motion`: disable non-essential animation.
+Subtle and fast (supports the <800ms-feel goal; nothing that delays first paint). This is the
+canonical motion spec; `.claude/rules/design.md → Motion` enforces it for new work.
+
+**Principles**
+- Subtle and quick — motion confirms a change, it never gates interaction.
 - No skeleton-blocking animation on cold start — show content progressively.
+- Always honour `prefers-reduced-motion` (see below).
+
+**Tokens** (`src/styles/_tokens.scss`; mirrored in `design-tokens.json`) — never hardcode a
+duration or easing:
+- `--motion-fast: 150ms` — taps, toggles, chip/press, scrim fade.
+- `--motion-standard: 200ms` — page/list entrance, modal dialog.
+- `--motion-slow: 300ms` — progress-bar fill, skeleton pulse cycle.
+- `--easing: cubic-bezier(0.2, 0, 0, 1)` — the single ease-out curve for everything.
+
+**Keyframe + class library** (`src/styles/_animations.scss`, `@use`d globally) — the one source;
+reuse these, don't author ad-hoc keyframes in a component:
+- `fade-in`, `fade-in-up`, `scrim-in`, `modal-enter`, `skeleton-pulse`, `spin`.
+- `.list-item-enter` (the only enter-class) for items entering a list.
+
+**Per-surface mapping**
+- **Page transitions** — automatic via the app shell (`src/app/app.scss` `router-outlet + *`,
+  `fade-in`). Screens add nothing per page.
+- **List rows** — `animate.enter="list-item-enter"` (Angular 20 native CSS hook), with a capped
+  stagger: `[style.animation-delay]="(i < 12 ? i * 40 : 0) + 'ms'"` (40ms steps, no delay past 12
+  rows so long lists don't drag).
+- **Modals** — `app-modal` applies `scrim-in` (`--motion-fast`) + `modal-enter` (`--motion-standard`)
+  itself; consumers get it for free.
+- **Skeletons / spinners** — `.anim-skeleton-pulse` / `.anim-spin` (infinite, cancelled under reduce).
+- **Progress** — animate `width` with `transition: width var(--motion-slow) var(--easing)`
+  (e.g. GoalProgressRow fills from 0 on mount).
+
+**Reduced-motion contract** — the motion tokens are zeroed under
+`@media (prefers-reduced-motion: reduce)` in `_tokens.scss`, so token-driven motion stops with no
+extra work; `_animations.scss` additionally cancels the infinite/movement keyframes. Any new
+animation must be token-driven (so it inherits this) or add its own reduce guard.
+
+> Note: most Android **emulators** report `prefers-reduced-motion: reduce` because
+> `animator_duration_scale` defaults to 0 — so motion looks instant there. Set it to 1
+> (`adb shell settings put global animator_duration_scale 1.0`) or test on a real device to see it.
 
 ---
 

@@ -65,21 +65,19 @@
 }
 
 // ---- Enter classes (for [animate.enter]) ----
-// Routed page content cross-fades in; list items rise-and-fade. List rows can stagger by setting
-//   [style.animation-delay]="'calc(' + $index + ' * 40ms)'"  (capped by the consumer for long lists).
-.page-enter {
-  animation: fade-in var(--motion-standard) var(--easing) both;
-}
-
+// List items rise-and-fade as they enter; stagger them by setting an inline delay, capped for long
+// lists: [style.animation-delay]="(i < 12 ? i * 40 : 0) + 'ms'".  (Routed-page entrance is handled
+// centrally by the app shell — see src/app/app.scss `router-outlet + *` — so pages need no class.)
 .list-item-enter {
   animation: fade-in-up var(--motion-standard) var(--easing) both;
 }
 
 // ---- Reduced motion: no breathing, no spin, no entrance movement ----
+// Motion tokens are already zeroed under reduce (styles/_tokens.scss); this additionally cancels the
+// infinite keyframes (skeleton pulse, spinner) so nothing loops, and the entrance movement.
 @media (prefers-reduced-motion: reduce) {
   .anim-skeleton-pulse,
   .anim-spin,
-  .page-enter,
   .list-item-enter {
     animation: none !important;
   }
