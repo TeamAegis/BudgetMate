@@ -262,6 +262,45 @@ export interface RulePreviewInput {
   account?: string | null;
 }
 
+// ── OCR receipt extraction (FR-2.1) ────────────────────────────────────────────────
+
+/**
+ * Deterministically extracted receipt fields (mirrors Rust `rules::receipt::ExtractedReceipt`).
+ * Suggestions only — the user confirms/edits before anything is saved. `totalMinor` is integer
+ * minor units (2-decimal assumption); the account currency is applied on save. Any field can be
+ * `null` when nothing recognisable was found (low-confidence/manual state).
+ */
+export interface ExtractedReceipt {
+  merchant: string | null;
+  /** ISO-8601 `yyyy-mm-dd`. */
+  date: string | null;
+  /** Total in integer minor units (2-decimal assumption); never a float. */
+  totalMinor: number | null;
+}
+
+/**
+ * Result of `extract_receipt` (mirrors Rust `commands::ocr::ReceiptExtraction`). `engineAvailable`
+ * is false when the native OCR engine is not built on this platform (desktop dev/test, iOS
+ * deferred) — the UI shows an "OCR engine not available yet" state instead of an error.
+ */
+export interface ReceiptExtraction {
+  engineAvailable: boolean;
+  fields: ExtractedReceipt;
+}
+
+/**
+ * A draft transaction handed to the manual-entry form to PREFILL it (e.g. from an OCR scan,
+ * FR-2.1). Not an IPC DTO — purely a frontend hand-off via router state. The user must still
+ * review/edit and explicitly Save; nothing is auto-committed. `totalMinor` is integer minor units.
+ */
+export interface TransactionPrefill {
+  payee: string | null;
+  postedDate: string | null;
+  totalMinor: number | null;
+  /** Currency the `totalMinor` is expressed in (the OCR 2-dp assumption maps to the base currency). */
+  currency: Iso4217;
+}
+
 // ── Goals (FR-3.2) ───────────────────────────────────────────────────────────────
 
 /** A savings goal (mirrors Rust `Goal`). `currentMinor` is the amount saved so far; `completed`

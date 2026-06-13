@@ -103,10 +103,15 @@ in the current Figma — design them to this spec.
 - **Components:** ReceiptScanSheet (camera/preview), progress, editable
   merchant/date/total fields, *Use* → prefilled Add Transaction.
 - **Data:** image (local only), extracted fields + confidence.
-- **Commands:** `plugin:ocr|recognize_text(imagePath)` → `extract_receipt_fields(blocks)`
-  (deterministic Rust).
-- **States:** capturing, processing (off-thread), extracted (editable), low-confidence
-  (flagged), failed (retry/manual entry). **Never auto-saves.**
+- **Commands:** `extract_receipt(imagePath)` — one thin Rust command that calls
+  `plugin:ocr|recognize_text` then runs the deterministic `rules::receipt::extract`, returning
+  `{ engineAvailable, fields: { merchant, date, totalMinor } }`. Image picked via the file-open
+  dialog (bridge `pickReceiptImage`). On "Use these details" the screen prefills the Add
+  Transaction modal (`/expenses` router state) — it does **not** save.
+- **States:** picking, processing (off-thread — `extract_receipt` is async, native engine on
+  Dispatchers.IO), review (editable), low-confidence (all fields empty → flagged + manual-entry
+  CTA), engine-unavailable (plugin `NotImplemented` on desktop/iOS), failed (retry/manual entry).
+  **Never auto-saves** — the user confirms in the Add Transaction modal.
 
 ### 4.5 Import Wizard **[NEW]**
 - **FR:** FR-2.2/2.3/2.4.

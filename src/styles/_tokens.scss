@@ -25,6 +25,7 @@
   // ---- Color: semantic (required by FR-3.1 / FR-2.4 / states) ----
   --c-positive: #2e9e6b;
   --c-warning: #e8a13a;
+  --c-warning-soft: rgba(232, 161, 58, 0.12);  // low-confidence/approaching tint fill (OCR, budgets)
   --c-danger: #d8453b;
   --c-info: #3a86c8;
 

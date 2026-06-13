@@ -17,6 +17,7 @@
     "border": "#ECECEC",
     "positive": "#2E9E6B",
     "warning": "#E8A13A",
+    "warningSoft": "rgba(232,161,58,0.12)",
     "danger": "#D8453B",
     "info": "#3A86C8",
     "shadowPink": "rgba(255,203,203,0.29)",

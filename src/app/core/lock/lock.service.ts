@@ -35,10 +35,28 @@ export class LockService {
 
   private idleTimer: ReturnType<typeof setTimeout> | null = null;
   private activityBound = false;
+  /**
+   * Suppresses the visibility-triggered lock while an app-initiated picker (e.g. the Android system
+   * photo picker for OCR) is in flight. That picker backgrounds the WebView and fires
+   * `visibilitychange → hidden`, which would otherwise lock the app mid-pick. Real backgrounding
+   * still locks (the flag is only set for the picker window). Counter, not boolean, so overlapping
+   * excursions are handled safely.
+   */
+  private trustedExcursions = 0;
   private readonly onActivity = (): void => this.resetIdleTimer();
   private readonly onVisibility = (): void => {
-    if (document.visibilityState === 'hidden') void this.lock();
+    if (document.visibilityState === 'hidden' && this.trustedExcursions === 0) void this.lock();
   };
+
+  /** Begin a trusted, app-initiated excursion (e.g. native picker): suppress the visibility lock. */
+  beginTrustedExcursion(): void {
+    this.trustedExcursions++;
+  }
+
+  /** End a trusted excursion. Must be paired with `beginTrustedExcursion()` (use try/finally). */
+  endTrustedExcursion(): void {
+    if (this.trustedExcursions > 0) this.trustedExcursions--;
+  }
 
   /** Pull the current vault/lock state from the core and update signals + timers. */
   async refreshState(): Promise<AppState | null> {

@@ -25,4 +25,48 @@ describe('LockService', () => {
     await expectAsync(lock.refreshState()).toBeResolvedTo(null);
     expect(lock.unlocked()).toBe(false);
   });
+
+  // The `onVisibility` handler is private; arm the listeners (which bind it) then dispatch a real
+  // `visibilitychange` with `visibilityState` stubbed to 'hidden' to exercise the actual code path.
+  function hideDocument(): void {
+    spyOnProperty(document, 'visibilityState', 'get').and.returnValue('hidden');
+    document.dispatchEvent(new Event('visibilitychange'));
+  }
+
+  it('visibility→hidden locks normally (no trusted excursion active)', () => {
+    spyOn(router, 'navigate').and.resolveTo(true);
+    lock.unlocked.set(true);
+    // Arm the security timers/listeners (binds the visibility handler).
+    (lock as unknown as { armSecurityTimers(): void }).armSecurityTimers();
+    const lockSpy = spyOn(lock, 'lock').and.resolveTo();
+
+    hideDocument();
+
+    expect(lockSpy).toHaveBeenCalled();
+  });
+
+  it('visibility→hidden does NOT lock while a trusted excursion is active', () => {
+    spyOn(router, 'navigate').and.resolveTo(true);
+    lock.unlocked.set(true);
+    (lock as unknown as { armSecurityTimers(): void }).armSecurityTimers();
+    const lockSpy = spyOn(lock, 'lock').and.resolveTo();
+
+    lock.beginTrustedExcursion();
+    hideDocument();
+
+    expect(lockSpy).not.toHaveBeenCalled();
+  });
+
+  it('clears the excursion flag so a later background locks again', () => {
+    spyOn(router, 'navigate').and.resolveTo(true);
+    lock.unlocked.set(true);
+    (lock as unknown as { armSecurityTimers(): void }).armSecurityTimers();
+    const lockSpy = spyOn(lock, 'lock').and.resolveTo();
+
+    lock.beginTrustedExcursion();
+    lock.endTrustedExcursion();
+    hideDocument();
+
+    expect(lockSpy).toHaveBeenCalled();
+  });
 });

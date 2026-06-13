@@ -1,0 +1,99 @@
+<section class="feature-page">
+  @if (error(); as err) {
+    <app-banner>{{ err }}</app-banner>
+  }
+
+  @switch (phase()) {
+    <!-- Idle: pick an image to scan. -->
+    @case ('idle') {
+      <app-empty-state
+        image="assets/illustrations/get-started.svg"
+        message="Scan a receipt to capture the merchant, date and total — then review before saving."
+        cta="Choose an image"
+        (action)="scan()"
+      />
+      <p class="note">
+        Photos stay on your device. Text is recognised on-device and the fields are only suggestions
+        — you confirm every transaction before it is saved.
+      </p>
+    }
+
+    <!-- Busy/processing: heavy work runs off the UI thread; the screen stays responsive. -->
+    @case ('processing') {
+      <div class="processing" role="status" aria-live="polite">
+        <app-spinner [size]="32" label="Reading receipt" />
+        <p>Reading the receipt…</p>
+      </div>
+    }
+
+    <!-- Engine not available on this platform (desktop dev/test, iOS deferred). -->
+    @case ('unavailable') {
+      <div class="state-card">
+        <svg lucideTriangleAlert [size]="32" aria-hidden="true" class="state-icon"></svg>
+        <h2>OCR engine not available yet</h2>
+        <p>
+          On-device receipt scanning runs on Android. On this platform you can add the transaction
+          by hand instead.
+        </p>
+        <div class="state-actions">
+          <app-button variant="ghost" (click)="reset()">Back</app-button>
+          <app-button variant="primary" (click)="manualEntry()">Enter manually</app-button>
+        </div>
+      </div>
+    }
+
+    <!-- Error: plain-language message + retry. -->
+    @case ('error') {
+      <div class="state-card">
+        <svg lucideTriangleAlert [size]="32" aria-hidden="true" class="state-icon"></svg>
+        <h2>Couldn’t scan that image</h2>
+        <p>Something went wrong reading the receipt. Try another photo, or enter it by hand.</p>
+        <div class="state-actions">
+          <app-button variant="ghost" (click)="manualEntry()">Enter manually</app-button>
+          <app-button variant="primary" (click)="scan()">Try again</app-button>
+        </div>
+      </div>
+    }
+
+    <!-- Review: editable suggestions; the user confirms by handing off to the Add form. -->
+    @case ('review') {
+      @if (lowConfidence()) {
+        <div class="low-confidence" role="status">
+          <svg lucideTriangleAlert [size]="20" aria-hidden="true"></svg>
+          <span>Couldn’t read much from that image. Check the fields below or enter it by hand.</span>
+        </div>
+      } @else {
+        <p class="note">Review the suggestions and correct anything before continuing.</p>
+      }
+
+      @if (totalPreview(); as preview) {
+        <div class="extracted-total">
+          <span class="extracted-total-label">Detected total</span>
+          <span class="extracted-total-value numeric">{{ preview | money }}</span>
+        </div>
+      }
+
+      <form class="scan-form" [formGroup]="form" (ngSubmit)="use()">
+        <app-form-field label="Merchant">
+          <input type="text" formControlName="merchant" placeholder="e.g. Winners" />
+        </app-form-field>
+
+        <app-form-field label="Date" hint="yyyy-mm-dd">
+          <input type="date" formControlName="date" />
+        </app-form-field>
+
+        <app-form-field label="Total" hint="Amount is in your base currency; confirm on the next step.">
+          <input type="text" inputmode="decimal" formControlName="total" placeholder="0.00" class="numeric" />
+        </app-form-field>
+
+        <div class="scan-actions">
+          <app-button variant="ghost" (click)="reset()">Rescan</app-button>
+          <app-button type="submit" variant="primary" [disabled]="form.invalid">
+            <svg icon lucideScanLine [size]="18"></svg>
+            <span>Use these details</span>
+          </app-button>
+        </div>
+      </form>
+    }
+  }
+</section>
