@@ -85,6 +85,7 @@ pub fn run() {
             commands::rules::delete_rule,
             commands::rules::reorder_rules,
             commands::rules::preview_rules,
+            commands::ocr::extract_receipt,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

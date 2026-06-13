@@ -5,6 +5,7 @@
 // All business logic lives in Rust; these wrappers only marshal arguments and return DTOs.
 
 import { invoke } from '@tauri-apps/api/core';
+import { open as openDialog } from '@tauri-apps/plugin-dialog';
 import type {
   AppInfo,
   AppState,
@@ -30,6 +31,7 @@ import type {
   Goal,
   NewGoal,
   UpdateGoal,
+  ReceiptExtraction,
 } from '../models';
 
 /** Whether we are running inside the Tauri runtime (vs. plain browser `ng serve`). */
@@ -190,4 +192,31 @@ export function updateGoal(goal: UpdateGoal): Promise<Goal> {
 }
 export function deleteGoal(id: number): Promise<void> {
   return invoke<void>('delete_goal', { id });
+}
+
+// ── OCR receipt scan (FR-2.1) ──────────────────────────────────────────────────────
+
+/**
+ * Open the native picker for a receipt image and return its local path (or `null` if cancelled).
+ * Images stay on-device; no network is ever touched. Routed through the bridge so the dialog ACL
+ * stays auditable.
+ */
+export async function pickReceiptImage(): Promise<string | null> {
+  const selected = await openDialog({
+    multiple: false,
+    directory: false,
+    filters: [{ name: 'Image', extensions: ['jpg', 'jpeg', 'png', 'webp', 'heic', 'bmp'] }],
+  });
+  // The dialog returns a path string (or null); array form is only for multiple:true.
+  return typeof selected === 'string' ? selected : null;
+}
+
+/**
+ * Run on-device OCR over a local receipt image and deterministically extract merchant/date/total
+ * (FR-2.1). Heavy work happens off the UI thread in Rust/native. Suggestions only — the caller
+ * prefills the manual-entry form and the user confirms before any save. `engineAvailable` is false
+ * where the native engine isn't built (desktop dev/test).
+ */
+export function extractReceipt(imagePath: string): Promise<ReceiptExtraction> {
+  return invoke<ReceiptExtraction>('extract_receipt', { imagePath });
 }

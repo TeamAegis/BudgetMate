@@ -1,4 +1,5 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { LucidePlus, LucidePencil, LucideTrash2, LucideX } from '@lucide/angular';
@@ -13,7 +14,7 @@ import {
   previewRules,
   isTauri,
 } from '../../core/bridge';
-import type { Transaction, Account, Category } from '../../core/models';
+import type { Transaction, Account, Category, TransactionPrefill } from '../../core/models';
 import { MoneyPipe } from '../../shared/pipes/money.pipe';
 import { Button } from '../../shared/ui/button/button';
 import { IconButton } from '../../shared/ui/icon-button/icon-button';
@@ -65,6 +66,12 @@ const DECIMAL = /^\d+(\.\d+)?$/;
 })
 export class Transactions implements OnInit {
   private readonly fb = inject(FormBuilder);
+  private readonly router = inject(Router);
+  /** OCR/scan hand-off captured from router state at construction (consumed once after load). */
+  private readonly pendingPrefill: TransactionPrefill | null =
+    (this.router.getCurrentNavigation()?.extras.state?.['transactionPrefill'] as
+      | TransactionPrefill
+      | undefined) ?? null;
   /** Placeholder row count shown while the list loads. */
   protected readonly skeletonRows = [0, 1, 2, 3, 4];
 
@@ -133,6 +140,10 @@ export class Transactions implements OnInit {
 
   async ngOnInit(): Promise<void> {
     await this.reload();
+    // A scan/OCR hand-off (FR-2.1) opens the create modal pre-filled; the user still reviews + Saves.
+    if (this.pendingPrefill && this.accounts().length > 0) {
+      this.startCreate(this.pendingPrefill);
+    }
   }
 
   private async reload(): Promise<void> {
@@ -227,13 +238,24 @@ export class Transactions implements OnInit {
     return this.splits.length > 1 && this.remainingMinor() !== 0;
   }
 
-  protected startCreate(): void {
+  protected startCreate(prefill?: TransactionPrefill): void {
     this.editingId.set(null);
     const account = this.accounts()[0] ?? null;
-    this.resetForm({ accountId: account?.id ?? null, currency: account?.currency ?? this.baseCurrency() });
+    const currency = account?.currency ?? this.baseCurrency();
+    // OCR suggestions (FR-2.1) only PREFILL the editable form — the user confirms before Save.
+    this.resetForm({
+      accountId: account?.id ?? null,
+      currency,
+      postedDate: prefill?.postedDate ?? undefined,
+      amount:
+        prefill?.totalMinor != null ? this.majorAmount(prefill.totalMinor, currency) : undefined,
+      payee: prefill?.payee ?? undefined,
+    });
     this.suggestedCategory.set(null);
     this.error.set(null);
     this.showForm.set(true);
+    // If the scan supplied a merchant, offer the same rule-based category hint as manual entry.
+    if (prefill?.payee) void this.suggestCategory();
   }
 
   protected startEdit(t: Transaction): void {
@@ -266,13 +288,14 @@ export class Transactions implements OnInit {
     note?: string;
     splits?: { categoryId: number; amount: string }[];
   }): void {
-    const splitData = opts.splits?.length ? opts.splits : [{ categoryId: null, amount: opts.amount ?? '' }];
+    const splitData: { categoryId: number | null; amount: string }[] = opts.splits?.length
+      ? opts.splits
+      : [{ categoryId: null, amount: opts.amount ?? '' }];
+    // Match the FormArray's control count to the data, then reset everything — including the splits —
+    // in one call. Resetting splits *within* form.reset (not before it) is essential: a bare
+    // form.reset() also resets this FormArray, which would otherwise wipe each split's categoryId.
     this.splits.clear();
-    for (const s of splitData) {
-      const g = this.newSplitGroup(s.amount);
-      g.get('categoryId')!.setValue(s.categoryId);
-      this.splits.push(g);
-    }
+    for (let i = 0; i < splitData.length; i++) this.splits.push(this.newSplitGroup());
     this.form.reset({
       accountId: opts.accountId ?? null,
       currency: opts.currency ?? this.baseCurrency(),
@@ -281,6 +304,7 @@ export class Transactions implements OnInit {
       amount: opts.amount ?? '',
       payee: opts.payee ?? '',
       note: opts.note ?? '',
+      splits: splitData,
     });
   }
 
