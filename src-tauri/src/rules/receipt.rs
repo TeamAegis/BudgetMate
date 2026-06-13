@@ -8,7 +8,7 @@
 use chrono::NaiveDate;
 use serde::Serialize;
 use std::sync::OnceLock;
-use tauri_plugin_ocr::OcrBlock;
+use tauri_plugin_ocr::{BBox, OcrBlock};
 
 use regex::Regex;
 
@@ -38,15 +38,6 @@ fn iso_date_re() -> &'static Regex {
 fn slashed_date_re() -> &'static Regex {
     static RE: OnceLock<Regex> = OnceLock::new();
     RE.get_or_init(|| Regex::new(r"\b(\d{1,2})[/.\-](\d{1,2})[/.\-](\d{2,4})\b").unwrap())
-}
-
-/// Parse the first currency-amount on a line into minor units (2-dp).
-fn parse_amount_minor(line: &str) -> Option<i64> {
-    let caps = amount_re().captures(line)?;
-    let int_part: String = caps[1].chars().filter(|c| c.is_ascii_digit()).collect();
-    let frac = &caps[2];
-    let combined = format!("{int_part}{frac}");
-    combined.parse::<i64>().ok()
 }
 
 /// All amounts on a line (minor units), in order.
@@ -104,8 +95,17 @@ fn parse_plausible_date(line: &str, today: NaiveDate) -> Option<NaiveDate> {
 
 fn is_total_keyword_line(lower: &str) -> bool {
     let positive = ["total", "amount due", "balance due", "grand total"];
-    let negative = ["subtotal", "sub total", "sub-total", "tax", "vat", "gst", "change"];
-    positive.iter().any(|k| lower.contains(k)) && !negative.iter().any(|k| lower.contains(k))
+    positive.iter().any(|k| lower.contains(k)) && !is_excluded_line(lower)
+}
+
+/// Lines whose amounts must never be treated as the total: tax/subtotal breakdowns and,
+/// crucially, cash-tendered / change lines (e.g. Mauritian "ESPECES" / "Rendu").
+fn is_excluded_line(lower: &str) -> bool {
+    const EXCLUDED: &[&str] = &[
+        "subtotal", "sub total", "sub-total", "tax", "vat", "gst", "change", "especes", "espèces",
+        "cash", "tendered", "rendered", "rendu", "paid",
+    ];
+    EXCLUDED.iter().any(|k| lower.contains(k))
 }
 
 fn looks_like_address_or_noise(lower: &str) -> bool {
@@ -116,6 +116,79 @@ fn looks_like_address_or_noise(lower: &str) -> bool {
         || ["tel", "phone", "receipt", "invoice", "www.", "@", "street", "ave", "road", "st."]
             .iter()
             .any(|k| lower.contains(k))
+}
+
+/// Two blocks are on the same printed row when their vertical bbox spans overlap. We require a
+/// real overlap (not mere proximity) so item rows above/below the TOTAL row are not mis-paired.
+fn rows_aligned(a: &BBox, b: &BBox) -> bool { // guard:allow-float (OCR bbox coordinates)
+    let a_top = a.y;
+    let a_bot = a.y + a.h;
+    let b_top = b.y;
+    let b_bot = b.y + b.h;
+    a_top < b_bot && b_top < a_bot
+}
+
+/// Pick the receipt total from OCR blocks using their geometry.
+///
+/// 1. If a total-keyword block carries an amount inline (the classic "TOTAL 20.00" layout), use
+///    the largest such amount.
+/// 2. Otherwise, for each keyword block with no inline amount, find amount-bearing blocks whose
+///    bbox row overlaps the keyword's row, preferring the nearest one to its right (the amount
+///    column). Take the largest amount among row-aligned candidates.
+/// 3. Fall back to the largest amount anywhere, ignoring excluded (tax/cash/change) lines.
+fn extract_total(blocks: &[OcrBlock]) -> Option<i64> {
+    let mut keyword_total: Option<i64> = None;
+    let mut max_overall: Option<i64> = None;
+
+    for kb in blocks {
+        let lower = kb.text.to_lowercase();
+        if !is_total_keyword_line(&lower) {
+            continue;
+        }
+        // Same-block / same-line case (e.g. "TOTAL 20.00").
+        let inline = all_amounts_minor(&kb.text);
+        if let Some(&m) = inline.iter().max() {
+            keyword_total = Some(keyword_total.map_or(m, |k| k.max(m)));
+            continue;
+        }
+        // Keyword block with no amount: associate the amount on its row, preferring the right.
+        let mut best: Option<(f32, i64)> = None; // guard:allow-float (bbox x for right-preference)
+        for ab in blocks {
+            if std::ptr::eq(ab, kb) || !rows_aligned(&kb.bbox, &ab.bbox) {
+                continue;
+            }
+            if is_excluded_line(&ab.text.to_lowercase()) {
+                continue;
+            }
+            for amt in all_amounts_minor(&ab.text) {
+                // Prefer the rightmost candidate to the right of the keyword; among equals, the
+                // larger amount. Candidates to the left are still allowed but ranked behind.
+                let to_right = ab.bbox.x >= kb.bbox.x;
+                let rank = if to_right { ab.bbox.x } else { f32::MIN }; // guard:allow-float
+                let better = match best {
+                    None => true,
+                    Some((br, ba)) => rank > br || (rank == br && amt > ba),
+                };
+                if better {
+                    best = Some((rank, amt));
+                }
+            }
+        }
+        if let Some((_, amt)) = best {
+            keyword_total = Some(keyword_total.map_or(amt, |k| k.max(amt)));
+        }
+    }
+
+    for b in blocks {
+        if is_excluded_line(&b.text.to_lowercase()) {
+            continue;
+        }
+        for amt in all_amounts_minor(&b.text) {
+            max_overall = Some(max_overall.map_or(amt, |m| m.max(amt)));
+        }
+    }
+
+    keyword_total.or(max_overall)
 }
 
 /// Extract merchant/date/total from OCR blocks. `today` is injected for deterministic tests.
@@ -131,22 +204,15 @@ pub fn extract(blocks: &[OcrBlock], today: NaiveDate) -> ExtractedReceipt {
         }
     }
 
-    // ── Total: prefer the largest amount on a total-keyword line; else largest overall. ──
-    let mut keyword_total: Option<i64> = None;
-    let mut max_overall: Option<i64> = None;
-    for (_, line) in &lines {
-        let lower = line.to_lowercase();
-        for amt in all_amounts_minor(line) {
-            max_overall = Some(max_overall.map_or(amt, |m| m.max(amt)));
-            if is_total_keyword_line(&lower) {
-                keyword_total = Some(keyword_total.map_or(amt, |m| m.max(amt)));
-            }
-        }
-        // Some receipts put the figure on the line *after* "TOTAL"; the keyword check above
-        // already catches same-line cases, which is the common layout.
-        let _ = parse_amount_minor(line);
-    }
-    let total_minor = keyword_total.or(max_overall);
+    // ── Total: prefer the amount on/aligned-with a total-keyword block; else largest overall. ──
+    //
+    // Real receipts (and ML Kit's block output) often split the "TOTAL" label and its amount
+    // into separate OcrBlocks because of the wide left-label/right-amount column gap, so the
+    // keyword block carries no amount of its own. We therefore reason over blocks (keeping their
+    // geometry) and, for a keyword block with no inline amount, spatially associate the amount
+    // block sharing its row. Cash-tendered / change lines (ESPECES, Rendu, …) are excluded so
+    // they never win — neither as a keyword total nor via the largest-overall fallback.
+    let total_minor = extract_total(blocks);
 
     // ── Date: most recent plausible date anywhere on the receipt. ──
     let mut date: Option<NaiveDate> = None;
@@ -177,12 +243,16 @@ pub fn extract(blocks: &[OcrBlock], today: NaiveDate) -> ExtractedReceipt {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tauri_plugin_ocr::{BBox, OcrBlock};
 
     fn block(text: &str, y: f32) -> OcrBlock { // guard:allow-float (y = OCR pixel coordinate)
+        block_at(text, 0.0, y)
+    }
+
+    /// A block at an explicit (x, y) — used to model left-label / right-amount column layouts.
+    fn block_at(text: &str, x: f32, y: f32) -> OcrBlock { // guard:allow-float (OCR coordinates)
         OcrBlock {
             text: text.to_string(),
-            bbox: BBox { x: 0.0, y, w: 100.0, h: 10.0 },
+            bbox: BBox { x, y, w: 100.0, h: 10.0 },
             confidence: 0.9,
         }
     }
@@ -219,6 +289,55 @@ mod tests {
         let r = extract(&blocks, today);
         assert_eq!(r.date, None);
         assert_eq!(r.total_minor, Some(999));
+    }
+
+    #[test]
+    fn winners_receipt_keyword_and_amount_in_separate_blocks() {
+        // Real Mauritian WINNERS receipt: ML Kit splits the left label column and the right
+        // amount column into separate blocks. The TOTAL is 138.00 Rs; 200.00 is ESPECES (cash
+        // tendered) and 62.00 is Rendu (change) — neither must win.
+        let blocks = vec![
+            block("WINNERS", 0.0),
+            // Item lines (label left, amount right) on their own rows.
+            block_at("Bread", 0.0, 30.0),
+            block_at("22.00 Rs", 200.0, 30.0),
+            block_at("Milk", 0.0, 40.0),
+            block_at("22.00 Rs", 200.0, 40.0),
+            block_at("Rice", 0.0, 50.0),
+            block_at("94.00 Rs", 200.0, 50.0),
+            // VAT breakdown lines (excluded).
+            block_at("VAT 0%", 0.0, 60.0),
+            block_at("44.00 0.00", 200.0, 60.0),
+            block_at("VAT 15%", 0.0, 70.0),
+            block_at("94.00 12.26", 200.0, 70.0),
+            // The crux: TOTAL label and its amount in SEPARATE blocks, same row.
+            block_at("TOTAL", 0.0, 90.0),
+            block_at("138.00 Rs", 200.0, 90.0),
+            // Cash tendered + change, also split across blocks, on lower rows.
+            block_at("ESPECES", 0.0, 100.0),
+            block_at("200.00 Rs", 200.0, 100.0),
+            block_at("Rendu ESPECES", 0.0, 110.0),
+            block_at("62.00 Rs", 200.0, 110.0),
+        ];
+        let today = NaiveDate::from_ymd_opt(2026, 6, 5).unwrap();
+        let r = extract(&blocks, today);
+        // Must be the TOTAL row's amount, not the larger cash-tendered 200.00.
+        assert_eq!(r.total_minor, Some(13800));
+    }
+
+    #[test]
+    fn total_label_block_with_amount_block_to_the_right() {
+        // Minimal "label left, amount right" layout — exercises row-alignment association
+        // distinctly from the same-block case.
+        let blocks = vec![
+            block_at("Item A", 0.0, 10.0),
+            block_at("50.00", 200.0, 10.0),
+            block_at("TOTAL", 0.0, 20.0),
+            block_at("75.00", 200.0, 20.0),
+        ];
+        let today = NaiveDate::from_ymd_opt(2026, 6, 5).unwrap();
+        let r = extract(&blocks, today);
+        assert_eq!(r.total_minor, Some(7500));
     }
 
     #[test]
