@@ -76,6 +76,25 @@ only (WebView2); **iOS is deferred** (macOS/Xcode-only build). See `docs/archite
   resumes). Do not gitignore — the Android manifest enforces zero-internet.
 - `docs/` — architecture + requirements; `docs/design/` — UI/UX spec (design-system,
   ux-blueprint, screens). Update these when behaviour/UI changes.
+- `.claude/agents/` — **role subagents** (personas, scoped tools). `.claude/skills/` — **task
+  procedures**. `.claude/rules/` — domain conventions. See below.
+
+## Roles & task skills
+Delegate work to the right **role** (a `.claude/agents/` subagent — its own context + tool scope).
+Only the implementer and bug-hunter may edit code; the rest are read-only advisors that report back.
+
+| Role | Use it to… | Edits? |
+| --- | --- | --- |
+| **architect** | design an approach / plan non-trivial work before coding | no |
+| **fullstack-engineer** | implement end-to-end (Rust-first → bridge → Angular) | yes |
+| **bug-hunter** | reproduce, root-cause, and minimally fix a defect | yes (minimal) |
+| **feature-researcher** | research libraries/approaches on the web, offline-filtered | no |
+| **gap-analyst** | find scope-vs-code gaps for an FR / issue / area | no |
+| **doc-alignment-reviewer** | find docs↔code drift and which side to fix | no |
+
+Task `/commands` (fork into a role): **`/gap-analysis <FR\|issue\|area>`**, **`/research-feature
+<question>`**, **`/doc-align <doc\|area>`**. Implementation and debugging just invoke the role
+directly (and use the `new-feature`/`new-screen`/`db-migration`/`run-app` skills).
 
 ## Git & CI workflow (always)
 - **Never commit or push to `main` directly.** Every change goes on its own branch off updated
