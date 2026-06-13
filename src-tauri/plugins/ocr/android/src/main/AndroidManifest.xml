@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  OCR plugin library manifest. Intentionally declares NO permissions.
+
+  Zero-internet guarantee (NFR-P4): the INTERNET permission must NEVER be added here — Google ML
+  Kit text recognition uses the BUNDLED on-device model (no first-use download, no network). The
+  app's main manifest (gen/android) also omits INTERNET; the no-network CI guard enforces this.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+</manifest>

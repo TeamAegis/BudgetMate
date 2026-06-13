@@ -216,6 +216,13 @@ invoke("plugin:ocr|recognize_text", { imagePath }) ->
 ```
 The plugin returns **raw recognised text + boxes only**. It makes no financial decision.
 
+**Status:** implemented on **Android** (Google ML Kit Text Recognition, bundled Latin model, runs
+on `Dispatchers.IO`). The plugin's Rust core splits desktop/mobile (`plugins/ocr/src/{desktop,mobile}.rs`):
+mobile dispatches to the Kotlin `OcrPlugin` via `run_mobile_plugin`; desktop (dev/test) returns
+`NotImplemented`. iOS (Apple Vision) is deferred. **`confidence`** is informational only — ML Kit's
+text API exposes no per-block confidence, so the Android engine emits a sentinel of `1.0`; the
+deterministic extractor (§6.3) decides from text + position, never from confidence.
+
 ### 6.3 Deterministic field extraction (Rust, not ML)
 A pure-Rust post-processor turns OCR blocks into `{ merchant, date, total }`:
 - **Total:** scan for currency-amount patterns; prefer the largest amount near a

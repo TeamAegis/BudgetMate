@@ -10,6 +10,11 @@ pub struct BBox {
 }
 
 /// One recognised block of text with its location and engine confidence (0.0–1.0).
+///
+/// Note: Google ML Kit's text-recognition API does not expose a per-block confidence, so the
+/// Android engine emits a sentinel of `1.0`. The deterministic extractor (`app_lib::rules::receipt`)
+/// makes its decisions from text + position, not confidence, so this is safe — confidence is
+/// informational only.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct OcrBlock {
     pub text: String,
@@ -25,8 +30,9 @@ pub struct OcrResult {
     pub blocks: Vec<OcrBlock>,
 }
 
-/// Argument for the `recognize_text` command.
-#[derive(Debug, Clone, Deserialize)]
+/// Argument for the `recognize_text` command. Also serialised when forwarding to the native
+/// Android plugin via `run_mobile_plugin`, hence `Serialize`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RecognizeTextArgs {
     pub image_path: String,
@@ -38,6 +44,8 @@ pub enum Error {
     NotImplemented,
     #[error("image not found: {0}")]
     ImageNotFound(String),
+    #[error("OCR plugin error: {0}")]
+    Plugin(String),
 }
 
 impl Serialize for Error {
