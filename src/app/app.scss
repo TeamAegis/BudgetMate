@@ -34,9 +34,10 @@
   display: flex;
   flex-direction: column;
 
-  // Subtle page cross-fade: the routed component renders as the sibling after <router-outlet>
-  // and is recreated on each navigation, so this entrance keyframe re-runs per route. Pure CSS —
-  // honours prefers-reduced-motion via the guard in styles/_animations.scss.
+  // Canonical page-entrance motion (design-system §6): the routed component renders as the sibling
+  // after <router-outlet> and is recreated on each navigation, so this entrance keyframe re-runs per
+  // route. This is the single source for page transitions — screens add nothing per page. Pure CSS,
+  // token-driven; honours prefers-reduced-motion (tokens zero in styles/_tokens.scss + guard below).
   > router-outlet + * {
     animation: fade-in var(--motion-standard) var(--easing) both;
   }

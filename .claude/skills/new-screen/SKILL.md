@@ -26,6 +26,10 @@ TS model → bridge wrapper), then build the view here.
   (eslint blocks it). No business logic in TS — money/dedup/recurrence/validation live in Rust.
 - **Money via the shared `money` pipe**, formatted from integer minor units (default MUR "Rs").
   Never do money arithmetic in TS.
+- **Motion via tokens + the shared library** (`docs/design/design-system.md` §6,
+  `.claude/rules/design.md → Motion`). Page transitions are automatic (app shell) — add nothing per
+  page; entering list rows use `animate.enter="list-item-enter"` with the capped stagger; modals
+  animate via `app-modal`. Token-driven durations/easing only; honour `prefers-reduced-motion`.
 - **Standalone component**, signals for state, typed reactive forms for input. Heavy screens
   (OCR/charts) get a lazy route.
 

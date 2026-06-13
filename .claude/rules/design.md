@@ -60,6 +60,26 @@ spec: `docs/design/` (README, design-system, ux-blueprint, screens).
   progress, UI stays responsive). Plus the special states in `ux-blueprint.md` §5
   (locked, over-budget, dedup-review, low-confidence-OCR).
 
+## Motion / Animation
+Canonical spec: `docs/design/design-system.md` §6. Keep motion subtle and fast (<800ms-feel; never
+blocks first paint).
+- **Tokens only.** Pull durations/easing from `_tokens.scss` (`var(--motion-fast|standard|slow)`,
+  `var(--easing)`) — never hardcode a `ms`/`s` value or a `cubic-bezier`. Add a token if one is
+  missing.
+- **Reuse the library.** Keyframes + the `.list-item-enter` class live in `src/styles/_animations.scss`
+  (`@use`d globally). Reuse them; don't author one-off keyframes in a component.
+- **Apply per the surface map:** page transitions are automatic (app shell, `src/app/app.scss`
+  `router-outlet + *`) — add nothing per page; entering list rows use
+  `animate.enter="list-item-enter"` with the capped stagger
+  `[style.animation-delay]="(i < 12 ? i * 40 : 0) + 'ms'"`; modals get `scrim-in`/`modal-enter` from
+  `app-modal`; progress fills animate `width` with `transition`.
+- **Reduced motion is mandatory.** Motion tokens are zeroed under
+  `@media (prefers-reduced-motion: reduce)`, so token-driven animation stops for free; any infinite
+  or movement keyframe also needs an explicit guard (see `_animations.scss`). Verify motion still
+  reads correctly with reduce on.
+- Emulators usually report `reduce` (animator scale 0) so motion looks instant; set
+  `animator_duration_scale 1.0` or use a real device to verify.
+
 ## Flows that must never auto-commit
 - OCR (FR-2.1) and Import (FR-2.2/2.3/2.4) always end in a **user-confirmation** step. Show
   the deterministic reason for any suggested category/duplicate. Nothing saves or deletes

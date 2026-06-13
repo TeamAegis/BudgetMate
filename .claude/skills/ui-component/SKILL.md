@@ -58,9 +58,13 @@ Mirror `shared/ui/select-field/` and the others:
 6. **Tokens only** in SCSS — `var(--c-…)`, `var(--space-…)`, `var(--radius-…)`, `var(--t-…)`,
    `var(--elev-…)`. Never hardcode hex/px/radius/shadow. Add missing tokens to `_tokens.scss` **and**
    `design-tokens.json`. Style the container on `:host` when the component *is* the element.
-7. **Accessibility:** required accessible name on interactive icon-only controls; 44px tap targets
+7. **Motion** (if the element animates): reuse the keyframes + `.list-item-enter` class and motion
+   tokens from `src/styles/_animations.scss` / `_tokens.scss` — never hardcode a duration/easing or
+   author a one-off keyframe. Token-driven motion honours `prefers-reduced-motion` for free; cancel
+   any infinite/movement keyframe under reduce. (Canonical spec: `design-system.md` §6.)
+8. **Accessibility:** required accessible name on interactive icon-only controls; 44px tap targets
    (`--tap-target-min`); never colour-alone signalling. (See `.claude/rules/design.md`.)
-8. **No barrel** — import each component by its direct path
+9. **No barrel** — import each component by its direct path
    (`import { Button } from '../../shared/ui/button/button';`), matching the existing convention.
 
 ## Recipe
