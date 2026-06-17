@@ -45,12 +45,15 @@ App Shell (header + bottom nav)
    └── Settings                    (header icon)                    [NEW]
          • Accounts (CRUD)  • Categories (CRUD, tree)
          • Base currency  • Lock timeout  • Budgets/envelopes
+         • Recurring (/settings/recurring)
          • Rules  • Export (CSV/XLSX)  • Encrypted backup / restore
 ```
 
 Accounts & Categories are managed under Settings (foundational data; seeded with a default
 account + category set on first run). v1 is single-account in practice (multi-account schema, no
-switcher).
+switcher). **Recurring** rules live as a Settings sub-screen (`/settings/recurring`) — matching the
+code — not under Expenses; occurrences still materialise lazily on app open (FR-1.3), this is just
+where the templates are managed.
 
 Onboarding (first run, before the shell): intro → income setup → first goal (the
 "Home page" and "Getting Started" frames map here).
@@ -60,6 +63,15 @@ Onboarding (first run, before the shell): intro → income setup → first goal 
 ## 3. Navigation map (primary)
 - **Bottom nav** is the spine: Home · Expenses · Goals · Analytics (always one canonical
   label set — fix the Figma "Charts/Analytics" drift).
+
+**Bottom-nav binding** (one source of truth — kills the "Charts" drift at the route level):
+| Tab | Label | Route path | `aria-label` | Route `data.title` |
+|---|---|---|---|---|
+| Home | Home | `/home` | "Home" | "BudgetMate" (brand header) |
+| Expenses | Expenses | `/expenses` | "Expenses" | "Expenses" |
+| Goals | Goals | `/goals` | "Goals" | "Goals" |
+| Analytics | Analytics | `/analytics` | "Analytics" | "Analytics" |
+
 - **Header trailing icon** opens Settings (and, from sub-screens, contextual actions).
 - **FAB** appears on Expenses (Add Transaction) and Goals (Add Goal); long-press or a small
   menu can expose Scan Receipt / Import on Expenses.
@@ -155,7 +167,8 @@ Special states required by the FRs:
   WCAG AA (4.5:1 body, 3:1 large).
 - **Colour is never the only signal:** income/expense use sign + colour; over-budget uses
   icon + colour; dedup uses label + colour.
-- **Targets:** ≥44×44pt tap targets (nav, chips, FAB, list rows).
+- **Targets:** ≥48px tap targets (Android v1 primary target; ≥ the WCAG 2.2 SC 2.5.8 24px floor
+  and the iOS 44pt minimum) — nav, chips, FAB, list rows. Token `--tap-target-min`.
 - **Dynamic type:** respect OS font scaling; layouts reflow, no clipping.
 - **Labels:** all icons have accessible names; inputs have visible labels (not placeholder-only).
 - **Motion:** honour `prefers-reduced-motion`.
@@ -193,7 +206,10 @@ What is **missing and must be designed** (specified in this blueprint + `design-
 
 Also flagged for cleanup in the Figma (see `screens.md` for nodes):
 - "Charts" vs "Analytics" nav label inconsistency; uneven nav spacing across screens.
-- Duplicate "Transaction" quick-action labels (placeholder).
+- Duplicate "Transaction" quick-action labels (placeholder) — normalise to the canonical set
+  **"Add Transaction / Add Goal / Scan Receipt"**.
+- Modal/dialog titles use the spec'd copy **"Add X" / "Edit X"** (e.g. "Add Goal", "Edit
+  Transaction") — never "Modify"/"New".
 - Two near-duplicate intro frames — consolidate.
 - Leftover delivery-app frames ("Order Tracking", "Set Location") — unrelated, delete.
 - Coral-on-white small text accessibility failures.

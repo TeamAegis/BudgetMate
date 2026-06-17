@@ -45,14 +45,21 @@
   --fw-medium: 500;
   --fw-bold: 700;
 
-  // type scale (size only; pair with weights above)
-  --t-wordmark: 32px;       // logo (700, letter-spacing .15em)
-  --t-screen-title: 30px;   // 700
-  --t-balance: 32px;        // 200 (the big balance figure)
-  --t-title: 16px;          // 500
-  --t-section: 14px;        // 500
-  --t-body: 13px;           // 400
-  --t-caption: 12px;        // 300
+  // type scale — expressed in rem (root = 16px) so OS dynamic-type scaling is honoured
+  // (px would ignore the user's system font-size; see ui-ux-principles §2.2). Comments give
+  // the px equivalent at the default root size.
+  --t-wordmark: 2rem;        // 32px — logo (700, letter-spacing .15em)
+  --t-screen-title: 1.875rem;// 30px — 700
+  --t-balance: 2rem;         // 32px — 200 (the big balance figure)
+  --t-dialog: 1.25rem;       // 20px — 600, modal/dialog titles (between title and screen-title)
+  --t-title: 1rem;           // 16px — 500, card titles
+  --t-section: 0.875rem;     // 14px — 500, section labels
+  --t-body: 0.8125rem;       // 13px — 400, body/list/amounts (Figma density; rem so it scales)
+  --t-caption: 0.75rem;      // 12px — 300, nav labels, helper text
+
+  // line-height (no unit so it scales with font-size)
+  --lh-body: 1.5;            // multi-line body copy (ui-ux-principles §2.2)
+  --lh-tight: 1.2;           // single-line headings / dense rows
 
   // ---- Spacing (4px base) ----
   --space-1: 4px;
@@ -82,7 +89,7 @@
   --layout-header-h: 80px;
   --layout-bottomnav-h: 80px;
   --layout-fab-size: 60px;
-  --tap-target-min: 44px;   // accessibility minimum
+  --tap-target-min: 48px;   // Android (v1 primary) usability target; ≥ WCAG 2.2 24px floor & iOS 44pt
 
   // ---- Insets (Android WebView: env(safe-area-inset-*) is unreliable — these vars let the
   //      visualViewport workaround / a native inset source override at runtime; see
@@ -94,6 +101,7 @@
   // ---- Z-index scale (keep stacking explicit; only these layers float) ----
   --z-dropdown: 20;         // select-field listbox menu
   --z-modal: 1000;          // modal scrim + dialog (above everything in-page)
+  --z-modal-nested: 1010;   // a dialog layered over another modal (e.g. ConfirmDialog over an edit form)
 
   // ---- Backdrop ----
   --backdrop-blur: 6px;     // modal scrim blur (backdrop-filter); paired with --c-scrim

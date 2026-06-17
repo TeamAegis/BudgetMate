@@ -16,10 +16,13 @@
     "textMuted": "#5A5A5A",
     "border": "#ECECEC",
     "positive": "#2E9E6B",
+    "positiveSoft": "rgba(46,158,107,0.10)",
     "warning": "#E8A13A",
     "warningSoft": "rgba(232,161,58,0.12)",
     "danger": "#D8453B",
+    "dangerSoft": "rgba(216,69,59,0.10)",
     "info": "#3A86C8",
+    "infoSoft": "rgba(58,134,200,0.10)",
     "shadowPink": "rgba(255,203,203,0.29)",
     "scrim": "rgba(0,0,0,0.40)"
   },
@@ -30,15 +33,18 @@
   "typography": {
     "fontFamily": "Poppins, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
     "weights": { "extralight": 200, "light": 300, "regular": 400, "medium": 500, "bold": 700 },
+    "scaleNote": "size is px at the default 16px root; CSS expresses these in rem so OS dynamic-type scaling is honoured (ui-ux-principles §2.2).",
     "scale": {
       "wordmark": { "size": 32, "weight": 700, "tracking": "0.15em" },
       "screenTitle": { "size": 30, "weight": 700 },
       "balance": { "size": 32, "weight": 200 },
+      "dialog": { "size": 20, "weight": 600 },
       "title": { "size": 16, "weight": 500 },
       "section": { "size": 14, "weight": 500 },
       "body": { "size": 13, "weight": 400 },
       "caption": { "size": 12, "weight": 300 }
-    }
+    },
+    "lineHeight": { "body": 1.5, "tight": 1.2 }
   },
   "spacing": { "1": 4, "2": 8, "3": 12, "4": 16, "5": 20, "6": 24, "8": 32 },
   "radius": { "sm": 5, "md": 10, "lg": 20, "pill": 999 },
@@ -47,12 +53,12 @@
     "headerH": 80,
     "bottomNavH": 80,
     "fabSize": 60,
-    "tapTargetMin": 44,
+    "tapTargetMin": 48,
     "screenGutter": 24,
     "cardPadding": 20
   },
-  "motion": { "fast": 150, "standard": 200, "slow": 300, "easing": "cubic-bezier(0.2,0,0,1)" },
-  "zIndex": { "dropdown": 20, "modal": 1000 },
+  "motion": { "fast": 150, "standard": 200, "slow": 300, "skeletonOffset": 200, "easing": "cubic-bezier(0.2,0,0,1)" },
+  "zIndex": { "dropdown": 20, "modal": 1000, "modalNested": 1010 },
   "backdrop": { "blur": 6 },
   "skeleton": { "base": "#ECECEC", "sheen": "#F5F5F5" },
   "currency": { "default": "MUR", "symbol": "Rs", "format": "Rs #,##0" },
