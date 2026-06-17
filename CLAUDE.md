@@ -71,11 +71,17 @@ only (WebView2); **iOS is deferred** (macOS/Xcode-only build). See `docs/archite
 - `src-tauri/src/` — Rust core (`db/`, `import/`, `rules/`, `export/`, `crypto/`). See
   `.claude/rules/rust.md` and `.claude/rules/database.md`.
 - `src-tauri/plugins/ocr/` — custom native OCR plugin (Swift + Kotlin).
-- `src-tauri/capabilities/` — Tauri ACL.
+- `src-tauri/capabilities/` — Tauri ACL. See `.claude/rules/tauri.md` (IPC/ACL/CSP).
 - `src-tauri/gen/` — committed `android/` project (the `apple/` project is added when iOS
-  resumes). Do not gitignore — the Android manifest enforces zero-internet.
+  resumes). Do not gitignore — the Android manifest enforces zero-internet. See
+  `.claude/rules/android.md` (16KB pages, WebView quirks, signing).
 - `docs/` — architecture + requirements; `docs/design/` — UI/UX spec (design-system,
-  ux-blueprint, screens). Update these when behaviour/UI changes.
+  ux-blueprint, screens) plus `ui-ux-principles.md` (the UI/UX heuristics knowledge base — UX laws,
+  WCAG 2.2, anti-patterns — validate against it with `/design-check`, **not** a feature backlog);
+  `docs/financial-knowledge.md` — financial-domain reference (definitions,
+  budgeting frameworks, category taxonomy, MUR formatting, 🇲🇺 statutory figures) used to validate
+  correctness + low-literacy usability, **not** a feature backlog. Update these when behaviour/UI
+  changes.
 - `.claude/agents/` — **role subagents** (personas, scoped tools). `.claude/skills/` — **task
   procedures**. `.claude/rules/` — domain conventions. See below.
 
@@ -91,10 +97,13 @@ Only the implementer and bug-hunter may edit code; the rest are read-only adviso
 | **feature-researcher** | research libraries/approaches on the web, offline-filtered | no |
 | **gap-analyst** | find scope-vs-code gaps for an FR / issue / area | no |
 | **doc-alignment-reviewer** | find docs↔code drift and which side to fix | no |
+| **finance-validator** | check a feature/screen/copy is money-correct **and** usable by a low/no-financial-literacy person | no |
+| **design-validator** | check a screen/component/blueprint is UI/UX-sound **and** accessible/on-system (tokens, states, a11y) | no |
 
 Task `/commands` (fork into a role): **`/gap-analysis <FR\|issue\|area>`**, **`/research-feature
-<question>`**, **`/doc-align <doc\|area>`**. Implementation and debugging just invoke the role
-directly (and use the `new-feature`/`new-screen`/`db-migration`/`run-app` skills).
+<question>`**, **`/doc-align <doc\|area>`**, **`/finance-check <FR\|screen\|area>`**, **`/design-check
+<screen\|component\|FR\|blueprint>`**. Implementation and debugging just invoke the role directly (and
+use the `new-feature`/`new-screen`/`db-migration`/`run-app` skills).
 
 ## Git & CI workflow (always)
 - **Never commit or push to `main` directly.** Every change goes on its own branch off updated

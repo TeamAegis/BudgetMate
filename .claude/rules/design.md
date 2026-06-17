@@ -1,7 +1,10 @@
 # Rules — Design / UI (`src/` styling & components)
 
 Applies when building or changing any UI. Read alongside `.claude/rules/frontend.md`. Full
-spec: `docs/design/` (README, design-system, ux-blueprint, screens).
+spec: `docs/design/` (README, design-system, ux-blueprint, screens). The *why* behind these rules —
+the UI/UX principles, UX laws, WCAG 2.2, and anti-patterns — lives in
+`docs/design/ui-ux-principles.md`; audit any screen, component, or blueprint against it with
+**`/design-check <target>`** (the read-only `design-validator` role).
 
 ## Tokens
 - **Use design tokens only.** Pull from `src/styles/_tokens.scss` (CSS custom properties).
@@ -23,6 +26,9 @@ spec: `docs/design/` (README, design-system, ux-blueprint, screens).
   sign/icon/label.
 - Tap targets ≥ 44×44pt. Inputs have visible labels. Honour `prefers-reduced-motion` and OS
   dynamic type.
+- **Android WebView caveat:** `env(safe-area-inset-*)` and keyboard resize are unreliable — for
+  notch/home-indicator padding and keyboard-aware layout use the `visualViewport` workaround in
+  `.claude/rules/android.md`, not safe-area CSS alone.
 
 ## Icons
 - **All icons use [`@lucide/angular`](https://lucide.dev/guide/angular).** It is the single,
@@ -53,6 +59,11 @@ spec: `docs/design/` (README, design-system, ux-blueprint, screens).
 - Format all amounts with the shared money pipe from **integer minor units** supplied by Rust.
   Never do money arithmetic in TS. Default currency MUR ("Rs"); show base conversion for
   foreign-currency rows (FR-1.4).
+- **Domain reference:** the canonical expense **category taxonomy** is `docs/financial-knowledge.md`
+  §2; **MUR currency/number formatting** conventions are §8. Reference those rather than inventing
+  categories or formats. Keep financial **jargon** out of UI copy or pair it with a plain-language
+  explainer — the app must be usable by someone with little or no financial literacy (validate with
+  the `/finance-check` skill).
 
 ## States
 - Every data screen implements all five states: loading (non-blocking), empty (illustration +

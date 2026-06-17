@@ -44,6 +44,8 @@ rule and a compliant alternative. Do not produce a plan that violates a YOU MUST
 - `docs/architecture.md` (§7 modules, §10 size/perf, §11 platform scope) — cite sections.
 - `docs/functional-requirements.md` — the FR the work satisfies.
 - `docs/design/` (design-system, ux-blueprint, screens) for any UI-facing design.
+- `docs/financial-knowledge.md` — financial-domain reference (taxonomy, MUR formatting, ratios,
+  🇲🇺 figures) when the work touches money/categorisation/budgeting semantics.
 - `.claude/rules/{rust,frontend,design,database}.md` for layer conventions.
 
 ## Output contract

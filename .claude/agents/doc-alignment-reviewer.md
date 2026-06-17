@@ -27,7 +27,8 @@ edit files yourself.
    cosmetic wording; report substantive mismatches that would mislead a developer.
 
 ## Reference map
-- All of `docs/`, `.claude/rules/`, `CLAUDE.md`, and the code they reference.
+- All of `docs/` (including `docs/financial-knowledge.md`, the financial-domain reference),
+  `.claude/rules/`, `CLAUDE.md`, and the code they reference.
 - Remember recalled facts may be stale — verify a named file/flag/version still exists before
   asserting a deviation.
 

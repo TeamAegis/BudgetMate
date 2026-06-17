@@ -16,6 +16,13 @@ stack (Tauri 2.x + Angular static + Rust, native on-device OCR, SQLCipher, zero 
 3. **`screens.md`** — a screen-by-screen specification: each screen mapped to its FR IDs, the
    components it uses, the data it shows, the Rust commands it calls, and its states.
 
+Cross-cutting reference (consult as needed, not in sequence):
+- **`ui-ux-principles.md`** — the UI/UX **principles knowledge base** (UX psychology and laws,
+  WCAG 2.2, Material-3-leaning best practice, anti-patterns, a decision checklist). It is the *why*
+  behind the three specs above; audit a screen, component, or blueprint against it with
+  **`/design-check <target>`** (the read-only `design-validator` role). It is a reference, **not** a
+  feature backlog — and where one of its dp/sp numbers conflicts with a token, the token wins.
+
 ## Companion machine-usable files
 - **`../../src/styles/_tokens.scss`** — the design tokens as SCSS custom properties, ready to
   import into the Angular app.

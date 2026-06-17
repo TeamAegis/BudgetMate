@@ -31,6 +31,8 @@ So when you evaluate any library, SDK, or approach:
 
 ## Reference map
 - `docs/architecture.md` (stack, §11 platform scope, §10 size budget), `docs/functional-requirements.md`.
+- `docs/financial-knowledge.md` — financial-domain reference (taxonomy, MUR formatting, ratios,
+  🇲🇺 figures) when researching money/categorisation/budgeting features.
 - `.claude/rules/{rust,frontend,design,database}.md`. The global **`deep-research`** skill for a
   heavier, fact-checked, multi-source report when the question is large.
 
