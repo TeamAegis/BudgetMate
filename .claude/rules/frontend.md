@@ -6,7 +6,23 @@ Applies to the Angular app. Read alongside root `CLAUDE.md`.
 - Angular 18+, **standalone components only** (no NgModules unless a dependency forces it).
 - **CSR static build — never enable SSR / Angular Universal.** Tauri serves static files.
 - Prefer **signals** for component state and **typed reactive forms** for input.
-- Build output must land in `dist/vault/browser` with `baseHref: "/"`.
+- Build output must land in `dist/vault/browser` with `baseHref: "/"` (the application/esbuild
+  builder adds the `browser/` subfolder — `frontendDist` must point inside it or you get a blank
+  window). The path is set in `CLAUDE.md` commands; keep them consistent.
+- Use the new control flow (`@if` / `@for` / `@switch`), not `*ngIf` / `*ngFor`. **`@for` always
+  needs a `track`** (e.g. `track tx.id`) — without it you get DOM churn / wrong-row bugs. Prefer
+  `inject()` over constructor injection.
+
+## Reactivity & change detection
+- Target **zoneless** + `ChangeDetectionStrategy.OnPush`; drive the UI from signals.
+- IPC results resolve **outside Angular's awareness** — update a signal in the `.then()`/event
+  callback to re-render. **Never mutate an array/object signal in place** (`sig().push(x)` does
+  nothing); replace the reference: `sig.set([...])` / `sig.update(a => [...a, x])`.
+- `computed()` for derived state (pure, no writes); use `effect()` only to sync signal state to
+  imperative APIs — **never** to derive one signal from another, and never read+write the same
+  signal in one effect (infinite loop).
+- Lazy-loaded heavy views (`import`, `reports`) may also use `@defer`; deferred deps must be
+  standalone and not referenced outside the block (incl. `@ViewChild`) or they load eagerly.
 
 ## Boundaries (non-negotiable)
 - **No business logic in TypeScript.** Money math, currency conversion, dedup, recurrence,
