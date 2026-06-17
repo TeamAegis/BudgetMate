@@ -1,11 +1,6 @@
 <section class="feature-page">
   @if (!showForm()) {
-    <div class="page-actions">
-      <app-button variant="primary" (click)="startCreate()" [disabled]="busy() || loading()">
-        <svg icon lucidePlus [size]="18" aria-hidden="true"></svg>
-        <span>Add</span>
-      </app-button>
-    </div>
+    <app-fab ariaLabel="Add transaction" (action)="startCreate()" />
   }
 
   @if (error(); as err) {

@@ -1,0 +1,24 @@
+.fab {
+  position: fixed;
+  right: var(--space-6);
+  // Above the bottom nav, in the thumb zone.
+  bottom: calc(var(--layout-bottomnav-h) + var(--space-6));
+  // Below modals (--z-modal: 1000) so a dialog scrim always covers it.
+  z-index: var(--z-dropdown);
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--layout-fab-size);
+  height: var(--layout-fab-size);
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--c-primary);
+  color: var(--c-bg);
+  box-shadow: var(--elev-float);
+  cursor: pointer;
+}
+.fab:focus-visible {
+  outline: 2px solid var(--c-primary-700);
+  outline-offset: 2px;
+}

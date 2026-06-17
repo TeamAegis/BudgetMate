@@ -1,6 +1,6 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { LucidePlus, LucideTrash2 } from '@lucide/angular';
+import { LucideTrash2 } from '@lucide/angular';
 import {
   listGoals,
   createGoal,
@@ -20,8 +20,12 @@ import { Skeleton } from '../../shared/ui/skeleton/skeleton';
 import { Modal } from '../../shared/ui/modal/modal';
 import { ConfirmDialog } from '../../shared/ui/confirm-dialog/confirm-dialog';
 import { GoalProgressRow } from '../../shared/ui/goal-progress-row/goal-progress-row';
+import { Fab } from '../../shared/ui/fab/fab';
+import { SegmentedToggle, type SegmentOption } from '../../shared/ui/segmented-toggle/segmented-toggle';
 
 const DECIMAL = /^\d+(\.\d+)?$/;
+
+type GoalFilter = 'ongoing' | 'completed';
 
 /**
  * Savings goals (FR-3.2). Smart component: reads goals via the bridge and renders each as a
@@ -32,7 +36,6 @@ const DECIMAL = /^\d+(\.\d+)?$/;
   selector: 'app-goals',
   imports: [
     ReactiveFormsModule,
-    LucidePlus,
     LucideTrash2,
     Button,
     IconButton,
@@ -43,6 +46,8 @@ const DECIMAL = /^\d+(\.\d+)?$/;
     Modal,
     ConfirmDialog,
     GoalProgressRow,
+    Fab,
+    SegmentedToggle,
   ],
   templateUrl: './goals.html',
   styleUrl: './goals.scss',
@@ -60,6 +65,22 @@ export class Goals implements OnInit {
   protected readonly showForm = signal(false);
   protected readonly editing = computed(() => this.editingId() !== null);
   protected readonly confirmingDelete = signal(false);
+
+  /** Ongoing/Completed list filter (design-system §7 SegmentedToggle). */
+  protected readonly filter = signal<GoalFilter>('ongoing');
+  protected readonly statusOptions: SegmentOption[] = [
+    { value: 'ongoing', label: 'Ongoing' },
+    { value: 'completed', label: 'Completed' },
+  ];
+
+  /**
+   * Goals for the active tab. "Completed" reuses the same `completed` flag the GoalProgressRow
+   * renders (derived in Rust), so the toggle and the row badge can never disagree.
+   */
+  protected readonly filtered = computed(() => {
+    const showCompleted = this.filter() === 'completed';
+    return this.goals().filter((g) => g.completed === showCompleted);
+  });
 
   protected readonly form = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.maxLength(60)]],

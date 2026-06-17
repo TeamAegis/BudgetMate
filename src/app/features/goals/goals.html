@@ -1,11 +1,6 @@
 <section class="feature-page">
   @if (!showForm()) {
-    <div class="page-actions">
-      <app-button variant="primary" (click)="startCreate()" [disabled]="busy() || loading()">
-        <svg icon lucidePlus [size]="18" aria-hidden="true"></svg>
-        <span>Add</span>
-      </app-button>
-    </div>
+    <app-fab ariaLabel="Add goal" (action)="startCreate()" />
   }
 
   @if (error(); as err) {
@@ -79,22 +74,38 @@
       (action)="startCreate()"
     />
   } @else {
-    <ul class="rows">
-      @for (g of goals(); track g.id; let i = $index) {
-        <li
-          animate.enter="list-item-enter"
-          [style.animation-delay]="(i < 12 ? i * 40 : 0) + 'ms'"
-        >
-          <app-goal-progress-row
-            [name]="g.name"
-            [currentMinor]="g.currentMinor"
-            [targetMinor]="g.targetMinor"
-            [currency]="g.currency"
-            [completed]="g.completed"
-            (edit)="startEdit(g)"
-          />
-        </li>
-      }
-    </ul>
+    @if (goals().length > 0) {
+      <app-segmented-toggle
+        ariaLabel="Goal status"
+        [options]="statusOptions"
+        [(value)]="filter"
+      />
+    }
+
+    @if (filtered().length === 0) {
+      <app-empty-state
+        [fill]="true"
+        image="assets/illustrations/get-started.svg"
+        [message]="filter() === 'completed' ? 'No completed goals yet — keep saving!' : 'No goals in progress — add one to get started.'"
+      />
+    } @else {
+      <ul class="rows">
+        @for (g of filtered(); track g.id; let i = $index) {
+          <li
+            animate.enter="list-item-enter"
+            [style.animation-delay]="(i < 12 ? i * 40 : 0) + 'ms'"
+          >
+            <app-goal-progress-row
+              [name]="g.name"
+              [currentMinor]="g.currentMinor"
+              [targetMinor]="g.targetMinor"
+              [currency]="g.currency"
+              [completed]="g.completed"
+              (edit)="startEdit(g)"
+            />
+          </li>
+        }
+      </ul>
+    }
   }
 </section>

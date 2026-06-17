@@ -18,6 +18,7 @@ import {
 import type { Transaction, Account, Category, TransactionPrefill } from '../../core/models';
 import { MoneyPipe } from '../../shared/pipes/money.pipe';
 import { Button } from '../../shared/ui/button/button';
+import { Fab } from '../../shared/ui/fab/fab';
 import { IconButton } from '../../shared/ui/icon-button/icon-button';
 import { Banner } from '../../shared/ui/banner/banner';
 import { EmptyState } from '../../shared/ui/empty-state/empty-state';
@@ -59,6 +60,7 @@ const DECIMAL = /^\d+(\.\d+)?$/;
     LucideTrash2,
     LucideX,
     Button,
+    Fab,
     IconButton,
     Banner,
     EmptyState,
