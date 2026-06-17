@@ -9,11 +9,8 @@
   flex-direction: column;
   flex: 1;
   gap: var(--space-4);
-}
-
-.page-actions {
-  display: flex;
-  justify-content: flex-end;
+  // Clear the floating Add button so it never hides the last row (design-system §7).
+  padding-bottom: calc(var(--layout-fab-size) + var(--space-6));
 }
 
 // Target + currency side by side (currency is a compact fixed-width field).
