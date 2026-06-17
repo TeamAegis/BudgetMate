@@ -8,6 +8,7 @@ import {
   setRecurringActive,
   listAccounts,
   listCategories,
+  toUserMessage,
   isTauri,
 } from '../../core/bridge';
 import type { RecurringRule, Account, Category, Schedule } from '../../core/models';
@@ -17,6 +18,7 @@ import { Banner } from '../../shared/ui/banner/banner';
 import { EmptyState } from '../../shared/ui/empty-state/empty-state';
 import { ListRow } from '../../shared/ui/list-row/list-row';
 import { FormField } from '../../shared/ui/form-field/form-field';
+import { Skeleton } from '../../shared/ui/skeleton/skeleton';
 import { Modal } from '../../shared/ui/modal/modal';
 import { SelectField, type SelectOption } from '../../shared/ui/select-field/select-field';
 
@@ -41,6 +43,7 @@ const DECIMAL = /^\d+(\.\d+)?$/;
     EmptyState,
     ListRow,
     FormField,
+    Skeleton,
     Modal,
     SelectField,
   ],
@@ -49,6 +52,8 @@ const DECIMAL = /^\d+(\.\d+)?$/;
 })
 export class Recurring implements OnInit {
   private readonly fb = inject(FormBuilder);
+  /** Placeholder row count shown while the list loads. */
+  protected readonly skeletonRows = [0, 1, 2, 3];
 
   protected readonly rules = signal<RecurringRule[]>([]);
   protected readonly accounts = signal<Account[]>([]);
@@ -101,10 +106,17 @@ export class Recurring implements OnInit {
       this.accounts.set(accts);
       this.categories.set(cats);
     } catch (e) {
-      this.error.set(String(e));
+      this.error.set(toUserMessage(e));
     } finally {
       this.loading.set(false);
     }
+  }
+
+  /** Inline validation message (A9) — shown only when invalid AND touched. */
+  protected amountError(): string | null {
+    const c = this.form.controls.amount;
+    if (!c.invalid || !c.touched) return null;
+    return c.hasError('required') ? 'Enter an amount.' : 'Amount must be a number greater than 0.';
   }
 
   protected accountName(id: number): string {
@@ -206,7 +218,7 @@ export class Recurring implements OnInit {
       this.showForm.set(false);
       await this.reload();
     } catch (e) {
-      this.error.set(String(e));
+      this.error.set(toUserMessage(e));
     } finally {
       this.busy.set(false);
     }
@@ -219,7 +231,7 @@ export class Recurring implements OnInit {
       await setRecurringActive(r.id, !r.active);
       await this.reload();
     } catch (e) {
-      this.error.set(String(e));
+      this.error.set(toUserMessage(e));
     } finally {
       this.busy.set(false);
     }

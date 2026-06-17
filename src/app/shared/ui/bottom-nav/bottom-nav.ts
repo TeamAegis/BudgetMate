@@ -12,21 +12,41 @@ import { LucideHouse, LucideWallet, LucideTarget, LucidePieChart } from '@lucide
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink, RouterLinkActive, LucideHouse, LucideWallet, LucideTarget, LucidePieChart],
   template: `
-    <nav class="app-nav">
-      <a routerLink="/home" routerLinkActive="active">
-        <svg lucideHouse [size]="22"></svg>
+    <nav class="app-nav" aria-label="Main navigation">
+      <a
+        routerLink="/home"
+        routerLinkActive="active"
+        #homeLink="routerLinkActive"
+        [attr.aria-current]="homeLink.isActive ? 'page' : null"
+      >
+        <svg lucideHouse [size]="22" aria-hidden="true"></svg>
         <span>Home</span>
       </a>
-      <a routerLink="/expenses" routerLinkActive="active">
-        <svg lucideWallet [size]="22"></svg>
+      <a
+        routerLink="/expenses"
+        routerLinkActive="active"
+        #expensesLink="routerLinkActive"
+        [attr.aria-current]="expensesLink.isActive ? 'page' : null"
+      >
+        <svg lucideWallet [size]="22" aria-hidden="true"></svg>
         <span>Expenses</span>
       </a>
-      <a routerLink="/goals" routerLinkActive="active">
-        <svg lucideTarget [size]="22"></svg>
+      <a
+        routerLink="/goals"
+        routerLinkActive="active"
+        #goalsLink="routerLinkActive"
+        [attr.aria-current]="goalsLink.isActive ? 'page' : null"
+      >
+        <svg lucideTarget [size]="22" aria-hidden="true"></svg>
         <span>Goals</span>
       </a>
-      <a routerLink="/analytics" routerLinkActive="active">
-        <svg lucidePieChart [size]="22"></svg>
+      <a
+        routerLink="/analytics"
+        routerLinkActive="active"
+        #analyticsLink="routerLinkActive"
+        [attr.aria-current]="analyticsLink.isActive ? 'page' : null"
+      >
+        <svg lucidePieChart [size]="22" aria-hidden="true"></svg>
         <span>Analytics</span>
       </a>
     </nav>

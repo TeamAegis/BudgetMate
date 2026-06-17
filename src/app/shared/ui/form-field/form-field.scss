@@ -25,7 +25,7 @@
 }
 .form-field input:focus,
 .form-field select:focus {
-  outline: 2px solid var(--c-secondary, var(--c-primary-700));
+  outline: 2px solid var(--c-primary-700);
   outline-offset: 1px;
 }
 // A projected SelectField (themed dropdown) fills the field width like the native inputs do.
@@ -38,4 +38,14 @@
 .form-field .hint {
   font-weight: var(--fw-regular);
   color: var(--c-text-muted);
+}
+// Inline validation (set via the `error` input). Border + message both signal the problem, so
+// it's never colour-only; never clears the user's input (ui-ux §2.9).
+.form-field.has-error input,
+.form-field.has-error select {
+  border-color: var(--c-danger);
+}
+.form-field .error-msg {
+  font-weight: var(--fw-regular);
+  color: var(--c-danger);
 }

@@ -17,6 +17,7 @@ import {
   deleteRule,
   reorderRules,
   previewRules,
+  toUserMessage,
   isTauri,
 } from '../../core/bridge';
 import type { ImportRule, MatchOp, RuleField, RulePreview } from '../../core/models';
@@ -27,6 +28,7 @@ import { Banner } from '../../shared/ui/banner/banner';
 import { EmptyState } from '../../shared/ui/empty-state/empty-state';
 import { ListRow } from '../../shared/ui/list-row/list-row';
 import { FormField } from '../../shared/ui/form-field/form-field';
+import { Skeleton } from '../../shared/ui/skeleton/skeleton';
 import { Modal } from '../../shared/ui/modal/modal';
 import { ConfirmDialog } from '../../shared/ui/confirm-dialog/confirm-dialog';
 import { SelectField, type SelectOption } from '../../shared/ui/select-field/select-field';
@@ -57,6 +59,7 @@ const OPS: MatchOp[] = ['contains', 'equals'];
     EmptyState,
     ListRow,
     FormField,
+    Skeleton,
     Modal,
     ConfirmDialog,
     SelectField,
@@ -66,6 +69,8 @@ const OPS: MatchOp[] = ['contains', 'equals'];
 })
 export class Rules implements OnInit {
   private readonly fb = inject(FormBuilder);
+  /** Placeholder row count shown while the list loads. */
+  protected readonly skeletonRows = [0, 1, 2, 3];
 
   /** Themed-dropdown options for the rule builder (rule fields/operators are fixed enums). */
   protected readonly fieldOptions: SelectOption[] = FIELDS.map((f) => ({ value: f, label: f }));
@@ -107,10 +112,20 @@ export class Rules implements OnInit {
       this.rules.set(await listRules());
       await this.runPreview();
     } catch (e) {
-      this.error.set(String(e));
+      this.error.set(toUserMessage(e));
     } finally {
       this.loading.set(false);
     }
+  }
+
+  // ── Inline validation messages (A9) — shown only when invalid AND touched. ──
+  protected matchValueError(): string | null {
+    const c = this.form.controls.matchValue;
+    return c.invalid && c.touched ? 'Enter a value to match, e.g. uber.' : null;
+  }
+  protected setValueError(): string | null {
+    const c = this.form.controls.setValue;
+    return c.invalid && c.touched ? 'Enter a value to set, e.g. Transport.' : null;
   }
 
   protected ruleText(r: ImportRule): string {
@@ -181,7 +196,7 @@ export class Rules implements OnInit {
       this.showForm.set(false);
       await this.reload();
     } catch (e) {
-      this.error.set(String(e));
+      this.error.set(toUserMessage(e));
     } finally {
       this.busy.set(false);
     }
@@ -224,7 +239,7 @@ export class Rules implements OnInit {
       this.rules.set(await listRules());
       await this.runPreview();
     } catch (e) {
-      this.error.set(String(e));
+      this.error.set(toUserMessage(e));
     } finally {
       this.busy.set(false);
     }

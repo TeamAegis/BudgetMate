@@ -31,41 +31,41 @@ import { SelectField, type SelectOption } from '../../shared/ui/select-field/sel
       <ul class="settings-list">
         <li>
           <a routerLink="/settings/accounts">
-            <svg lucideWallet [size]="20"></svg>
+            <svg lucideWallet [size]="24" aria-hidden="true"></svg>
             <span class="label">Accounts</span>
             <span class="hint">Manage where money lives</span>
-            <svg lucideChevronRight [size]="18" class="chevron"></svg>
+            <svg lucideChevronRight [size]="18" class="chevron" aria-hidden="true"></svg>
           </a>
         </li>
         <li>
           <a routerLink="/settings/categories">
-            <svg lucideTags [size]="20"></svg>
+            <svg lucideTags [size]="24" aria-hidden="true"></svg>
             <span class="label">Categories</span>
             <span class="hint">Organise spending &amp; income</span>
-            <svg lucideChevronRight [size]="18" class="chevron"></svg>
+            <svg lucideChevronRight [size]="18" class="chevron" aria-hidden="true"></svg>
           </a>
         </li>
         <li>
           <a routerLink="/settings/recurring">
-            <svg lucideRepeat [size]="20"></svg>
+            <svg lucideRepeat [size]="24" aria-hidden="true"></svg>
             <span class="label">Recurring</span>
             <span class="hint">Scheduled, auto-materialised transactions</span>
-            <svg lucideChevronRight [size]="18" class="chevron"></svg>
+            <svg lucideChevronRight [size]="18" class="chevron" aria-hidden="true"></svg>
           </a>
         </li>
         <li>
           <a routerLink="/settings/rules">
-            <svg lucideFunnel [size]="20"></svg>
+            <svg lucideFunnel [size]="24" aria-hidden="true"></svg>
             <span class="label">Rules</span>
             <span class="hint">Auto-categorise by if-then rules</span>
-            <svg lucideChevronRight [size]="18" class="chevron"></svg>
+            <svg lucideChevronRight [size]="18" class="chevron" aria-hidden="true"></svg>
           </a>
         </li>
       </ul>
 
       <h2 class="group-title">General</h2>
       <div class="setting-row">
-        <svg lucideCoins [size]="20" aria-hidden="true"></svg>
+        <svg lucideCoins [size]="24" aria-hidden="true"></svg>
         <span class="label" id="base-currency-label">Base currency</span>
         <app-select-field
           [options]="currencyOptions"
@@ -78,7 +78,7 @@ import { SelectField, type SelectOption } from '../../shared/ui/select-field/sel
 
       <h2 class="group-title">Security</h2>
       <div class="setting-row">
-        <svg lucideLock [size]="20" aria-hidden="true"></svg>
+        <svg lucideLock [size]="24" aria-hidden="true"></svg>
         <span class="label" id="lock-timeout-label">Lock timeout</span>
         <app-select-field
           [options]="timeoutOptions"

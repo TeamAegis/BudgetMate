@@ -6,6 +6,7 @@ import {
   createCategory,
   updateCategory,
   archiveCategory,
+  toUserMessage,
   isTauri,
 } from '../../core/bridge';
 import type { Category, CategoryKind } from '../../core/models';
@@ -17,6 +18,7 @@ import { ListRow } from '../../shared/ui/list-row/list-row';
 import { FormField } from '../../shared/ui/form-field/form-field';
 import { Skeleton } from '../../shared/ui/skeleton/skeleton';
 import { Modal } from '../../shared/ui/modal/modal';
+import { ConfirmDialog } from '../../shared/ui/confirm-dialog/confirm-dialog';
 import { SelectField, type SelectOption } from '../../shared/ui/select-field/select-field';
 
 const KINDS: CategoryKind[] = ['expense', 'income', 'transfer'];
@@ -38,6 +40,7 @@ const NO_PARENT = '';
     FormField,
     Skeleton,
     Modal,
+    ConfirmDialog,
     SelectField,
   ],
   templateUrl: './categories.html',
@@ -56,6 +59,8 @@ export class Categories implements OnInit {
   protected readonly editingId = signal<number | null>(null);
   protected readonly showForm = signal(false);
   protected readonly editing = computed(() => this.editingId() !== null);
+  /** The category pending archive confirmation (A14); null when no confirm is open. */
+  protected readonly archivingCategory = signal<Category | null>(null);
 
   /** Candidate parents = "None" + all categories except the one being edited (backend rejects cycles). */
   protected readonly parentOptions = computed<SelectOption[]>(() => [
@@ -75,6 +80,13 @@ export class Categories implements OnInit {
     await this.reload();
   }
 
+  /** Inline validation message (A9) — shown only when invalid AND touched. */
+  protected nameError(): string | null {
+    const c = this.form.controls.name;
+    if (!c.invalid || !c.touched) return null;
+    return c.hasError('required') ? 'Enter a name.' : 'Name is too long (60 characters max).';
+  }
+
   protected parentName(id: number | null): string {
     if (id === null) return '—';
     return this.categories().find((c) => c.id === id)?.name ?? '—';
@@ -91,7 +103,7 @@ export class Categories implements OnInit {
     try {
       this.categories.set(await listCategories(false));
     } catch (e) {
-      this.error.set(String(e));
+      this.error.set(toUserMessage(e));
     } finally {
       this.loading.set(false);
     }
@@ -144,19 +156,29 @@ export class Categories implements OnInit {
       this.showForm.set(false);
       await this.reload();
     } catch (e) {
-      this.error.set(String(e));
+      this.error.set(toUserMessage(e));
     } finally {
       this.busy.set(false);
     }
   }
 
-  protected async archive(c: Category): Promise<void> {
+  /** Open the archive confirmation for a category (A14) — archive never fires straight from the row. */
+  protected confirmArchive(c: Category): void {
+    this.error.set(null);
+    this.archivingCategory.set(c);
+  }
+
+  protected async archiveConfirmed(): Promise<void> {
+    const c = this.archivingCategory();
+    if (!c) return;
     this.busy.set(true);
+    this.error.set(null);
     try {
       await archiveCategory(c.id);
+      this.archivingCategory.set(null);
       await this.reload();
     } catch (e) {
-      this.error.set(String(e));
+      this.error.set(toUserMessage(e));
     } finally {
       this.busy.set(false);
     }

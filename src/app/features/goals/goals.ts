@@ -7,6 +7,7 @@ import {
   updateGoal,
   deleteGoal,
   getSettings,
+  toUserMessage,
   isTauri,
 } from '../../core/bridge';
 import type { Goal } from '../../core/models';
@@ -72,6 +73,31 @@ export class Goals implements OnInit {
     await this.reload();
   }
 
+  // ── Inline validation messages (A9) — message only when invalid AND touched; null otherwise. ──
+  protected nameError(): string | null {
+    const c = this.form.controls.name;
+    if (!c.invalid || !c.touched) return null;
+    return c.hasError('required') ? 'Enter a name.' : 'Name is too long (60 characters max).';
+  }
+
+  protected targetError(): string | null {
+    const c = this.form.controls.target;
+    if (!c.invalid || !c.touched) return null;
+    return c.hasError('required') ? 'Enter a target amount.' : 'Target must be a number greater than 0.';
+  }
+
+  protected currentError(): string | null {
+    const c = this.form.controls.current;
+    if (!c.invalid || !c.touched) return null;
+    return c.hasError('required') ? 'Enter an amount (use 0 if none).' : 'Use a number, e.g. 0.';
+  }
+
+  protected currencyError(): string | null {
+    const c = this.form.controls.currency;
+    if (!c.invalid || !c.touched) return null;
+    return 'Use a 3-letter currency code, e.g. MUR.';
+  }
+
   private async reload(): Promise<void> {
     if (!isTauri()) {
       this.loading.set(false);
@@ -85,7 +111,7 @@ export class Goals implements OnInit {
       this.goals.set(goals);
       this.baseCurrency.set(settings.baseCurrency);
     } catch (e) {
-      this.error.set(String(e));
+      this.error.set(toUserMessage(e));
     } finally {
       this.loading.set(false);
     }
@@ -139,7 +165,7 @@ export class Goals implements OnInit {
       this.showForm.set(false);
       await this.reload();
     } catch (e) {
-      this.error.set(String(e));
+      this.error.set(toUserMessage(e));
     } finally {
       this.busy.set(false);
     }
@@ -157,7 +183,7 @@ export class Goals implements OnInit {
       this.showForm.set(false);
       await this.reload();
     } catch (e) {
-      this.error.set(String(e));
+      this.error.set(toUserMessage(e));
     } finally {
       this.busy.set(false);
     }

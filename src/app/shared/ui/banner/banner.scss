@@ -3,12 +3,36 @@
 }
 
 .banner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
   margin: 0;
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-md);
   font-size: var(--t-body);
 }
+.banner .icon {
+  flex: none;
+}
+.banner .msg {
+  flex: 1;
+}
+
+// Tone backgrounds use the soft semantic tints; the icon + text colour carries the meaning, so
+// it is never signalled by colour alone (icon present in every tone).
 .banner.error {
-  background: var(--c-primary-05);
+  background: var(--c-danger-soft);
   color: var(--c-danger);
+}
+.banner.warning {
+  background: var(--c-warning-soft);
+  color: var(--c-warning);
+}
+.banner.success {
+  background: var(--c-positive-soft);
+  color: var(--c-positive);
+}
+.banner.info {
+  background: var(--c-info-soft);
+  color: var(--c-info);
 }

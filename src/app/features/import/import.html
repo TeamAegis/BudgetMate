@@ -89,7 +89,7 @@
         <div class="scan-actions">
           <app-button variant="ghost" (click)="reset()">Rescan</app-button>
           <app-button type="submit" variant="primary" [disabled]="form.invalid">
-            <svg icon lucideScanLine [size]="18"></svg>
+            <svg icon lucideScanLine [size]="18" aria-hidden="true"></svg>
             <span>Use these details</span>
           </app-button>
         </div>

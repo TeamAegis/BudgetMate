@@ -12,6 +12,7 @@ import {
   listCategories,
   getSettings,
   previewRules,
+  toUserMessage,
   isTauri,
 } from '../../core/bridge';
 import type { Transaction, Account, Category, TransactionPrefill } from '../../core/models';
@@ -27,10 +28,17 @@ import { Modal } from '../../shared/ui/modal/modal';
 import { ConfirmDialog } from '../../shared/ui/confirm-dialog/confirm-dialog';
 import { SelectField, type SelectOption } from '../../shared/ui/select-field/select-field';
 
+/** A transaction plus its position in the flattened (cross-group) list — drives the capped stagger. */
+interface GroupItem {
+  tx: Transaction;
+  /** Cumulative index across all date groups, so the entrance stagger reads correctly (A12). */
+  flatIndex: number;
+}
+
 /** A run of transactions sharing one posted date, for the grouped list. */
 interface DateGroup {
   date: string;
-  items: Transaction[];
+  items: GroupItem[];
 }
 
 const DECIMAL = /^\d+(\.\d+)?$/;
@@ -127,13 +135,41 @@ export class Transactions implements OnInit {
     return this.form.controls.splits;
   }
 
-  /** Transactions grouped into consecutive runs by posted date (list is newest-first from Rust). */
+  // ── Inline validation messages (A9) ──────────────────────────────────────────
+  // Each returns a plain-language message only when the control is invalid AND touched, so the
+  // form-field flags the error inline; null otherwise. Validators are unchanged.
+
+  protected amountError(): string | null {
+    const c = this.form.controls.amount;
+    if (!c.invalid || !c.touched) return null;
+    return c.hasError('required') ? 'Enter an amount.' : 'Amount must be a number greater than 0.';
+  }
+
+  protected currencyError(): string | null {
+    const c = this.form.controls.currency;
+    if (!c.invalid || !c.touched) return null;
+    return 'Use a 3-letter currency code, e.g. MUR.';
+  }
+
+  protected splitAmountError(i: number): string | null {
+    const c = this.splits.at(i).get('amount')!;
+    if (!c.invalid || !c.touched) return null;
+    return c.hasError('required') ? 'Enter an amount.' : 'Amount must be a number greater than 0.';
+  }
+
+  /**
+   * Transactions grouped into consecutive runs by posted date (list is newest-first from Rust).
+   * Each item carries a `flatIndex` (its position across all groups) so the capped entrance stagger
+   * reads correctly instead of restarting per group (A12).
+   */
   protected readonly grouped = computed<DateGroup[]>(() => {
     const groups: DateGroup[] = [];
+    let flatIndex = 0;
     for (const t of this.transactions()) {
+      const item: GroupItem = { tx: t, flatIndex: flatIndex++ };
       const last = groups.at(-1);
-      if (last && last.date === t.postedDate) last.items.push(t);
-      else groups.push({ date: t.postedDate, items: [t] });
+      if (last && last.date === t.postedDate) last.items.push(item);
+      else groups.push({ date: t.postedDate, items: [item] });
     }
     return groups;
   });
@@ -166,7 +202,7 @@ export class Transactions implements OnInit {
       this.categories.set(cats);
       this.baseCurrency.set(settings.baseCurrency);
     } catch (e) {
-      this.error.set(String(e));
+      this.error.set(toUserMessage(e));
     } finally {
       this.loading.set(false);
     }
@@ -353,7 +389,7 @@ export class Transactions implements OnInit {
       this.showForm.set(false);
       await this.reload();
     } catch (e) {
-      this.error.set(String(e));
+      this.error.set(toUserMessage(e));
     } finally {
       this.busy.set(false);
     }
@@ -371,7 +407,7 @@ export class Transactions implements OnInit {
       this.showForm.set(false);
       await this.reload();
     } catch (e) {
-      this.error.set(String(e));
+      this.error.set(toUserMessage(e));
     } finally {
       this.busy.set(false);
     }

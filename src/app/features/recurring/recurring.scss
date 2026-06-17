@@ -24,6 +24,18 @@
   gap: var(--space-2);
 }
 
+// Loading placeholder shaped like a list row (title bone left, amount bone right).
+.skeleton-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: var(--tap-target-min);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
+}
+
 // The sign already conveys direction; colour is a secondary cue (never colour alone).
 .amount {
   color: var(--c-text);

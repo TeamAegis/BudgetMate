@@ -2,7 +2,7 @@
   @if (!showForm()) {
     <div class="page-actions">
       <app-button variant="primary" (click)="startCreate()" [disabled]="busy() || loading()">
-        <svg icon lucidePlus [size]="18"></svg>
+        <svg icon lucidePlus [size]="18" aria-hidden="true"></svg>
         <span>Add</span>
       </app-button>
     </div>
@@ -47,7 +47,11 @@
               (valueChange)="setCategory($event)"
             />
           </app-form-field>
-          <app-form-field label="Amount" hint="Expense or income is set by the category.">
+          <app-form-field
+            label="Amount"
+            hint="Expense or income is set by the category."
+            [error]="amountError()"
+          >
             <input type="text" inputmode="decimal" formControlName="amount" placeholder="0.00" class="numeric" />
           </app-form-field>
           <app-form-field label="Payee (optional)">
@@ -67,7 +71,14 @@
   }
 
   @if (loading()) {
-    <p class="muted">Loading…</p>
+    <ul class="rows" aria-busy="true">
+      @for (i of skeletonRows; track i) {
+        <li class="skeleton-row">
+          <app-skeleton variant="text" width="50%" />
+          <app-skeleton variant="text" width="22%" />
+        </li>
+      }
+    </ul>
   } @else if (!showForm() && rules().length === 0 && !error()) {
     <app-empty-state
       message="No recurring rules yet."
@@ -86,15 +97,15 @@
             >{{ amountLabel(r) }}</span
           >
           <app-icon-button actions ariaLabel="Edit" (click)="startEdit(r)" [disabled]="busy()">
-            <svg lucidePencil [size]="18"></svg>
+            <svg lucidePencil [size]="18" aria-hidden="true"></svg>
           </app-icon-button>
           @if (r.active) {
             <app-icon-button actions ariaLabel="Pause" (click)="toggleActive(r)" [disabled]="busy()">
-              <svg lucidePause [size]="18"></svg>
+              <svg lucidePause [size]="18" aria-hidden="true"></svg>
             </app-icon-button>
           } @else {
             <app-icon-button actions ariaLabel="Resume" (click)="toggleActive(r)" [disabled]="busy()">
-              <svg lucidePlay [size]="18"></svg>
+              <svg lucidePlay [size]="18" aria-hidden="true"></svg>
             </app-icon-button>
           }
         </li>

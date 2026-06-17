@@ -12,7 +12,8 @@
   // Keyframe + reduced-motion guard live in src/styles/_animations.scss.
   animation: skeleton-pulse var(--motion-slow) var(--easing) infinite;
   // Loop the pulse over a calmer ~1.4s cycle rather than the 300ms token base.
-  animation-duration: calc(var(--motion-slow) * 4 + 200ms);
+  // Both terms are tokens so the cycle collapses to 0ms under prefers-reduced-motion.
+  animation-duration: calc(var(--motion-slow) * 4 + var(--motion-skeleton-offset));
 }
 
 .bone.circle {

@@ -2,7 +2,7 @@
   @if (!showForm()) {
     <div class="page-actions">
       <app-button variant="primary" (click)="startCreate()" [disabled]="busy() || loading()">
-        <svg icon lucidePlus [size]="18"></svg>
+        <svg icon lucidePlus [size]="18" aria-hidden="true"></svg>
         <span>Add</span>
       </app-button>
     </div>
@@ -12,7 +12,8 @@
     <app-banner>{{ err }}</app-banner>
   }
 
-  @if (showForm()) {
+  <!-- Suppress the edit modal while the delete-confirm is open so only one scrim shows (A13). -->
+  @if (showForm() && !confirmingDelete()) {
     <app-modal [title]="editing() ? 'Modify a Transaction' : 'Add a Transaction'" [busy]="busy()" (dismiss)="cancel()">
       <form class="modal-form" [formGroup]="form" (ngSubmit)="save()">
         <div class="modal-body">
@@ -26,10 +27,14 @@
           </app-form-field>
 
           <div class="amount-row">
-            <app-form-field label="Amount" hint="Expense or income is set by the category.">
+            <app-form-field
+              label="Amount"
+              hint="Expense or income is set by the category."
+              [error]="amountError()"
+            >
               <input type="text" inputmode="decimal" formControlName="amount" placeholder="0.00" class="numeric" />
             </app-form-field>
-            <app-form-field label="Currency" class="currency-field">
+            <app-form-field label="Currency" class="currency-field" [error]="currencyError()">
               <input type="text" formControlName="currency" maxlength="3" class="numeric currency" />
             </app-form-field>
           </div>
@@ -48,7 +53,7 @@
             <div class="splits-head">
               <span class="splits-title">{{ splits.length > 1 ? 'Splits' : 'Category' }}</span>
               <button type="button" class="add-split" (click)="addSplit()" [disabled]="busy()">
-                <svg lucidePlus [size]="16"></svg>
+                <svg lucidePlus [size]="16" aria-hidden="true"></svg>
                 <span>Split</span>
               </button>
             </div>
@@ -65,11 +70,11 @@
                 </app-form-field>
 
                 @if (splits.length > 1) {
-                  <app-form-field class="split-amount" label="Amount">
+                  <app-form-field class="split-amount" label="Amount" [error]="splitAmountError($index)">
                     <input type="text" inputmode="decimal" formControlName="amount" placeholder="0.00" class="numeric" />
                   </app-form-field>
                   <app-icon-button ariaLabel="Remove split" (click)="removeSplit($index)" [disabled]="busy()">
-                    <svg lucideX [size]="18"></svg>
+                    <svg lucideX [size]="18" aria-hidden="true"></svg>
                   </app-icon-button>
                 }
               </div>
@@ -106,7 +111,7 @@
         <div class="modal-footer">
           @if (editing()) {
             <app-icon-button ariaLabel="Delete transaction" (click)="confirmingDelete.set(true)" [disabled]="busy()">
-              <svg lucideTrash2 [size]="18"></svg>
+              <svg lucideTrash2 [size]="18" aria-hidden="true"></svg>
             </app-icon-button>
           }
           <span class="modal-footer-spacer"></span>
@@ -154,29 +159,29 @@
       <div class="date-group">
         <h2 class="date-heading">{{ group.date }}</h2>
         <ul class="rows">
-          @for (t of group.items; track t.id; let i = $index) {
+          @for (t of group.items; track t.tx.id) {
             <li
               app-list-row
               animate.enter="list-item-enter"
-              [style.animation-delay]="(i < 12 ? i * 40 : 0) + 'ms'"
-              [name]="t.payee || categoryLabel(t)"
-              [meta]="metaLine(t)"
+              [style.animation-delay]="(t.flatIndex < 12 ? t.flatIndex * 40 : 0) + 'ms'"
+              [name]="t.tx.payee || categoryLabel(t.tx)"
+              [meta]="metaLine(t.tx)"
             >
               <span amount class="amount-cell">
                 <span
                   class="amount numeric"
-                  [class.income]="t.amountMinor > 0"
-                  [class.expense]="t.amountMinor < 0"
-                  >{{ { amountMinor: t.amountMinor, currency: t.currency } | money }}</span
+                  [class.income]="t.tx.amountMinor > 0"
+                  [class.expense]="t.tx.amountMinor < 0"
+                  >{{ { amountMinor: t.tx.amountMinor, currency: t.tx.currency } | money }}</span
                 >
-                @if (t.currency !== baseCurrency()) {
+                @if (t.tx.currency !== baseCurrency()) {
                   <small class="base numeric"
-                    >≈ {{ { amountMinor: t.baseAmountMinor, currency: baseCurrency() } | money }}</small
+                    >≈ {{ { amountMinor: t.tx.baseAmountMinor, currency: baseCurrency() } | money }}</small
                   >
                 }
               </span>
-              <app-icon-button actions ariaLabel="Edit" (click)="startEdit(t)" [disabled]="busy()">
-                <svg lucidePencil [size]="18"></svg>
+              <app-icon-button actions ariaLabel="Edit" (click)="startEdit(t.tx)" [disabled]="busy()">
+                <svg lucidePencil [size]="18" aria-hidden="true"></svg>
               </app-icon-button>
             </li>
           }
