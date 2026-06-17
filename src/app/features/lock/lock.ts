@@ -78,10 +78,10 @@ import { FormField } from '../../shared/ui/form-field/form-field';
               [attr.aria-pressed]="reveal()"
             >
               @if (reveal()) {
-                <svg lucideEyeOff [size]="16"></svg>
+                <svg lucideEyeOff [size]="16" aria-hidden="true"></svg>
                 <span>Hide passphrase</span>
               } @else {
-                <svg lucideEye [size]="16"></svg>
+                <svg lucideEye [size]="16" aria-hidden="true"></svg>
                 <span>Show passphrase</span>
               }
             </button>
@@ -101,7 +101,7 @@ import { FormField } from '../../shared/ui/form-field/form-field';
             (click)="biometric()"
             [disabled]="busy()"
           >
-            <svg icon lucideFingerprint [size]="20"></svg>
+            <svg icon lucideFingerprint [size]="20" aria-hidden="true"></svg>
             <span>Use biometrics</span>
           </app-button>
         }

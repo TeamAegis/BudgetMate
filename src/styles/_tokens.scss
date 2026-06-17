@@ -24,10 +24,13 @@
 
   // ---- Color: semantic (required by FR-3.1 / FR-2.4 / states) ----
   --c-positive: #2e9e6b;
+  --c-positive-soft: rgba(46, 158, 107, 0.10);  // success banner / on-track tint fill
   --c-warning: #e8a13a;
   --c-warning-soft: rgba(232, 161, 58, 0.12);  // low-confidence/approaching tint fill (OCR, budgets)
   --c-danger: #d8453b;
+  --c-danger-soft: rgba(216, 69, 59, 0.10);    // error banner / over-budget tint fill
   --c-info: #3a86c8;
+  --c-info-soft: rgba(58, 134, 200, 0.10);     // neutral info / tip tint fill
 
   // ---- Elevation ----
   --c-shadow-pink: rgba(255, 203, 203, 0.29);
@@ -66,6 +69,10 @@
   --radius-lg: 20px;        // hero balance card
   --radius-pill: 999px;     // progress track, toggles, FAB
 
+  // ---- Component metrics (not on the spacing grid; component-specific) ----
+  --progress-track-h: 8px;  // GoalProgressRow / EnvelopeCard pill track height
+  --progress-knob-size: 16px;
+
   // ---- Icons (all icons via @lucide/angular; see docs/design/design-system.md §5) ----
   --icon-size-sm: 24px;     // inline / action icons (nav uses 22–24)
   --icon-size-md: 32px;     // larger feature glyphs
@@ -76,6 +83,13 @@
   --layout-bottomnav-h: 80px;
   --layout-fab-size: 60px;
   --tap-target-min: 44px;   // accessibility minimum
+
+  // ---- Insets (Android WebView: env(safe-area-inset-*) is unreliable — these vars let the
+  //      visualViewport workaround / a native inset source override at runtime; see
+  //      .claude/rules/android.md and core/layout/viewport-insets.service.ts) ----
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --keyboard-inset: 0px;    // height the on-screen keyboard covers (written by the service)
 
   // ---- Z-index scale (keep stacking explicit; only these layers float) ----
   --z-dropdown: 20;         // select-field listbox menu
@@ -88,6 +102,7 @@
   --motion-fast: 150ms;
   --motion-standard: 200ms;
   --motion-slow: 300ms;            // progress-bar fill, skeleton pulse cycle (design-system §6)
+  --motion-skeleton-offset: 200ms; // added to the skeleton pulse cycle; zeroed under reduce
   --easing: cubic-bezier(0.2, 0, 0, 1);
 
   // ---- Skeleton (loading placeholders) ----
@@ -100,5 +115,6 @@
     --motion-fast: 0ms;
     --motion-standard: 0ms;
     --motion-slow: 0ms;
+    --motion-skeleton-offset: 0ms;
   }
 }

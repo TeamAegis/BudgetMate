@@ -7,7 +7,8 @@
   justify-content: space-around;
   align-items: center;
   min-height: var(--layout-bottomnav-h);
-  padding: var(--space-2) var(--space-2) max(var(--space-2), env(safe-area-inset-bottom));
+  // --safe-area-bottom defaults to env() but can be overridden at runtime (android.md).
+  padding: var(--space-2) var(--space-2) max(var(--space-2), var(--safe-area-bottom));
   background: var(--c-surface);
   border-top: 1px solid var(--c-border);
 

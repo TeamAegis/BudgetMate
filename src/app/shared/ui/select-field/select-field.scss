@@ -63,10 +63,14 @@
   white-space: nowrap;
   cursor: pointer;
 }
-.opt:hover,
+.opt:hover {
+  background: var(--c-primary-05);
+}
 .opt:focus-visible {
   background: var(--c-primary-05);
-  outline: none;
+  // Inset so the ring stays within the rounded option (not clipped by the menu edge).
+  outline: 2px solid var(--c-primary-700);
+  outline-offset: -2px;
 }
 .opt.selected {
   color: var(--c-primary-700);

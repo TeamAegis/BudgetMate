@@ -2,7 +2,7 @@
   @if (!showForm()) {
     <div class="page-actions">
       <app-button variant="primary" (click)="startCreate()" [disabled]="busy() || loading()">
-        <svg icon lucidePlus [size]="18"></svg>
+        <svg icon lucidePlus [size]="18" aria-hidden="true"></svg>
         <span>Add rule</span>
       </app-button>
     </div>
@@ -12,7 +12,8 @@
     <app-banner>{{ err }}</app-banner>
   }
 
-  @if (showForm()) {
+  <!-- Suppress the edit modal while the delete-confirm is open so only one scrim shows (A13). -->
+  @if (showForm() && !confirmingDelete()) {
     <app-modal [title]="editing() ? 'Modify a Rule' : 'Add a Rule'" [busy]="busy()" (dismiss)="cancel()">
       <form class="modal-form" [formGroup]="form" (ngSubmit)="save()">
         <div class="modal-body">
@@ -33,7 +34,7 @@
               (valueChange)="setMatchOp($event)"
             />
           </app-form-field>
-          <app-form-field label="Value">
+          <app-form-field label="Value" [error]="matchValueError()">
             <input type="text" formControlName="matchValue" placeholder="e.g. uber" />
           </app-form-field>
 
@@ -46,7 +47,7 @@
               (valueChange)="setSetField($event)"
             />
           </app-form-field>
-          <app-form-field label="To value">
+          <app-form-field label="To value" [error]="setValueError()">
             <input type="text" formControlName="setValue" placeholder="e.g. Transport" />
           </app-form-field>
         </div>
@@ -54,7 +55,7 @@
         <div class="modal-footer">
           @if (editing()) {
             <app-icon-button ariaLabel="Delete rule" (click)="confirmingDelete.set(true)" [disabled]="busy()">
-              <svg lucideTrash2 [size]="18"></svg>
+              <svg lucideTrash2 [size]="18" aria-hidden="true"></svg>
             </app-icon-button>
           }
           <span class="modal-footer-spacer"></span>
@@ -77,7 +78,14 @@
   }
 
   @if (loading()) {
-    <p class="muted">Loading…</p>
+    <ul class="rows" aria-busy="true">
+      @for (i of skeletonRows; track i) {
+        <li class="skeleton-row">
+          <app-skeleton variant="text" width="55%" />
+          <app-skeleton variant="text" width="25%" />
+        </li>
+      }
+    </ul>
   } @else if (rules().length === 0 && !error()) {
     <app-empty-state
       message="No rules yet."
@@ -91,26 +99,26 @@
         <li app-list-row [name]="ruleText(r)" [meta]="ruleEffect(r)" [class.disabled]="!r.active">
           <div actions class="reorder">
             <app-icon-button ariaLabel="Move up" (click)="moveUp(i)" [disabled]="busy() || i === 0">
-              <svg lucideChevronUp [size]="18"></svg>
+              <svg lucideChevronUp [size]="18" aria-hidden="true"></svg>
             </app-icon-button>
             <app-icon-button
               ariaLabel="Move down"
               (click)="moveDown(i)"
               [disabled]="busy() || i === rules().length - 1"
             >
-              <svg lucideChevronDown [size]="18"></svg>
+              <svg lucideChevronDown [size]="18" aria-hidden="true"></svg>
             </app-icon-button>
           </div>
           <app-icon-button actions ariaLabel="Edit" (click)="startEdit(r)" [disabled]="busy()">
-            <svg lucidePencil [size]="18"></svg>
+            <svg lucidePencil [size]="18" aria-hidden="true"></svg>
           </app-icon-button>
           @if (r.active) {
             <app-icon-button actions ariaLabel="Disable" (click)="toggleActive(r)" [disabled]="busy()">
-              <svg lucidePause [size]="18"></svg>
+              <svg lucidePause [size]="18" aria-hidden="true"></svg>
             </app-icon-button>
           } @else {
             <app-icon-button actions ariaLabel="Enable" (click)="toggleActive(r)" [disabled]="busy()">
-              <svg lucidePlay [size]="18"></svg>
+              <svg lucidePlay [size]="18" aria-hidden="true"></svg>
             </app-icon-button>
           }
         </li>

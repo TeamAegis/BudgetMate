@@ -16,25 +16,15 @@ import { LucidePlus, LucideTarget, LucideScanLine } from '@lucide/angular';
 
       <div class="quick-actions">
         <a class="chip" routerLink="/expenses" animate.enter="list-item-enter">
-          <svg lucidePlus [size]="20"></svg>
+          <svg lucidePlus [size]="20" aria-hidden="true"></svg>
           <span>Transaction</span>
         </a>
-        <a
-          class="chip"
-          routerLink="/goals"
-          animate.enter="list-item-enter"
-          style="animation-delay: 40ms"
-        >
-          <svg lucideTarget [size]="20"></svg>
+        <a class="chip" routerLink="/goals" animate.enter="list-item-enter">
+          <svg lucideTarget [size]="20" aria-hidden="true"></svg>
           <span>Goal</span>
         </a>
-        <a
-          class="chip"
-          routerLink="/import"
-          animate.enter="list-item-enter"
-          style="animation-delay: 80ms"
-        >
-          <svg lucideScanLine [size]="20"></svg>
+        <a class="chip" routerLink="/import" animate.enter="list-item-enter">
+          <svg lucideScanLine [size]="20" aria-hidden="true"></svg>
           <span>Scan / Import</span>
         </a>
       </div>
@@ -84,12 +74,20 @@ import { LucidePlus, LucideTarget, LucideScanLine } from '@lucide/angular';
       justify-content: center;
       gap: var(--space-2);
       padding: var(--space-4) var(--space-2);
+      min-height: var(--tap-target-min); // guarantee the 44px target floor
       background: var(--c-primary-05);
       border-radius: var(--radius-sm);
       color: var(--c-primary-700);
       font-size: var(--t-caption);
       text-align: center;
       text-decoration: none;
+    }
+    // Token-driven entrance stagger (zeros under prefers-reduced-motion, unlike a hardcoded ms).
+    .quick-actions .chip:nth-child(2) {
+      animation-delay: var(--motion-fast);
+    }
+    .quick-actions .chip:nth-child(3) {
+      animation-delay: var(--motion-standard);
     }
   `,
 })

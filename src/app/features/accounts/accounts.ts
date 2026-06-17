@@ -6,6 +6,7 @@ import {
   createAccount,
   updateAccount,
   archiveAccount,
+  toUserMessage,
   isTauri,
 } from '../../core/bridge';
 import type { Account, AccountKind } from '../../core/models';
@@ -18,6 +19,7 @@ import { ListRow } from '../../shared/ui/list-row/list-row';
 import { FormField } from '../../shared/ui/form-field/form-field';
 import { Skeleton } from '../../shared/ui/skeleton/skeleton';
 import { Modal } from '../../shared/ui/modal/modal';
+import { ConfirmDialog } from '../../shared/ui/confirm-dialog/confirm-dialog';
 import { SelectField, type SelectOption } from '../../shared/ui/select-field/select-field';
 
 const KINDS: AccountKind[] = ['cash', 'bank', 'card', 'wallet', 'other'];
@@ -38,6 +40,7 @@ const KINDS: AccountKind[] = ['cash', 'bank', 'card', 'wallet', 'other'];
     FormField,
     Skeleton,
     Modal,
+    ConfirmDialog,
     SelectField,
   ],
   templateUrl: './accounts.html',
@@ -56,6 +59,8 @@ export class Accounts implements OnInit {
   protected readonly editingId = signal<number | null>(null);
   protected readonly showForm = signal(false);
   protected readonly editing = computed(() => this.editingId() !== null);
+  /** The account pending archive confirmation (A14); null when no confirm is open. */
+  protected readonly archivingAccount = signal<Account | null>(null);
 
   protected readonly form = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.maxLength(60)]],
@@ -65,6 +70,19 @@ export class Accounts implements OnInit {
 
   async ngOnInit(): Promise<void> {
     await this.reload();
+  }
+
+  // ── Inline validation messages (A9) — message only when invalid AND touched; null otherwise. ──
+  protected nameError(): string | null {
+    const c = this.form.controls.name;
+    if (!c.invalid || !c.touched) return null;
+    return c.hasError('required') ? 'Enter a name.' : 'Name is too long (60 characters max).';
+  }
+
+  protected currencyError(): string | null {
+    const c = this.form.controls.currency;
+    if (!c.invalid || !c.touched) return null;
+    return 'Use a 3-letter currency code, e.g. MUR.';
   }
 
   private async reload(): Promise<void> {
@@ -78,7 +96,7 @@ export class Accounts implements OnInit {
     try {
       this.accounts.set(await listAccounts(false));
     } catch (e) {
-      this.error.set(String(e));
+      this.error.set(toUserMessage(e));
     } finally {
       this.loading.set(false);
     }
@@ -132,19 +150,29 @@ export class Accounts implements OnInit {
       this.showForm.set(false);
       await this.reload();
     } catch (e) {
-      this.error.set(String(e));
+      this.error.set(toUserMessage(e));
     } finally {
       this.busy.set(false);
     }
   }
 
-  protected async archive(a: Account): Promise<void> {
+  /** Open the archive confirmation for an account (A14) — archive never fires straight from the row. */
+  protected confirmArchive(a: Account): void {
+    this.error.set(null);
+    this.archivingAccount.set(a);
+  }
+
+  protected async archiveConfirmed(): Promise<void> {
+    const a = this.archivingAccount();
+    if (!a) return;
     this.busy.set(true);
+    this.error.set(null);
     try {
       await archiveAccount(a.id);
+      this.archivingAccount.set(null);
       await this.reload();
     } catch (e) {
-      this.error.set(String(e));
+      this.error.set(toUserMessage(e));
     } finally {
       this.busy.set(false);
     }

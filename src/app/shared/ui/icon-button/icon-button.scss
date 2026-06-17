@@ -21,3 +21,7 @@
   opacity: 0.5;
   cursor: default;
 }
+.icon-btn:focus-visible {
+  outline: 2px solid var(--c-primary-700);
+  outline-offset: 1px;
+}

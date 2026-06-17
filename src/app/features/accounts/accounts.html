@@ -2,7 +2,7 @@
   @if (!showForm()) {
     <div class="page-actions">
       <app-button variant="primary" (click)="startCreate()" [disabled]="busy()">
-        <svg icon lucidePlus [size]="18"></svg>
+        <svg icon lucidePlus [size]="18" aria-hidden="true"></svg>
         <span>Add</span>
       </app-button>
     </div>
@@ -16,7 +16,7 @@
     <app-modal [title]="editing() ? 'Modify an Account' : 'Add an Account'" [busy]="busy()" (dismiss)="cancel()">
       <form class="modal-form" [formGroup]="form" (ngSubmit)="save()">
         <div class="modal-body">
-          <app-form-field label="Name">
+          <app-form-field label="Name" [error]="nameError()">
             <input type="text" formControlName="name" placeholder="e.g. Cash, Main Bank" />
           </app-form-field>
           <app-form-field label="Type">
@@ -27,7 +27,7 @@
               (valueChange)="setKind($event)"
             />
           </app-form-field>
-          <app-form-field label="Currency" hint="3-letter ISO code, e.g. MUR">
+          <app-form-field label="Currency" hint="3-letter ISO code, e.g. MUR" [error]="currencyError()">
             <input type="text" formControlName="currency" maxlength="3" class="numeric" />
           </app-form-field>
         </div>
@@ -38,6 +38,19 @@
         </div>
       </form>
     </app-modal>
+  }
+
+  @if (archivingAccount(); as target) {
+    <app-confirm-dialog
+      title="Archive this account?"
+      [message]="
+        'Archive “' + target.name + '”? It will be hidden from pickers but not deleted.'
+      "
+      confirmLabel="Archive"
+      [busy]="busy()"
+      (confirm)="archiveConfirmed()"
+      (cancelled)="archivingAccount.set(null)"
+    />
   }
 
   @if (loading()) {
@@ -69,10 +82,10 @@
             { amountMinor: a.openingBalanceMinor, currency: a.currency } | money
           }}</span>
           <app-icon-button actions ariaLabel="Edit" (click)="startEdit(a)" [disabled]="busy()">
-            <svg lucidePencil [size]="18"></svg>
+            <svg lucidePencil [size]="18" aria-hidden="true"></svg>
           </app-icon-button>
-          <app-icon-button actions ariaLabel="Archive" (click)="archive(a)" [disabled]="busy()">
-            <svg lucideArchive [size]="18"></svg>
+          <app-icon-button actions ariaLabel="Archive" (click)="confirmArchive(a)" [disabled]="busy()">
+            <svg lucideArchive [size]="18" aria-hidden="true"></svg>
           </app-icon-button>
         </li>
       }

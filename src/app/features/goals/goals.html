@@ -2,7 +2,7 @@
   @if (!showForm()) {
     <div class="page-actions">
       <app-button variant="primary" (click)="startCreate()" [disabled]="busy() || loading()">
-        <svg icon lucidePlus [size]="18"></svg>
+        <svg icon lucidePlus [size]="18" aria-hidden="true"></svg>
         <span>Add</span>
       </app-button>
     </div>
@@ -12,22 +12,27 @@
     <app-banner>{{ err }}</app-banner>
   }
 
-  @if (showForm()) {
+  <!-- Suppress the edit modal while the delete-confirm is open so only one scrim shows (A13). -->
+  @if (showForm() && !confirmingDelete()) {
     <app-modal [title]="editing() ? 'Modify a Goal' : 'Add a Goal'" [busy]="busy()" (dismiss)="cancel()">
       <form class="modal-form" [formGroup]="form" (ngSubmit)="save()">
         <div class="modal-body">
-          <app-form-field label="Name">
+          <app-form-field label="Name" [error]="nameError()">
             <input type="text" formControlName="name" placeholder="e.g. Vacation" />
           </app-form-field>
           <div class="amount-row">
-            <app-form-field label="Target" class="grow">
+            <app-form-field label="Target" class="grow" [error]="targetError()">
               <input type="text" inputmode="decimal" formControlName="target" placeholder="0.00" class="numeric" />
             </app-form-field>
-            <app-form-field label="Currency" class="currency-field">
+            <app-form-field label="Currency" class="currency-field" [error]="currencyError()">
               <input type="text" formControlName="currency" maxlength="3" class="numeric currency" />
             </app-form-field>
           </div>
-          <app-form-field label="Saved so far" hint="How much you've put aside toward this goal.">
+          <app-form-field
+            label="Saved so far"
+            hint="How much you've put aside toward this goal."
+            [error]="currentError()"
+          >
             <input type="text" inputmode="decimal" formControlName="current" placeholder="0.00" class="numeric" />
           </app-form-field>
           <app-form-field label="Target date (optional)">
@@ -37,7 +42,7 @@
         <div class="modal-footer">
           @if (editing()) {
             <app-icon-button ariaLabel="Delete goal" (click)="confirmingDelete.set(true)" [disabled]="busy()">
-              <svg lucideTrash2 [size]="18"></svg>
+              <svg lucideTrash2 [size]="18" aria-hidden="true"></svg>
             </app-icon-button>
           }
           <span class="modal-footer-spacer"></span>
