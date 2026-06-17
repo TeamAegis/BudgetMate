@@ -25,7 +25,7 @@ design-tokens.json       Same tokens, machine-readable (for tooling / sync)
 docs/design/             UI/UX spec: design-system · ux-blueprint · screens (FR↔command map)
 src-tauri/src/           Rust core: db (SQLCipher) · crypto (Argon2id) · domain (money)
                          · rules (receipt/engine/dedup) · import · export · commands
-src-tauri/plugins/ocr/   Custom OCR plugin (raw text+boxes; native engine deferred)
+src-tauri/plugins/ocr/   Custom OCR plugin — Android ML Kit text recognition (raw text+boxes; desktop NotImplemented)
 src-tauri/capabilities/  Tauri ACL (minimal grants)
 scripts/guards.mjs       no-network / no-telemetry / no-float-money CI guards
 .claude/rules,skills     Agent rules (frontend · rust · database · design) + skills
@@ -75,6 +75,10 @@ npm run lint && npm test && npm run guards \
   until then.
 - All IPC goes through `src/app/core/bridge` (lint-enforced). Add features via the `new-feature`
   skill (Rust command + DTO first, then mirror the TS model, bridge wrapper, component).
+- **OCR (FR-2.1):** the Android engine is the native **ML Kit** text recogniser (Apple Vision is
+  deferred with iOS; desktop returns `NotImplemented`). The plugin returns **raw text + boxes
+  only** — merchant/date/total extraction is deterministic Rust (`src-tauri/src/rules/receipt`),
+  and every result is **confirmed by the user before saving** (never auto-committed).
 - The Rust core compiles and links bundled SQLCipher on Windows; an encrypted on-disk round-trip
   test proves encryption + key rejection at runtime. SQLCipher cross-compile to Android is
   verified once Android tooling is installed (`npm run tauri android dev`).
