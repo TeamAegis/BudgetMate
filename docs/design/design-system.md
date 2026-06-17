@@ -47,6 +47,30 @@ captions use coral on white at 12–13px, which is **not accessible**.
   paired with a text label. For small coral text/labels on white, use `--c-primary-700`
   (`#D84F2C` ≈ 4.6:1). Verify any new pairing.
 
+#### Semantic colours — contrast (fill, not foreground text)
+The §2.2 semantics are tuned to harmonise with coral, so most **fail AA as small text on white**.
+Use them as **fill/background only** — paired with their soft tints for banner/surface fills — and
+never as foreground body text on white. The icon-not-colour-alone rule (§2.2, §5) still applies on
+top of this: a semantic state always carries a sign/icon/label, not just hue.
+| Token | On white | Allowed use |
+|---|---|---|
+| `--c-warning` (`#E8A13A`) | ≈ **2.6:1** — fails AA | Fill/border only, on `--c-warning-soft`; never text on white. |
+| `--c-danger` (`#D8453B`) | borderline | Fill/icon (paired with label/sign), on `--c-danger-soft`; never small text on white. |
+| `--c-info` (`#3A86C8`) | borderline | Fill/icon (paired with label), on `--c-info-soft`; never small text on white. |
+| `--c-positive` (`#2E9E6B`) | ≈ 3.3:1 | Large/bold text + fills only (e.g. signed amounts ≥19px bold); not small body text. |
+
+The soft tokens (`--c-danger-soft`, `--c-warning-soft`, `--c-positive-soft`, `--c-info-soft`) are
+the Banner/surface background tints behind their parent colour (see §7 Banner). Foreground text on a
+soft tint uses `--c-text`, not the semantic hue. **Dark-mode contrast caveat:** these ratios are for
+the light theme only — re-verify every pairing when the dark-mode override lands (see §2.4).
+
+### 2.4 Dark mode (deferred to v2)
+**Dark mode is deferred to v2.** Tokens are light-only today. When it lands, a
+`@media (prefers-color-scheme: dark)` override block in `_tokens.scss` will redefine the same
+custom-property names — no component churn. The contract that makes this drop-in possible:
+**never hardcode a hex/colour in a component** (design.md), always reference `var(--c-…)`. A
+component that inlines a colour today blocks the v2 theme layer.
+
 ---
 
 ## 3. Typography
@@ -59,18 +83,23 @@ Ship the needed weights as local `woff2` and declare with `@font-face`. Fallback
 Bold 700.
 
 ### Type scale
+**rem-based (root = 16px)** so OS dynamic-type scaling is honoured — sizes scale with the user's
+font setting, layouts must reflow (§ux-blueprint §7). px equivalents are shown in parentheses for
+reference only; never hardcode the px.
 | Token | Size / weight | Used for (Figma origin) |
 |---|---|---|
-| `--t-wordmark` | 32px / 700, tracking 4.8px | "BudgetMate" logo only. |
-| `--t-screen-title` | 30px / 700 | Screen headers ("Expenses", "Goals", "Transactions"). |
-| `--t-balance` | 32px / 200 | The big balance figure ("Rs 10,000"). |
-| `--t-title` | 16px / 500 | Card titles ("Current Balance"). |
-| `--t-section` | 14px / 500 | Section labels ("Goals", "Usable Balance Trend"). |
-| `--t-body` | 13px / 400 | Body, list titles, amounts. |
-| `--t-caption` | 12px / 300 | Nav labels, helper text, "More Goals >". |
+| `--t-wordmark` | 2rem (32px) / 700, tracking 4.8px | "BudgetMate" logo only. |
+| `--t-screen-title` | 1.875rem (30px) / 700 | Screen headers ("Expenses", "Goals", "Transactions"). |
+| `--t-balance` | 2rem (32px) / 200 | The big balance figure ("Rs 10,000"). |
+| `--t-dialog` | 1.25rem (20px) / 600 | Modal/dialog titles (Modal, ConfirmDialog — §7). |
+| `--t-title` | 1rem (16px) / 500 | Card titles ("Current Balance"). |
+| `--t-section` | 0.875rem (14px) / 500 | Section labels ("Goals", "Usable Balance Trend"). |
+| `--t-body` | 0.8125rem (13px) / 400 | Body, list titles, amounts. |
+| `--t-caption` | 0.75rem (12px) / 300 | Nav labels, helper text, "More Goals >". |
 
-Line-height: `normal` per Figma; for multi-line body use 1.5. Avoid weights below Light for
-body text on small screens (legibility).
+**Line-height tokens:** `--lh-body: 1.5` for multi-line body/paragraph text; `--lh-tight: 1.2`
+for headings and single-line labels (titles, balance, nav). Use the tokens — don't set raw
+line-heights. Avoid weights below Light for body text on small screens (legibility).
 
 ---
 
@@ -107,11 +136,17 @@ FAB).
 - `--backdrop-blur: 6px` — modal backdrop blur (`backdrop-filter: blur(var(--backdrop-blur))`),
   so the screen behind a form is legibly de-emphasised without going fully opaque.
 - **Z-index scale** (only these layers float; everything else is in flow):
-  `--z-dropdown: 20` (SelectField listbox) · `--z-modal: 1000` (modal scrim + dialog).
+  `--z-dropdown: 20` (SelectField listbox) · `--z-modal: 1000` (modal scrim + dialog) ·
+  `--z-modal-nested: 1010` (a dialog layered over another modal — e.g. a ConfirmDialog raised over
+  an open edit form when the footer trash is tapped).
 - **Scrollbars are hidden app-wide** (native-app feel — it's an app, not a website): content still
   scrolls, but no scrollbar track is drawn, on every scroll container (page, modal body, dropdown).
   A SelectField opened **inside a modal** expands the dialog in-flow (not an overlay) so every
   option stays reachable as the body scrolls.
+  - **Exception — preserve a scroll affordance in long lists.** Where positional awareness matters
+    (Import dedup-review list, Analytics, any list taller than one viewport) keep a visible scroll
+    indicator so the user knows there's more and where they are (ui-ux §2.10). Hiding the scrollbar
+    is for chrome/short containers, not for long scannable data.
 
 ---
 
@@ -148,7 +183,8 @@ in `src/app/app.config.ts`. For data-driven/dynamic icons, use Lucide's dynamic 
 ### Accessibility
 - Every standalone/interactive icon needs an accessible name (`aria-label` / `title`); decorative
   icons paired with visible text use `aria-hidden="true"`.
-- Keep tap targets ≥ `--tap-target-min` (44px) even when the glyph is smaller.
+- Keep tap targets ≥ `--tap-target-min` (**48px** — Android v1 primary target; ≥ the WCAG 2.2
+  SC 2.5.8 24px floor and the iOS 44pt minimum) even when the glyph is smaller.
 
 ### Common mappings (extend as needed)
 Home `house` · Expenses `wallet` · Goals `target` · Analytics `pie-chart` · Settings `settings` ·
@@ -239,7 +275,10 @@ and the tokens it consumes. Components are dumb/presentational (`shared/`) unles
   (`+ Rs 500`). Sign coloured: income `--c-positive`, expense `--c-danger`/`--c-text`.
 - **SegmentedToggle** — Daily/Weekly/Monthly and Ongoing/Completed. Pill, active segment
   `--c-primary`.
-- **FAB** — 60px coral circle, `+` icon, `--elev-float`. For add-transaction / add-goal.
+- **FAB** — 60px coral circle, `+` icon, `--elev-float`. For add-transaction / add-goal. The
+  **host list must reserve bottom space** so the FAB never occludes the last row: `padding-bottom`
+  ≥ `--layout-fab-size + --space-6` (≈84px). Without it the final transaction/goal hides behind the
+  button (ui-ux §2.10). See `screens.md` §4.1, §5.1.
 - **Modal** (`app-modal`) — the app-wide form/dialog container. Centred card (`--radius-lg`,
   `--elev-float`, `max-width 420px`, `max-height 90vh`) over a dimmed + blurred scrim (`--c-scrim`
   + `--backdrop-blur`, `--z-modal`). **Every form in the app is a modal** — it renders via `@if`

@@ -33,6 +33,9 @@ in the current Figma — design them to this spec.
 - **Data:** passphrase (never stored plaintext; derives SQLCipher key).
 - **Commands:** `init_vault(passphrase)`, `enable_biometric()`.
 - **States:** mismatch error, weak-passphrase warning, biometric-unavailable fallback.
+- **a11y:** passphrase fields **must allow paste** (don't block it) and offer a **show/hide
+  toggle** — WCAG 2.2 SC 3.3.7 (Redundant Entry) and SC 3.3.8 (Accessible Authentication, so a
+  password manager can fill it).
 
 ---
 
@@ -46,6 +49,9 @@ in the current Figma — design them to this spec.
   releases DB key into memory.
 - **States:** prompting, authenticating, fail/retry, locked-out fallback to passphrase.
 - **Behaviour:** shown on cold start and after idle/background (key zeroised on lock).
+- **a11y:** the passphrase fallback field **must allow paste** and offer a **show/hide toggle**
+  — WCAG 2.2 SC 3.3.7 (Redundant Entry) and SC 3.3.8 (Accessible Authentication; let a password
+  manager fill it).
 
 ---
 
@@ -80,6 +86,8 @@ in the current Figma — design them to this spec.
 - **Commands:** `list_transactions(period, filter)`, `get_trend(period)`.
 - **States:** loading, empty ("no transactions yet" — add to design), populated, busy
   (import/scan running).
+- **Layout:** the transaction list reserves `padding-bottom` ≥ ≈84px so the FAB never occludes the
+  last row (see `design-system.md` §7 FAB).
 
 ### 4.2 Add / Edit Transaction **[partly NEW]**
 - **FR:** FR-1.1 (+ FR-1.2/1.3/1.4 via sub-editors).
@@ -136,6 +144,8 @@ in the current Figma — design them to this spec.
 - **Data:** goals with `currentMinor`/`targetMinor`/`currency`/`targetDate`; `completed` derived.
 - **Commands:** `list_goals`, `create_goal`, `update_goal`, `delete_goal`.
 - **States:** loading (skeleton blocks), empty (illustration + CTA), populated, error, busy.
+- **Layout:** the goals list reserves `padding-bottom` ≥ ≈84px so the FAB never occludes the last
+  row (see `design-system.md` §7 FAB).
 
 ### 5.2 Add / Edit Goal **[built]**
 - **FR:** FR-3.2.
@@ -162,7 +172,8 @@ in the current Figma — design them to this spec.
   over time), period/category filters, BottomNav. **Charts via bundled Chart.js.**
 - **Data:** aggregations by category and over time.
 - **Commands:** `get_spend_by_category(period)`, `get_spend_over_time(period)`.
-- **States:** loading, empty (`133:806` "No Data" + illustration), populated.
+- **States:** loading, empty (`133:806` "No Data" + illustration), populated, error (aggregation
+  failed — plain-language + retry), busy (recomputing on filter/period change, UI stays responsive).
 
 ---
 
@@ -201,7 +212,8 @@ in the current Figma — design them to this spec.
 - **FR:** FR-3.1.
 - **Components:** EnvelopeCard ×N (category cap, spent/remaining bar, warning/over states).
 - **Commands:** `list_envelopes()`, `save_envelope(dto)`.
-- **States:** under / approaching (warning) / over (danger).
+- **States:** loading, empty (no caps set + CTA), populated — under / approaching (warning) / over
+  (danger), error (load/save failed — plain-language + retry), busy (saving a cap).
 
 ### 7.3 Rules (if-then)
 - **FR:** FR-2.3.
