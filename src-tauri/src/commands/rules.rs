@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 
 use crate::db::rules::{self, ImportRule, RuleInput};
+use crate::error::AppError;
 use crate::rules::engine::RuleFields;
 use crate::state::DbState;
 
@@ -43,17 +44,17 @@ fn as_input(r: &NewRule) -> RuleInput<'_> {
 }
 
 #[tauri::command]
-pub fn list_rules(state: State<'_, DbState>) -> Result<Vec<ImportRule>, String> {
+pub fn list_rules(state: State<'_, DbState>) -> Result<Vec<ImportRule>, AppError> {
     state.with(rules::list)
 }
 
 #[tauri::command]
-pub fn create_rule(state: State<'_, DbState>, rule: NewRule) -> Result<ImportRule, String> {
+pub fn create_rule(state: State<'_, DbState>, rule: NewRule) -> Result<ImportRule, AppError> {
     state.with(|c| rules::create(c, as_input(&rule)))
 }
 
 #[tauri::command]
-pub fn update_rule(state: State<'_, DbState>, rule: UpdateRule) -> Result<ImportRule, String> {
+pub fn update_rule(state: State<'_, DbState>, rule: UpdateRule) -> Result<ImportRule, AppError> {
     let input = RuleInput {
         match_field: &rule.match_field,
         match_op: &rule.match_op,
@@ -70,17 +71,17 @@ pub fn set_rule_active(
     state: State<'_, DbState>,
     id: i64,
     active: bool,
-) -> Result<ImportRule, String> {
+) -> Result<ImportRule, AppError> {
     state.with(|c| rules::set_active(c, id, active))
 }
 
 #[tauri::command]
-pub fn delete_rule(state: State<'_, DbState>, id: i64) -> Result<(), String> {
+pub fn delete_rule(state: State<'_, DbState>, id: i64) -> Result<(), AppError> {
     state.with(|c| rules::delete(c, id))
 }
 
 #[tauri::command]
-pub fn reorder_rules(state: State<'_, DbState>, ids: Vec<i64>) -> Result<Vec<ImportRule>, String> {
+pub fn reorder_rules(state: State<'_, DbState>, ids: Vec<i64>) -> Result<Vec<ImportRule>, AppError> {
     state.with(|c| rules::reorder(c, &ids))
 }
 
@@ -112,7 +113,7 @@ pub struct RulePreview {
 }
 
 #[tauri::command]
-pub fn preview_rules(state: State<'_, DbState>, input: PreviewInput) -> Result<RulePreview, String> {
+pub fn preview_rules(state: State<'_, DbState>, input: PreviewInput) -> Result<RulePreview, AppError> {
     state.with(|c| {
         let (fields, applied) = rules::apply(
             c,

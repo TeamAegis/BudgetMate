@@ -1,3 +1,5 @@
+import { asAppError } from '../models';
+
 /**
  * Maps an error thrown by a bridge `invoke<T>()` call into a short, plain-language message safe to
  * show in an `<app-banner>`. The Rust core rejects with a tagged `AppError` whose `Display` text is
@@ -9,7 +11,14 @@
  * Feature components call this in their `catch (e)` blocks instead of `String(e)`.
  */
 export function toUserMessage(e: unknown): string {
-  const raw = rawText(e).trim();
+  const err = asAppError(e);
+  // Typed kinds map directly, no string-matching needed.
+  if (err.kind === 'locked') return 'The app is locked. Unlock it and try again.';
+  if (err.kind === 'keyVerificationFailed') return 'Incorrect passphrase. Check it and try again.';
+
+  // Validation/database/internal: fall back to the message-text heuristics (the message carries the
+  // specific reason from the Rust domain layer).
+  const raw = (err.message || rawText(e)).trim();
   if (!raw) return GENERIC;
 
   const lower = raw.toLowerCase();

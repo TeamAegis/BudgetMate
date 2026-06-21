@@ -5,6 +5,7 @@ use serde::Deserialize;
 use tauri::State;
 
 use crate::db::recurring::{self, RecurringRule, RecurringTemplate};
+use crate::error::AppError;
 use crate::state::DbState;
 
 #[derive(Debug, Deserialize)]
@@ -25,7 +26,7 @@ pub struct UpdateRecurringRule {
 }
 
 #[tauri::command]
-pub fn list_recurring_rules(state: State<'_, DbState>) -> Result<Vec<RecurringRule>, String> {
+pub fn list_recurring_rules(state: State<'_, DbState>) -> Result<Vec<RecurringRule>, AppError> {
     state.with(recurring::list)
 }
 
@@ -33,7 +34,7 @@ pub fn list_recurring_rules(state: State<'_, DbState>) -> Result<Vec<RecurringRu
 pub fn create_recurring_rule(
     state: State<'_, DbState>,
     rule: NewRecurringRule,
-) -> Result<RecurringRule, String> {
+) -> Result<RecurringRule, AppError> {
     state.with(|c| recurring::create(c, &rule.schedule, &rule.next_run_date, &rule.template))
 }
 
@@ -41,7 +42,7 @@ pub fn create_recurring_rule(
 pub fn update_recurring_rule(
     state: State<'_, DbState>,
     rule: UpdateRecurringRule,
-) -> Result<RecurringRule, String> {
+) -> Result<RecurringRule, AppError> {
     state.with(|c| recurring::update(c, rule.id, &rule.schedule, &rule.next_run_date, &rule.template))
 }
 
@@ -50,6 +51,6 @@ pub fn set_recurring_active(
     state: State<'_, DbState>,
     id: i64,
     active: bool,
-) -> Result<RecurringRule, String> {
+) -> Result<RecurringRule, AppError> {
     state.with(|c| recurring::set_active(c, id, active))
 }

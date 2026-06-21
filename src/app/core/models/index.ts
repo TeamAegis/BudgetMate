@@ -329,3 +329,40 @@ export interface NewGoal {
 export interface UpdateGoal extends NewGoal {
   id: number;
 }
+
+// Errors (IPC rejections) ----------------------------------------------------------
+
+/** Discriminant of an `AppError` (mirrors Rust `error::AppError`, adjacently tagged on `kind`). */
+export type AppErrorKind =
+  | 'locked'
+  | 'keyVerificationFailed'
+  | 'validation'
+  | 'database'
+  | 'internal';
+
+/**
+ * The rejection payload of every bridge `invoke<T>()` call (mirrors Rust `AppError`). Switch on
+ * `kind`; `message` is present on the data-carrying kinds. Narrow an unknown rejection with
+ * `asAppError`.
+ */
+export type AppError =
+  | { kind: 'locked' }
+  | { kind: 'keyVerificationFailed' }
+  | { kind: 'validation'; message: string }
+  | { kind: 'database'; message: string }
+  | { kind: 'internal'; message: string };
+
+/** Narrow an unknown `invoke` rejection (rejections arrive as `unknown`) to a typed `AppError`. */
+export function asAppError(e: unknown): AppError {
+  if (e && typeof e === 'object' && 'kind' in e) {
+    const kind = (e as { kind: unknown }).kind;
+    if (kind === 'locked' || kind === 'keyVerificationFailed') {
+      return { kind };
+    }
+    if (kind === 'validation' || kind === 'database' || kind === 'internal') {
+      const raw = (e as { message?: unknown }).message;
+      return { kind, message: typeof raw === 'string' ? raw : '' };
+    }
+  }
+  return { kind: 'internal', message: typeof e === 'string' ? e : '' };
+}
