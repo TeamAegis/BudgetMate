@@ -20,7 +20,7 @@ while read -r local_ref local_sha remote_ref remote_sha; do
 done
 
 if [ "$blocked" -eq 1 ]; then
-  echo "✖ pre-push: direct pushes to 'main' are blocked." >&2
+  echo "[x] pre-push: direct pushes to 'main' are blocked." >&2
   echo "  Open a PR from a feature branch instead:" >&2
   echo "    git switch -c feat/<issue>-<slug>   # see the feature-branch skill" >&2
   echo "    git push -u origin <branch> && gh pr create" >&2

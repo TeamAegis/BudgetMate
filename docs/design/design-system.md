@@ -255,13 +255,13 @@ and the tokens it consumes. Components are dumb/presentational (`shared/`) unles
   `data.title` / `data.back`; the trailing settings icon shows only when there is no back affordance
   (i.e. the bottom-nav tabs).
 - **BottomNav** — 4 tabs. **Canonical tabs: Home · Expenses · Goals · Analytics.**
-  ⚠️ Figma inconsistently labels the 4th tab "Charts" on some screens and "Analytics" on
+  Note: Figma inconsistently labels the 4th tab "Charts" on some screens and "Analytics" on
   others, and tab x-positions drift between screens — **normalise to evenly-spaced flexbox
   and one label ("Analytics")**.
 - **BalanceCard** — hero. `--c-primary-40` fill, `--radius-lg`, `--elev-card`. Shows Current
   Balance (`--t-balance`), Usable Balance, wallet illustration.
 - **QuickActionChip** — 90×60 tile, `--c-primary-05`, `--radius-sm`, icon + caption.
-  ⚠️ Figma shows duplicate "Transaction" labels — placeholder; real actions: *Add
+  Note: Figma shows duplicate "Transaction" labels — placeholder; real actions: *Add
   Transaction*, *Add Goal*, *Scan Receipt*.
 - **GoalProgressRow** (`app-goal-progress-row`, **built**) — label, pill progress track with knob,
   `current / target` amounts (via the money pipe). Track `--c-primary-10`, fill + knob

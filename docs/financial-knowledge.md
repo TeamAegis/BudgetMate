@@ -13,7 +13,7 @@
 > against the latest MRA / Bank of Mauritius / Statistics Mauritius publications before relying on any
 > specific figure in code or user-facing copy.**
 
-*A reference file of domain expertise for building a personal budgeting/finance application. Conceptual knowledge only — definitions, principles, formulas, frameworks, taxonomies, and best practices. No code, architecture, or implementation. Mauritius-specific content is clearly marked 🇲🇺. Figures current to the 2025/2026 Mauritius income year (1 July 2025 – 30 June 2026).*
+*A reference file of domain expertise for building a personal budgeting/finance application. Conceptual knowledge only — definitions, principles, formulas, frameworks, taxonomies, and best practices. No code, architecture, or implementation. Mauritius-specific content is clearly marked (MU). Figures current to the 2025/2026 Mauritius income year (1 July 2025 – 30 June 2026).*
 
 ## Table of Contents
 1. Personal Financial Literacy Fundamentals
@@ -216,7 +216,7 @@ Each payment splits between **interest** (on outstanding balance) and **principa
 ### Credit scores & creditworthiness
 Creditworthiness is assessed on the "5 Cs": Character (history), Capacity (income/DTI), Capital, Collateral, Conditions. In score-based systems (e.g., US FICO), key factors are payment history, amounts owed/utilization, length of history, new credit, credit mix.
 
-🇲🇺 **Mauritius does NOT use a US-style numeric credit score.** Creditworthiness is assessed through the **Mauritius Credit Information Bureau (MCIB)** — the only credit bureau in Mauritius — which is "fully owned and operated by the Bank of Mauritius from within its premises." Established under Section 52 of the Bank of Mauritius Act 2004, it came into operation on **1 December 2005**. The MCIB is "a repository of credit information, both positive and negative, on all recipients of credit facilities and guarantors" — covering name, address, date of birth, NIC number, and facility details (original amount, outstanding balance, repayments, arrears, suit-filed/bankruptcy records) from banks, leasing/insurance companies, utilities, and others. Critically, it generates no score or opinion: *"It only gives factual information on borrowers' credit exposures. The final decision to grant a facility or otherwise rests entirely on the lender. The MCIB does not provide any opinion on the applicant."* Consultation is mandatory before approving, increasing, or renewing a facility. Positive information is purged three years after a facility is repaid.
+**Mauritius does NOT use a US-style numeric credit score.** Creditworthiness is assessed through the **Mauritius Credit Information Bureau (MCIB)** — the only credit bureau in Mauritius — which is "fully owned and operated by the Bank of Mauritius from within its premises." Established under Section 52 of the Bank of Mauritius Act 2004, it came into operation on **1 December 2005**. The MCIB is "a repository of credit information, both positive and negative, on all recipients of credit facilities and guarantors" — covering name, address, date of birth, NIC number, and facility details (original amount, outstanding balance, repayments, arrears, suit-filed/bankruptcy records) from banks, leasing/insurance companies, utilities, and others. Critically, it generates no score or opinion: *"It only gives factual information on borrowers' credit exposures. The final decision to grant a facility or otherwise rests entirely on the lender. The MCIB does not provide any opinion on the applicant."* Consultation is mandatory before approving, increasing, or renewing a facility. Positive information is purged three years after a facility is repaid.
 
 ### Debt repayment strategies
 - **Avalanche:** Pay highest-interest debt first (minimums on rest). Mathematically cheapest; saves most interest.
@@ -263,7 +263,7 @@ Savings accounts (liquid, variable interest), fixed/term deposits (locked for a 
 ### Retirement planning concepts
 Estimate retirement needs, leverage tax-advantaged accounts, contribute consistently, harness compounding, and shift to lower-risk assets near retirement. The **"4% rule"** (target ~25× annual expenses) was introduced by financial planner William P. Bengen in his October 1994 *Journal of Financial Planning* paper; his original analysis yielded ~4.15% as a safe initial withdrawal rate for a 30-year retirement, and in his 2025 book *A Richer Retirement* he revised his "SAFEMAX" upward to 4.7%.
 
-### 🇲🇺 Mauritius retail investing infrastructure
+### Mauritius retail investing infrastructure
 - **Stock Exchange of Mauritius (SEM):** Operated by the Stock Exchange of Mauritius Ltd (established under the Stock Exchange Act 1988; trading began July 1989), regulated by the Financial Services Commission. Two main markets — the Official Market and the Development & Enterprise Market (DEM). Key indices: **SEMDEX** (benchmark all-share, capitalisation-weighted, base 5 July 1989 = 100), **SEMTRI** (total return), and **SEM-10** (ten-largest blue-chip investible index, launched 2 October 2014). Retail investors trade via a licensed investment dealer/stockbroker, with settlement through the Central Depository & Settlement Co (CDS) on a T+3 basis. **Officially listed shares attract no capital gains tax and no withholding tax on dividends.**
 - **Bank deposits:** Savings accounts (variable rate) and fixed/term deposits offered by commercial banks (MCB, SBM, AfrAsia, etc.).
 - **Bank of Mauritius policy rate (the "Key Rate"):** raised to 4.50% on 4 February 2025, held through 2025, and raised 25 bps to **4.75%** on 20 May 2026 (its highest level since 2013). BoM's medium-term inflation target range is 2–5%.
@@ -303,7 +303,7 @@ The **28/36 rule:** spend ≤28% of gross income on housing and ≤36% on total 
 - **Withholding/PAYE:** Tax deducted at source by employers.
 - Common taxes: income tax, VAT/GST/sales tax, capital gains tax, property tax, inheritance/estate tax, social security contributions.
 
-### 🇲🇺 Mauritius-specific (income year 1 July 2025 – 30 June 2026)
+### Mauritius-specific (income year 1 July 2025 – 30 June 2026)
 
 **Administered by the Mauritius Revenue Authority (MRA)** on a self-assessment basis. **Fiscal/income year runs 1 July to 30 June.**
 
@@ -352,7 +352,7 @@ The **28/36 rule:** spend ≤28% of gross income on housing and ≤36% on total 
 
 **Other Mauritius features:** No capital gains tax, no inheritance tax, no wealth tax, no property tax (only land transfer/registration duties). Corporate income tax generally 15%.
 
-🇲🇺 **Inflation context:** Headline inflation for calendar year 2025 was **3.7%** (Statistics Mauritius, "Consumer Price Index – Year 2025," published 16 January 2026), up marginally from 3.6% in 2024. (BoM's forward projection for 2026 was revised upward to ~5.5% in May 2026 citing fuel/geopolitical risks — a forecast, not a realized figure.)
+(MU) **Inflation context:** Headline inflation for calendar year 2025 was **3.7%** (Statistics Mauritius, "Consumer Price Index – Year 2025," published 16 January 2026), up marginally from 3.6% in 2024. (BoM's forward projection for 2026 was revised upward to ~5.5% in May 2026 citing fuel/geopolitical risks — a forecast, not a realized figure.)
 
 **Pensions/retirement (Mauritius):**
 - **Basic Retirement Pension (BRP)** — universal, non-contributory, tax-funded. Amount payable from January 2025: Rs 15,000/month (ages 60–89), Rs 22,710 (90–99), Rs 27,710 (100+). Finance Act 2025 is gradually raising the eligibility age from 60 to 65 over a phased period (controversial, subject to legal challenge); an Rs 10,000/month income support bridges those aged 60+ not yet eligible.
@@ -367,7 +367,7 @@ The **28/36 rule:** spend ≤28% of gross income on housing and ≤36% on total 
 ### Multi-currency & exchange rates
 An **exchange rate** is the price of one currency in another. Personal finance apps handling multiple currencies must track the base/reporting currency and convert via current rates; gains/losses arise from rate movements. Formatting conventions vary by locale (decimal separators, symbol placement, grouping).
 
-### 🇲🇺 Mauritian Rupee (MUR)
+### Mauritian Rupee (MUR)
 - **ISO code:** MUR. **Symbol:** Rs (also ₨). **Subdivision:** 100 cents.
 - **Issued by:** Bank of Mauritius (central bank, established 1967). Managed float regime.
 - **Banknotes:** Rs 25, 50, 100, 200, 500, 1,000, 2,000. **Coins:** 5c, 20c, 50c, Rs 1, 5, 10, 20.
@@ -419,7 +419,7 @@ A common priority sequence: (1) budget & positive cash flow → (2) starter emer
 Core insurance principles: insurable interest, indemnity, utmost good faith, law of large numbers.
 
 ### Estate & inheritance basics
-Estate planning directs asset transfer at death and minimizes complications: wills, beneficiary designations, trusts, powers of attorney. 🇲🇺 Note: Mauritius has **no inheritance/estate tax**, though succession is governed by civil-law rules (forced-heirship concepts apply under the Code Civil Mauricien).
+Estate planning directs asset transfer at death and minimizes complications: wills, beneficiary designations, trusts, powers of attorney. (MU) Note: Mauritius has **no inheritance/estate tax**, though succession is governed by civil-law rules (forced-heirship concepts apply under the Code Civil Mauricien).
 
 ---
 
