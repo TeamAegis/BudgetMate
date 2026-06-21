@@ -7,6 +7,7 @@ use serde::Serialize;
 use std::path::Path;
 use tauri::{AppHandle, Manager, Runtime, State};
 
+use crate::error::AppError;
 use crate::state::DbState;
 use crate::{crypto, db, vault};
 
@@ -21,11 +22,11 @@ pub struct AppState {
     pub idle_timeout_secs: u32,
 }
 
-fn app_data_dir<R: Runtime>(app: &AppHandle<R>) -> Result<std::path::PathBuf, String> {
-    app.path().app_data_dir().map_err(|e| e.to_string())
+fn app_data_dir<R: Runtime>(app: &AppHandle<R>) -> Result<std::path::PathBuf, AppError> {
+    app.path().app_data_dir().map_err(|e| AppError::Internal(e.to_string()))
 }
 
-fn current_state<R: Runtime>(app: &AppHandle<R>, db: &DbState) -> Result<AppState, String> {
+fn current_state<R: Runtime>(app: &AppHandle<R>, db: &DbState) -> Result<AppState, AppError> {
     let dir = app_data_dir(app)?;
     let (biometric_enabled, idle_timeout_secs) = match vault::read_meta(&dir) {
         Ok(m) => (m.settings.biometric_enabled, m.settings.idle_timeout_secs),
@@ -48,13 +49,13 @@ fn open_and_unlock(
     dir: &Path,
     passphrase: &str,
     meta: &vault::VaultMeta,
-) -> Result<(), String> {
+) -> Result<(), AppError> {
     let key = crypto::derive_key_with_params(passphrase.as_bytes(), &meta.salt, &meta.kdf)
-        .map_err(|_| "unable to derive key".to_string())?;
+        .map_err(|_| AppError::Internal("unable to derive key".to_string()))?;
     let key_hex = crypto::key_to_sqlcipher_hex(&key);
     let now = chrono::Utc::now().to_rfc3339();
     let conn = db::open_and_migrate(&vault::db_path(dir), &key_hex, &now)
-        .map_err(|_| "Incorrect passphrase".to_string())?;
+        .map_err(|_| AppError::KeyVerificationFailed)?;
     // Materialise any due recurring occurrences lazily on app open (FR-1.3) — no background
     // scheduler. Idempotent, so a failure here must never block unlock; log-and-continue.
     if let Err(e) = db::recurring::materialise_due(&conn, chrono::Utc::now().date_naive()) {
@@ -65,7 +66,7 @@ fn open_and_unlock(
 
 /// Current vault/lock state for the shell to decide setup vs unlock vs app.
 #[tauri::command]
-pub fn app_state<R: Runtime>(app: AppHandle<R>, db: State<'_, DbState>) -> Result<AppState, String> {
+pub fn app_state<R: Runtime>(app: AppHandle<R>, db: State<'_, DbState>) -> Result<AppState, AppError> {
     current_state(&app, &db)
 }
 
@@ -76,25 +77,25 @@ pub fn set_passphrase<R: Runtime>(
     app: AppHandle<R>,
     db: State<'_, DbState>,
     passphrase: String,
-) -> Result<AppState, String> {
+) -> Result<AppState, AppError> {
     let dir = app_data_dir(&app)?;
     match vault::consistency(&dir) {
         Ok(false) => {}
-        Ok(true) => return Err(vault::VaultError::AlreadyInitialised.to_string()),
-        Err(e) => return Err(e.to_string()),
+        Ok(true) => return Err(vault::VaultError::AlreadyInitialised.into()),
+        Err(e) => return Err(e.into()),
     }
-    vault::validate_passphrase(&passphrase).map_err(|e| e.to_string())?;
+    vault::validate_passphrase(&passphrase)?;
 
     let meta = vault::VaultMeta {
         meta_version: vault::CURRENT_META_VERSION,
-        salt: vault::generate_salt().map_err(|e| e.to_string())?,
+        salt: vault::generate_salt()?,
         kdf: crypto::KdfParams::default(),
         created_at: chrono::Utc::now().to_rfc3339(),
         settings: vault::VaultSettings::default(),
     };
     // Write meta first: if we crash before the DB is created, the next unlock recreates it with
     // the same salt. The reverse (DB without salt) would be unrecoverable.
-    vault::write_meta(&dir, &meta).map_err(|e| e.to_string())?;
+    vault::write_meta(&dir, &meta)?;
     open_and_unlock(&db, &dir, &passphrase, &meta)?;
     current_state(&app, &db)
 }
@@ -105,12 +106,12 @@ pub fn unlock<R: Runtime>(
     app: AppHandle<R>,
     db: State<'_, DbState>,
     passphrase: String,
-) -> Result<AppState, String> {
+) -> Result<AppState, AppError> {
     let dir = app_data_dir(&app)?;
     let meta = match vault::read_meta(&dir) {
         Ok(m) => m,
-        Err(vault::VaultError::Io(_)) => return Err(vault::VaultError::NotInitialised.to_string()),
-        Err(e) => return Err(e.to_string()),
+        Err(vault::VaultError::Io(_)) => return Err(vault::VaultError::NotInitialised.into()),
+        Err(e) => return Err(e.into()),
     };
     open_and_unlock(&db, &dir, &passphrase, &meta)?;
     current_state(&app, &db)
@@ -122,19 +123,19 @@ pub fn unlock<R: Runtime>(
 pub fn unlock_with_biometric<R: Runtime>(
     app: AppHandle<R>,
     db: State<'_, DbState>,
-) -> Result<AppState, String> {
+) -> Result<AppState, AppError> {
     let _ = (&app, &db);
-    Err("biometric unlock is not available on this platform".to_string())
+    Err(AppError::Internal("biometric unlock is not available on this platform".to_string()))
 }
 
 /// Lock: drop the in-memory key/connection. Idempotent.
 #[tauri::command]
-pub fn lock(db: State<'_, DbState>) -> Result<(), String> {
+pub fn lock(db: State<'_, DbState>) -> Result<(), AppError> {
     db.lock()
 }
 
 #[tauri::command]
-pub fn get_settings<R: Runtime>(app: AppHandle<R>) -> Result<vault::VaultSettings, String> {
+pub fn get_settings<R: Runtime>(app: AppHandle<R>) -> Result<vault::VaultSettings, AppError> {
     let dir = app_data_dir(&app)?;
     Ok(vault::read_meta(&dir).map(|m| m.settings).unwrap_or_default())
 }
@@ -143,7 +144,7 @@ pub fn get_settings<R: Runtime>(app: AppHandle<R>) -> Result<vault::VaultSetting
 pub fn set_idle_timeout<R: Runtime>(
     app: AppHandle<R>,
     secs: u32,
-) -> Result<vault::VaultSettings, String> {
+) -> Result<vault::VaultSettings, AppError> {
     update_settings(&app, |s| s.idle_timeout_secs = clamp_timeout(secs))
 }
 
@@ -151,7 +152,7 @@ pub fn set_idle_timeout<R: Runtime>(
 pub fn set_biometric_enabled<R: Runtime>(
     app: AppHandle<R>,
     enabled: bool,
-) -> Result<vault::VaultSettings, String> {
+) -> Result<vault::VaultSettings, AppError> {
     update_settings(&app, |s| s.biometric_enabled = enabled)
 }
 
@@ -160,10 +161,12 @@ pub fn set_biometric_enabled<R: Runtime>(
 pub fn set_base_currency<R: Runtime>(
     app: AppHandle<R>,
     currency: String,
-) -> Result<vault::VaultSettings, String> {
+) -> Result<vault::VaultSettings, AppError> {
     let code = currency.trim().to_uppercase();
     if !crate::domain::account::is_iso4217(&code) {
-        return Err("currency must be a 3-letter ISO-4217 code (e.g. MUR)".to_string());
+        return Err(AppError::Validation(
+            "currency must be a 3-letter ISO-4217 code (e.g. MUR)".to_string(),
+        ));
     }
     update_settings(&app, move |s| s.base_currency = code)
 }
@@ -171,11 +174,11 @@ pub fn set_base_currency<R: Runtime>(
 fn update_settings<R: Runtime>(
     app: &AppHandle<R>,
     f: impl FnOnce(&mut vault::VaultSettings),
-) -> Result<vault::VaultSettings, String> {
+) -> Result<vault::VaultSettings, AppError> {
     let dir = app_data_dir(app)?;
-    let mut meta = vault::read_meta(&dir).map_err(|_| vault::VaultError::NotInitialised.to_string())?;
+    let mut meta = vault::read_meta(&dir).map_err(|_| vault::VaultError::NotInitialised)?;
     f(&mut meta.settings);
-    vault::write_meta(&dir, &meta).map_err(|e| e.to_string())?;
+    vault::write_meta(&dir, &meta)?;
     Ok(meta.settings)
 }
 

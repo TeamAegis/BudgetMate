@@ -7,6 +7,7 @@ use tauri::State;
 
 use crate::db::transactions::{self, SplitInput, TxInput};
 use crate::domain::transaction::Transaction;
+use crate::error::AppError;
 use crate::state::DbState;
 
 /// One category line (mirrors TS `NewSplit`). `amount` is the user's non-negative major-unit input.
@@ -54,7 +55,7 @@ fn split_inputs(splits: &[NewSplit]) -> Vec<SplitInput<'_>> {
 }
 
 #[tauri::command]
-pub fn list_transactions(state: State<'_, DbState>) -> Result<Vec<Transaction>, String> {
+pub fn list_transactions(state: State<'_, DbState>) -> Result<Vec<Transaction>, AppError> {
     state.with(transactions::list)
 }
 
@@ -62,7 +63,7 @@ pub fn list_transactions(state: State<'_, DbState>) -> Result<Vec<Transaction>, 
 pub fn create_transaction(
     state: State<'_, DbState>,
     tx: NewTransaction,
-) -> Result<Transaction, String> {
+) -> Result<Transaction, AppError> {
     let now = chrono::Utc::now().to_rfc3339();
     let splits = split_inputs(&tx.splits);
     state.with(|c| {
@@ -87,7 +88,7 @@ pub fn create_transaction(
 pub fn update_transaction(
     state: State<'_, DbState>,
     tx: UpdateTransaction,
-) -> Result<Transaction, String> {
+) -> Result<Transaction, AppError> {
     let splits = split_inputs(&tx.splits);
     state.with(|c| {
         transactions::update(
@@ -108,6 +109,6 @@ pub fn update_transaction(
 }
 
 #[tauri::command]
-pub fn delete_transaction(state: State<'_, DbState>, id: i64) -> Result<(), String> {
+pub fn delete_transaction(state: State<'_, DbState>, id: i64) -> Result<(), AppError> {
     state.with(|c| transactions::delete(c, id))
 }

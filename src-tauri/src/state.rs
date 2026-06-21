@@ -10,6 +10,8 @@
 use rusqlite::Connection;
 use std::sync::{Mutex, MutexGuard};
 
+use crate::error::AppError;
+
 pub struct DbState(pub Mutex<Option<Connection>>);
 
 impl DbState {
@@ -23,7 +25,7 @@ impl DbState {
     }
 
     /// Install an opened connection (transition locked → unlocked).
-    pub fn unlock(&self, conn: Connection) -> Result<(), String> {
+    pub fn unlock(&self, conn: Connection) -> Result<(), AppError> {
         let mut guard = self.guard()?;
         *guard = Some(conn);
         Ok(())
@@ -31,7 +33,7 @@ impl DbState {
 
     /// Drop the connection (transition unlocked → locked). Closing the keyed connection frees
     /// SQLCipher's in-memory key. Idempotent.
-    pub fn lock(&self) -> Result<(), String> {
+    pub fn lock(&self) -> Result<(), AppError> {
         let mut guard = self.guard()?;
         *guard = None;
         Ok(())
@@ -41,18 +43,18 @@ impl DbState {
         self.guard().map(|g| g.is_some()).unwrap_or(false)
     }
 
-    pub fn guard(&self) -> Result<MutexGuard<'_, Option<Connection>>, String> {
-        self.0.lock().map_err(|_| "database state is poisoned".to_string())
+    pub fn guard(&self) -> Result<MutexGuard<'_, Option<Connection>>, AppError> {
+        self.0.lock().map_err(|_| AppError::Internal("database state is poisoned".to_string()))
     }
 
     /// Run `f` with the open connection, or return a clear error if the app is locked.
     pub fn with<T>(
         &self,
         f: impl FnOnce(&Connection) -> Result<T, crate::db::DbError>,
-    ) -> Result<T, String> {
+    ) -> Result<T, AppError> {
         let guard = self.guard()?;
-        let conn = guard.as_ref().ok_or("database is locked")?;
-        f(conn).map_err(|e| e.to_string())
+        let conn = guard.as_ref().ok_or(AppError::Locked)?;
+        f(conn).map_err(AppError::from)
     }
 }
 
@@ -65,8 +67,7 @@ mod tests {
         let st = DbState::locked();
         assert!(!st.is_unlocked());
         // Locked: any DB access fails cleanly.
-        let err = st.with(|_| Ok(())).unwrap_err();
-        assert_eq!(err, "database is locked");
+        assert!(matches!(st.with(|_| Ok(())).unwrap_err(), crate::error::AppError::Locked));
 
         // Unlock with an open connection.
         st.unlock(Connection::open_in_memory().unwrap()).unwrap();

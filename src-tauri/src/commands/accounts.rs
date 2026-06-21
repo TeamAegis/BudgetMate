@@ -5,6 +5,7 @@ use tauri::State;
 
 use crate::db::accounts;
 use crate::domain::account::{Account, AccountKind};
+use crate::error::AppError;
 use crate::state::DbState;
 
 #[derive(Debug, Deserialize)]
@@ -30,12 +31,12 @@ pub struct UpdateAccount {
 pub fn list_accounts(
     state: State<'_, DbState>,
     include_archived: Option<bool>,
-) -> Result<Vec<Account>, String> {
+) -> Result<Vec<Account>, AppError> {
     state.with(|c| accounts::list(c, include_archived.unwrap_or(false)))
 }
 
 #[tauri::command]
-pub fn create_account(state: State<'_, DbState>, account: NewAccount) -> Result<Account, String> {
+pub fn create_account(state: State<'_, DbState>, account: NewAccount) -> Result<Account, AppError> {
     state.with(|c| {
         accounts::create(
             c,
@@ -48,7 +49,7 @@ pub fn create_account(state: State<'_, DbState>, account: NewAccount) -> Result<
 }
 
 #[tauri::command]
-pub fn update_account(state: State<'_, DbState>, account: UpdateAccount) -> Result<Account, String> {
+pub fn update_account(state: State<'_, DbState>, account: UpdateAccount) -> Result<Account, AppError> {
     state.with(|c| {
         accounts::update(
             c,
@@ -62,6 +63,6 @@ pub fn update_account(state: State<'_, DbState>, account: UpdateAccount) -> Resu
 }
 
 #[tauri::command]
-pub fn archive_account(state: State<'_, DbState>, id: i64) -> Result<(), String> {
+pub fn archive_account(state: State<'_, DbState>, id: i64) -> Result<(), AppError> {
     state.with(|c| accounts::archive(c, id))
 }

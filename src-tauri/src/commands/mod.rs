@@ -14,6 +14,7 @@ use serde::Serialize;
 use tauri::State;
 
 use crate::db;
+use crate::error::AppError;
 use crate::state::DbState;
 
 /// Mirrors TS `AppInfo`.
@@ -46,7 +47,7 @@ pub fn get_app_info() -> AppInfo {
 /// Report the managed DB connection's health: open, encrypted, and at which schema version.
 /// The connection is opened + migrated at startup (`lib.rs`); the unlock flow (#2) will gate it.
 #[tauri::command]
-pub fn db_health(state: State<'_, DbState>) -> Result<DbHealth, String> {
+pub fn db_health(state: State<'_, DbState>) -> Result<DbHealth, AppError> {
     state.with(|conn| {
         let schema_version: i64 = conn.query_row(
             "SELECT COALESCE(MAX(version), 0) FROM schema_migrations",

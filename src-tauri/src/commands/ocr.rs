@@ -13,6 +13,7 @@ use serde::Serialize;
 use tauri::{AppHandle, Runtime};
 use tauri_plugin_ocr::{Error as OcrError, OcrExt};
 
+use crate::error::AppError;
 use crate::rules::receipt::{self, ExtractedReceipt};
 
 /// Result of an `extract_receipt` call (mirrors TS `ReceiptExtraction`). Either the engine is
@@ -32,7 +33,7 @@ pub struct ReceiptExtraction {
 pub async fn extract_receipt<R: Runtime>(
     app: AppHandle<R>,
     image_path: String,
-) -> Result<ReceiptExtraction, String> {
+) -> Result<ReceiptExtraction, AppError> {
     // Delegate recognition to the platform OCR plugin (ML Kit on Android, stub on desktop). The
     // native side runs off the UI thread; this command is async so the WebView stays responsive.
     let recognised = app
@@ -52,6 +53,6 @@ pub async fn extract_receipt<R: Runtime>(
             fields: ExtractedReceipt::default(),
         }),
         // A real failure (image missing, native error): bubble up the plugin's message.
-        Err(e) => Err(e.to_string()),
+        Err(e) => Err(AppError::Internal(e.to_string())),
     }
 }
