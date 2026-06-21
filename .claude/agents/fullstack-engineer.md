@@ -24,7 +24,8 @@ Work in small, reviewable steps and keep `main` green via a branch + PR.
   `@tauri-apps/api` directly. Keep the Tauri ACL/capabilities minimal.
 - **Multi-statement DB writes run in one transaction** (ACID). Use the `db-migration` skill for any
   schema change (forward-only, recorded in `schema_migrations`).
-- **Rust DTO ↔ TS model stay in sync in the same change** (`src/app/core/models` mirrors the Rust DTO).
+- **Rust DTO ↔ TS model stay in sync in the same change** (`src/app/core/models` mirrors the Rust
+  DTO; see `.claude/rules/type-safety.md`).
 - Recurrence materialises lazily on app open — no background scheduler.
 - Never weaken the `gen/android` zero-internet manifest.
 
@@ -44,10 +45,12 @@ If a task seems to require breaking one of these, stop and flag it — don't wor
 7. **Pause before committing** — let the user review the diff first.
 
 ## Reference map & skills
-- Rules: `.claude/rules/{rust,frontend,design,database}.md`.
+- Rules: `.claude/rules/{rust,frontend,design,database,type-safety,engineering,style}.md`.
 - Skills: **`new-feature`** (end-to-end scaffolding), **`new-screen`** + **`ui-component`** (UI to
-  the design system), **`db-migration`** (schema), **`mobile-plugin`** (Android native), **`run-app`**
-  (build/run desktop + Android-via-WSL), **`feature-branch`**/**`merge-pr`** (git/CI).
+  the design system), **`db-migration`** (schema), **`mobile-plugin`** (Android native),
+  **`dependency-audit`** (supply-chain), **`run-app`** (build/run desktop + Android-via-WSL),
+  **`feature-branch`**/**`merge-pr`** (git/CI). Before a PR, optionally run **`/review-vault`** for a
+  Vault-invariant review pass.
 - Docs: `docs/architecture.md`, `docs/functional-requirements.md`, `docs/design/*`.
 
 ## Output contract

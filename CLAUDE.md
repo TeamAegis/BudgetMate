@@ -44,7 +44,8 @@ only (WebView2); **iOS is deferred** (macOS/Xcode-only build). See `docs/archite
 ## Conventions
 - Angular: standalone components, signals/typed forms, no NgModules unless unavoidable. Lazy-
   load `import` (OCR) and `reports` (charts) routes to protect cold start.
-- When a Rust DTO changes, update its mirror in `src/app/core/models` **in the same change**.
+- When a Rust DTO changes, update its mirror in `src/app/core/models` **in the same change**
+  (`.claude/rules/type-safety.md`).
 - Keep the Tauri ACL minimal: grant only the commands a capability actually uses.
 - OCR plugin returns raw text + boxes only; field extraction (merchant/date/total) is
   deterministic Rust, and results are always confirmed by the user before saving.
@@ -83,7 +84,10 @@ only (WebView2); **iOS is deferred** (macOS/Xcode-only build). See `docs/archite
   correctness + low-literacy usability, **not** a feature backlog. Update these when behaviour/UI
   changes.
 - `.claude/agents/` — **role subagents** (personas, scoped tools). `.claude/skills/` — **task
-  procedures**. `.claude/rules/` — domain conventions. See below.
+  procedures**. `.claude/rules/` — domain conventions. See below. Project-wide rules:
+  `.claude/rules/type-safety.md` (Rust/TS IPC contract), `.claude/rules/engineering.md`
+  (testing, dependencies, ADRs, maintainability), `.claude/rules/style.md` (writing style: no
+  em/en dashes or emoji). Architecture Decision Records live in `docs/adr/`.
 
 ## Roles & task skills
 Delegate work to the right **role** (a `.claude/agents/` subagent — its own context + tool scope).
@@ -99,11 +103,13 @@ Only the implementer and bug-hunter may edit code; the rest are read-only adviso
 | **doc-alignment-reviewer** | find docs↔code drift and which side to fix | no |
 | **finance-validator** | check a feature/screen/copy is money-correct **and** usable by a low/no-financial-literacy person | no |
 | **design-validator** | check a screen/component/blueprint is UI/UX-sound **and** accessible/on-system (tokens, states, a11y) | no |
+| **code-reviewer** | review a diff/area for Vault invariants (money, IPC, ACID, async, zero-internet, a11y) | no |
 
 Task `/commands` (fork into a role): **`/gap-analysis <FR\|issue\|area>`**, **`/research-feature
 <question>`**, **`/doc-align <doc\|area>`**, **`/finance-check <FR\|screen\|area>`**, **`/design-check
-<screen\|component\|FR\|blueprint>`**. Implementation and debugging just invoke the role directly (and
-use the `new-feature`/`new-screen`/`db-migration`/`run-app` skills).
+<screen\|component\|FR\|blueprint>`**, **`/review-vault <diff\|PR\|area>`**. Implementation and
+debugging just invoke the role directly (and use the
+`new-feature`/`new-screen`/`db-migration`/`dependency-audit`/`run-app` skills).
 
 ## Git & CI workflow (always)
 - **Never commit or push to `main` directly.** Every change goes on its own branch off updated

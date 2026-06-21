@@ -46,7 +46,8 @@ rule and a compliant alternative. Do not produce a plan that violates a YOU MUST
 - `docs/design/` (design-system, ux-blueprint, screens) for any UI-facing design.
 - `docs/financial-knowledge.md` — financial-domain reference (taxonomy, MUR formatting, ratios,
   🇲🇺 figures) when the work touches money/categorisation/budgeting semantics.
-- `.claude/rules/{rust,frontend,design,database}.md` for layer conventions.
+- `.claude/rules/{rust,frontend,design,database,type-safety,engineering,style}.md` for layer and
+  project-wide conventions.
 
 ## Output contract
 Return a concise plan: **Goal → Approach → Ordered steps (with file paths) → Data/DTO shapes →
