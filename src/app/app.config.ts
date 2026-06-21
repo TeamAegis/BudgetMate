@@ -19,7 +19,7 @@ export const appConfig: ApplicationConfig = {
     // Resolve vault/lock state BEFORE the first route activates, so the unlock guard routes to
     // /setup or /unlock correctly on cold start (no flash of the wrong lock screen).
     provideAppInitializer(() => inject(LockService).refreshState()),
-    // Global icon defaults — refined single-weight outline to match the light Poppins type.
+    // Global icon defaults - refined single-weight outline to match the light Poppins type.
     provideLucideConfig({ strokeWidth: 1.75 }),
   ],
 };

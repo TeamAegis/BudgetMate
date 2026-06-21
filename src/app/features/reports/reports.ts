@@ -11,7 +11,7 @@ import { EmptyState } from '../../shared/ui/empty-state/empty-state';
       <app-empty-state
         [fill]="true"
         image="assets/illustrations/analytics.svg"
-        message="No data yet — spending charts appear once you have transactions."
+        message="No data yet - spending charts appear once you have transactions."
       />
     </section>
   `,

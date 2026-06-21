@@ -6,7 +6,7 @@ import { asAppError } from '../models';
  * serialised across IPC; dumping that raw string into the UI leaks jargon ("ValidationError: …",
  * SQL/SQLCipher internals) that a low-financial-literacy user can't act on (ui-ux-principles §2.9).
  *
- * Presentation-only: this does NOT change the IPC protocol or the bridge wrappers — it just
+ * Presentation-only: this does NOT change the IPC protocol or the bridge wrappers - it just
  * translates known patterns at the catch site and falls back to a friendly generic message.
  * Feature components call this in their `catch (e)` blocks instead of `String(e)`.
  */
@@ -23,7 +23,7 @@ export function toUserMessage(e: unknown): string {
 
   const lower = raw.toLowerCase();
 
-  // The DB is locked / passphrase not yet supplied — the user should unlock and retry.
+  // The DB is locked / passphrase not yet supplied - the user should unlock and retry.
   if (lower.includes('locked') || lower.includes('not unlocked') || lower.includes('no key')) {
     return 'The app is locked. Unlock it and try again.';
   }
@@ -41,7 +41,7 @@ export function toUserMessage(e: unknown): string {
   }
   // Not-found (a row was removed in another view before this action ran).
   if (lower.includes('not found') || lower.includes('no such') || lower.includes('missing')) {
-    return "We couldn't find that — it may have been removed. Refresh and try again.";
+    return "We couldn't find that - it may have been removed. Refresh and try again.";
   }
   // Generic validation failures from the domain layer.
   if (lower.includes('invalid') || lower.includes('validation') || lower.includes('must ')) {
@@ -51,7 +51,7 @@ export function toUserMessage(e: unknown): string {
   return GENERIC;
 }
 
-const GENERIC = 'Something went wrong — please try again.';
+const GENERIC = 'Something went wrong - please try again.';
 
 /** Best-effort extraction of a string from whatever a rejected `invoke` produced. */
 function rawText(e: unknown): string {

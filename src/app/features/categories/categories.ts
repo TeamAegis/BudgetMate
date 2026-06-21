@@ -64,7 +64,7 @@ export class Categories implements OnInit {
 
   /** Candidate parents = "None" + all categories except the one being edited (backend rejects cycles). */
   protected readonly parentOptions = computed<SelectOption[]>(() => [
-    { value: NO_PARENT, label: '— None —' },
+    { value: NO_PARENT, label: '- None -' },
     ...this.categories()
       .filter((c) => c.id !== this.editingId())
       .map((c) => ({ value: c.id, label: c.name })),
@@ -80,7 +80,7 @@ export class Categories implements OnInit {
     await this.reload();
   }
 
-  /** Inline validation message (A9) — shown only when invalid AND touched. */
+  /** Inline validation message (A9) - shown only when invalid AND touched. */
   protected nameError(): string | null {
     const c = this.form.controls.name;
     if (!c.invalid || !c.touched) return null;
@@ -88,8 +88,8 @@ export class Categories implements OnInit {
   }
 
   protected parentName(id: number | null): string {
-    if (id === null) return '—';
-    return this.categories().find((c) => c.id === id)?.name ?? '—';
+    if (id === null) return '-';
+    return this.categories().find((c) => c.id === id)?.name ?? '-';
   }
 
   private async reload(): Promise<void> {
@@ -162,7 +162,7 @@ export class Categories implements OnInit {
     }
   }
 
-  /** Open the archive confirmation for a category (A14) — archive never fires straight from the row. */
+  /** Open the archive confirmation for a category (A14) - archive never fires straight from the row. */
   protected confirmArchive(c: Category): void {
     this.error.set(null);
     this.archivingCategory.set(c);

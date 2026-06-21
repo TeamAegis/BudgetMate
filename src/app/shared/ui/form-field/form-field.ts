@@ -12,7 +12,7 @@ import { ChangeDetectionStrategy, Component, ViewEncapsulation, input } from '@a
  * Uses `ViewEncapsulation.None` because the projected control must be styled by this component;
  * every rule is scoped under the host `.form-field` class so nothing leaks globally.
  *
- * Pass `error` (a plain-language message) when the projected control is invalid **and** touched —
+ * Pass `error` (a plain-language message) when the projected control is invalid **and** touched -
  * it renders inline beneath the field with `role="alert"` and flags the control border. The
  * consumer owns the touched/invalid logic; this keeps the presentation consistent (ui-ux §2.9):
  *

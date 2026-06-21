@@ -1,7 +1,7 @@
 [package]
 name = "budgetmate"
 version = "0.1.0"
-description = "BudgetMate (Vault) — strictly offline, privacy-first budget app"
+description = "BudgetMate (Vault) - strictly offline, privacy-first budget app"
 authors = ["BudgetMate"]
 license = ""
 repository = ""
@@ -29,7 +29,7 @@ tauri-plugin-log = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
 
-# Custom on-device OCR plugin (Apple Vision / ML Kit; native impl deferred — skeleton + Rust
+# Custom on-device OCR plugin (Apple Vision / ML Kit; native impl deferred - skeleton + Rust
 # field extractor). Path dependency within this repo.
 tauri-plugin-ocr = { path = "plugins/ocr" }
 

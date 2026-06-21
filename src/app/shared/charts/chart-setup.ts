@@ -2,7 +2,7 @@
 // (FR-3.3 / frontend rules) so the bundle stays small. ng2-charts uses the global Chart
 // registry, so calling registerCharts() once at startup is enough.
 //
-// Currently registered: pie (spend by category) and line (spend over time) — extend here as new
+// Currently registered: pie (spend by category) and line (spend over time) - extend here as new
 // report types are added, never by importing all of Chart.js.
 
 import {

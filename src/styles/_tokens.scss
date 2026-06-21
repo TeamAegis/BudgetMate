@@ -1,4 +1,4 @@
-// BudgetMate design tokens — source of truth: docs/design/design-system.md
+// BudgetMate design tokens - source of truth: docs/design/design-system.md
 // Self-hosted Poppins only (NFR-P4: never load fonts/assets from a CDN).
 //
 // Bundle Poppins weights locally and declare @font-face pointing at local woff2, e.g.:
@@ -45,17 +45,17 @@
   --fw-medium: 500;
   --fw-bold: 700;
 
-  // type scale — expressed in rem (root = 16px) so OS dynamic-type scaling is honoured
+  // type scale - expressed in rem (root = 16px) so OS dynamic-type scaling is honoured
   // (px would ignore the user's system font-size; see ui-ux-principles §2.2). Comments give
   // the px equivalent at the default root size.
-  --t-wordmark: 2rem;        // 32px — logo (700, letter-spacing .15em)
-  --t-screen-title: 1.875rem;// 30px — 700
-  --t-balance: 2rem;         // 32px — 200 (the big balance figure)
-  --t-dialog: 1.25rem;       // 20px — 600, modal/dialog titles (between title and screen-title)
-  --t-title: 1rem;           // 16px — 500, card titles
-  --t-section: 0.875rem;     // 14px — 500, section labels
-  --t-body: 0.8125rem;       // 13px — 400, body/list/amounts (Figma density; rem so it scales)
-  --t-caption: 0.75rem;      // 12px — 300, nav labels, helper text
+  --t-wordmark: 2rem;        // 32px - logo (700, letter-spacing .15em)
+  --t-screen-title: 1.875rem;// 30px - 700
+  --t-balance: 2rem;         // 32px - 200 (the big balance figure)
+  --t-dialog: 1.25rem;       // 20px - 600, modal/dialog titles (between title and screen-title)
+  --t-title: 1rem;           // 16px - 500, card titles
+  --t-section: 0.875rem;     // 14px - 500, section labels
+  --t-body: 0.8125rem;       // 13px - 400, body/list/amounts (Figma density; rem so it scales)
+  --t-caption: 0.75rem;      // 12px - 300, nav labels, helper text
 
   // line-height (no unit so it scales with font-size)
   --lh-body: 1.5;            // multi-line body copy (ui-ux-principles §2.2)
@@ -81,7 +81,7 @@
   --progress-knob-size: 16px;
 
   // ---- Icons (all icons via @lucide/angular; see docs/design/design-system.md §5) ----
-  --icon-size-sm: 24px;     // inline / action icons (nav uses 22–24)
+  --icon-size-sm: 24px;     // inline / action icons (nav uses 22-24)
   --icon-size-md: 32px;     // larger feature glyphs
   --icon-stroke: 1.75;      // default lucide stroke width (set via provideLucideConfig)
 
@@ -91,7 +91,7 @@
   --layout-fab-size: 60px;
   --tap-target-min: 48px;   // Android (v1 primary) usability target; ≥ WCAG 2.2 24px floor & iOS 44pt
 
-  // ---- Insets (Android WebView: env(safe-area-inset-*) is unreliable — these vars let the
+  // ---- Insets (Android WebView: env(safe-area-inset-*) is unreliable - these vars let the
   //      visualViewport workaround / a native inset source override at runtime; see
   //      .claude/rules/android.md and core/layout/viewport-insets.service.ts) ----
   --safe-area-top: env(safe-area-inset-top, 0px);

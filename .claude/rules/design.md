@@ -1,43 +1,43 @@
-# Rules — Design / UI (`src/` styling & components)
+# Rules - Design / UI (`src/` styling & components)
 
 Applies when building or changing any UI. Read alongside `.claude/rules/frontend.md`. Full
-spec: `docs/design/` (README, design-system, ux-blueprint, screens). The *why* behind these rules —
-the UI/UX principles, UX laws, WCAG 2.2, and anti-patterns — lives in
+spec: `docs/design/` (README, design-system, ux-blueprint, screens). The *why* behind these rules -
+the UI/UX principles, UX laws, WCAG 2.2, and anti-patterns - lives in
 `docs/design/ui-ux-principles.md`; audit any screen, component, or blueprint against it with
 **`/design-check <target>`** (the read-only `design-validator` role).
 
 ## Tokens
 - **Use design tokens only.** Pull from `src/styles/_tokens.scss` (CSS custom properties).
-  Never hardcode hex colours, px sizes, radii, or shadows in components — reference
+  Never hardcode hex colours, px sizes, radii, or shadows in components - reference
   `var(--c-…)`, `var(--space-…)`, `var(--radius-…)`, `var(--t-…)`.
 - If a needed token doesn't exist, add it to `_tokens.scss` (and `design-tokens.json`) with a
   comment, don't inline a magic value.
 
 ## Brand & assets (offline)
 - Font is **Poppins, self-hosted** via local `@font-face` + bundled `woff2`. **Never** link
-  Google Fonts or any CDN (NFR-P4). Same for icons and illustrations — all bundled locally.
+  Google Fonts or any CDN (NFR-P4). Same for icons and illustrations - all bundled locally.
 - No remote images, no online avatars, no network-dependent UI. Their absence is a feature.
 
 ## Accessibility (enforced)
 - Coral `#FF7755` on white fails AA for small text. Use `--c-primary-700` for small coral
   text/icons on white; reserve `--c-primary` for large/bold text, fills, and icons with a
   separate label. Verify contrast for any new pairing (AA: 4.5:1 body, 3:1 large).
-- Never signal meaning by colour alone (income/expense, over-budget, dedup) — pair with
+- Never signal meaning by colour alone (income/expense, over-budget, dedup) - pair with
   sign/icon/label.
 - Tap targets ≥ 44×44pt. Inputs have visible labels. Honour `prefers-reduced-motion` and OS
   dynamic type.
-- **Android WebView caveat:** `env(safe-area-inset-*)` and keyboard resize are unreliable — for
+- **Android WebView caveat:** `env(safe-area-inset-*)` and keyboard resize are unreliable - for
   notch/home-indicator padding and keyboard-aware layout use the `visualViewport` workaround in
   `.claude/rules/android.md`, not safe-area CSS alone.
 
 ## Icons
 - **All icons use [`@lucide/angular`](https://lucide.dev/guide/angular).** It is the single,
-  mandatory icon source — bundled inline SVG, tree-shakable, no CDN/icon-font/network (NFR-P4).
+  mandatory icon source - bundled inline SVG, tree-shakable, no CDN/icon-font/network (NFR-P4).
 - Import only the icons a component needs and add them to its `imports`; reference via the
   `lucide…` attribute directive on an `<svg>` (e.g. `<svg lucideWallet [size]="24">`). Do **not**
   hand-roll ad-hoc `<svg>` icons, add an icon font, or introduce a second icon library.
 - Global defaults live in `provideLucideConfig({ strokeWidth: 1.75 })` (`app.config.ts`). Sizes:
-  nav 22–24, inline 24, feature glyphs ≤32 (`--icon-size-sm/md`). Icons inherit `currentColor`.
+  nav 22-24, inline 24, feature glyphs ≤32 (`--icon-size-sm/md`). Icons inherit `currentColor`.
 - Every interactive icon has an accessible name (`aria-label`/`title`); decorative icons paired
   with text use `aria-hidden`. Tap targets ≥ 44px. See `docs/design/design-system.md` §5 for the
   name→icon mapping.
@@ -45,14 +45,14 @@ the UI/UX principles, UX laws, WCAG 2.2, and anti-patterns — lives in
 ## Components
 - **Reusable UI elements are components, never inlined.** Any button, card, form field, list
   row, banner, empty state, icon button, header/nav, etc. lives as a dumb/presentational
-  standalone component in **`src/app/shared/ui/`** — reuse or extend an existing one before
+  standalone component in **`src/app/shared/ui/`** - reuse or extend an existing one before
   adding markup/SCSS to a feature template. Follow the **`ui-component`** skill
   (`.claude/skills/ui-component/`) for the convention.
 - Build the components named in `design-system.md` §7; keep them dumb/presentational in
   `shared/ui/` and feed data from feature components (which call `core/bridge`).
-- **Charts:** bundled **Chart.js (canvas)** only — never a remote chart script, never static
+- **Charts:** bundled **Chart.js (canvas)** only - never a remote chart script, never static
   image charts. (TrendChart, pie, line.)
-- BottomNav canonical tabs: **Home · Expenses · Goals · Analytics** (one label set — do not
+- BottomNav canonical tabs: **Home · Expenses · Goals · Analytics** (one label set - do not
   reintroduce the Figma "Charts/Analytics" inconsistency).
 
 ## Money & data display
@@ -62,7 +62,7 @@ the UI/UX principles, UX laws, WCAG 2.2, and anti-patterns — lives in
 - **Domain reference:** the canonical expense **category taxonomy** is `docs/financial-knowledge.md`
   §2; **MUR currency/number formatting** conventions are §8. Reference those rather than inventing
   categories or formats. Keep financial **jargon** out of UI copy or pair it with a plain-language
-  explainer — the app must be usable by someone with little or no financial literacy (validate with
+  explainer - the app must be usable by someone with little or no financial literacy (validate with
   the `/finance-check` skill).
 
 ## States
@@ -75,12 +75,12 @@ the UI/UX principles, UX laws, WCAG 2.2, and anti-patterns — lives in
 Canonical spec: `docs/design/design-system.md` §6. Keep motion subtle and fast (<800ms-feel; never
 blocks first paint).
 - **Tokens only.** Pull durations/easing from `_tokens.scss` (`var(--motion-fast|standard|slow)`,
-  `var(--easing)`) — never hardcode a `ms`/`s` value or a `cubic-bezier`. Add a token if one is
+  `var(--easing)`) - never hardcode a `ms`/`s` value or a `cubic-bezier`. Add a token if one is
   missing.
 - **Reuse the library.** Keyframes + the `.list-item-enter` class live in `src/styles/_animations.scss`
   (`@use`d globally). Reuse them; don't author one-off keyframes in a component.
 - **Apply per the surface map:** page transitions are automatic (app shell, `src/app/app.scss`
-  `router-outlet + *`) — add nothing per page; entering list rows use
+  `router-outlet + *`) - add nothing per page; entering list rows use
   `animate.enter="list-item-enter"` with the capped stagger
   `[style.animation-delay]="(i < 12 ? i * 40 : 0) + 'ms'"`; modals get `scrim-in`/`modal-enter` from
   `app-modal`; progress fills animate `width` with `transition`.
@@ -97,6 +97,6 @@ blocks first paint).
   silently.
 
 ## When designing a NEW screen
-Check `docs/design/screens.md` first — many "missing" screens (Lock, Scan, Import, Settings,
+Check `docs/design/screens.md` first - many "missing" screens (Lock, Scan, Import, Settings,
 Envelopes, Backup) are already specified there with their FR, components, commands, and
 states. Build to that spec rather than inventing layout.

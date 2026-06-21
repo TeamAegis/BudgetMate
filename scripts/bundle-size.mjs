@@ -2,7 +2,7 @@
 // Web bundle-size metric (architecture.md §10.4 rule 5 / NFR-Perf2 cold start).
 // Pure Node, no dependencies, no network. Exits non-zero if the initial payload exceeds the budget.
 //
-// Measures the INITIAL load only — the JS/CSS the browser must fetch before first paint — by
+// Measures the INITIAL load only - the JS/CSS the browser must fetch before first paint - by
 // reading the assets referenced directly in dist/vault/browser/index.html (entry <script>s,
 // <link rel="modulepreload">, and <link rel="stylesheet">). Lazy route chunks are not referenced
 // there, so they are correctly excluded. Reports raw + gzip size per asset and in total, and
@@ -36,7 +36,7 @@ function fail(msg) {
 
 const indexPath = join(BROWSER_DIR, 'index.html');
 if (!existsSync(indexPath)) {
-  fail(`no build found at dist/vault/browser — run \`npm run build\` first.`);
+  fail(`no build found at dist/vault/browser - run \`npm run build\` first.`);
 }
 
 const html = readFileSync(indexPath, 'utf8');
@@ -63,7 +63,7 @@ for (const tag of html.matchAll(/<link\b[^>]*>/gi)) {
 }
 
 if (assets.length === 0) {
-  fail('parsed index.html but found no initial JS/CSS assets — has the build format changed?');
+  fail('parsed index.html but found no initial JS/CSS assets - has the build format changed?');
 }
 
 // Measure raw + gzip for each asset.
@@ -91,7 +91,7 @@ lines.push('|---|---|--:|--:|');
 for (const r of rows) lines.push(`| \`${r.ref}\` | ${r.kind} | ${kb(r.raw)} kB | ${kb(r.gzip)} kB |`);
 lines.push(`| **Total initial** | | **${kb(total.raw)} kB** | **${kb(total.gzip)} kB** |`);
 lines.push('');
-lines.push(`Budget: warn ≥ ${WARN_KB} kB, fail ≥ ${ERROR_KB} kB (raw initial). _Android APK/AAB size (NFR-Perf1 ≤25 MB) is tracked separately once the Android toolchain lands — issue #4._`);
+lines.push(`Budget: warn ≥ ${WARN_KB} kB, fail ≥ ${ERROR_KB} kB (raw initial). _Android APK/AAB size (NFR-Perf1 ≤25 MB) is tracked separately once the Android toolchain lands - issue #4._`);
 
 const report = lines.join('\n');
 console.log(report);

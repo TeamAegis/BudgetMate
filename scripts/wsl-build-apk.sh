@@ -51,7 +51,7 @@ echo "### npm ci (Linux deps) ###"
 if [ ! -d "$DST/node_modules/@angular" ]; then
   npm ci
 else
-  echo "node_modules present — skipping npm ci"
+  echo "node_modules present - skipping npm ci"
 fi
 
 echo "### tauri android build (debug APK, aarch64) ###"

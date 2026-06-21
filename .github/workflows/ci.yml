@@ -47,7 +47,7 @@ jobs:
       - name: Production build
         run: npm run build
       # Records the initial web payload (raw + gzip) to the run summary and fails on a budget
-      # breach — the cold-start proxy (NFR-Perf2). The Android APK/AAB size (NFR-Perf1) is the
+      # breach - the cold-start proxy (NFR-Perf2). The Android APK/AAB size (NFR-Perf1) is the
       # deferred job below.
       - name: Bundle size metric
         run: npm run size
@@ -76,7 +76,7 @@ jobs:
         with:
           components: clippy
 
-      # Caches ~/.cargo (registry/git) AND src-tauri/target — including the expensive compiled
+      # Caches ~/.cargo (registry/git) AND src-tauri/target - including the expensive compiled
       # OpenSSL/SQLCipher artifacts. Saved after a successful job; PRs restore main's cache.
       - name: Cache Rust
         uses: Swatinem/rust-cache@v2
@@ -92,5 +92,5 @@ jobs:
   # ── Deferred: Android bundle-size metric (issue #5) ──
   # The web initial-payload metric (cold-start proxy, NFR-Perf2) now runs in the `frontend` job
   # via `npm run size`. The INSTALL-size budget (NFR-Perf1: <=25 MB) is the Android APK/AAB, which
-  # needs the Android SDK/NDK + signing — not wired yet (see issue #4 / run-app). Add a job here
+  # needs the Android SDK/NDK + signing - not wired yet (see issue #4 / run-app). Add a job here
   # that runs `npm run tauri android build` and reports the artifact size once Android tooling lands.

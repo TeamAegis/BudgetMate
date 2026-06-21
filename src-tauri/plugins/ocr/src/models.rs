@@ -9,11 +9,11 @@ pub struct BBox {
     pub h: f32,
 }
 
-/// One recognised block of text with its location and engine confidence (0.0–1.0).
+/// One recognised block of text with its location and engine confidence (0.0-1.0).
 ///
 /// Note: Google ML Kit's text-recognition API does not expose a per-block confidence, so the
 /// Android engine emits a sentinel of `1.0`. The deterministic extractor (`app_lib::rules::receipt`)
-/// makes its decisions from text + position, not confidence, so this is safe — confidence is
+/// makes its decisions from text + position, not confidence, so this is safe - confidence is
 /// informational only.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct OcrBlock {
@@ -22,7 +22,7 @@ pub struct OcrBlock {
     pub confidence: f32,
 }
 
-/// Raw OCR output. The plugin returns text + boxes ONLY — it makes no financial decision.
+/// Raw OCR output. The plugin returns text + boxes ONLY - it makes no financial decision.
 /// Deterministic field extraction (merchant/date/total) happens in the Rust core
 /// (`app_lib::rules::receipt`) and is always confirmed by the user before saving.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]

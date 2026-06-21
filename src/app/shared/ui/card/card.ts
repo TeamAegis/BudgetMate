@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 
 /**
- * Surface container — the `.card` background/border/radius/padding that was duplicated across
+ * Surface container - the `.card` background/border/radius/padding that was duplicated across
  * features. Styling lives on `:host` so no wrapper element is added; project any content.
  */
 @Component({

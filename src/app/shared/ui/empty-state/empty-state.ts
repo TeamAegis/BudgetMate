@@ -3,7 +3,7 @@ import { Button } from '../button/button';
 
 /**
  * Centred empty state: an optional illustration, a message, and an optional primary CTA
- * (design-system.md §7). The host owns no data — it emits `action` when the CTA is pressed.
+ * (design-system.md §7). The host owns no data - it emits `action` when the CTA is pressed.
  * Illustrations are bundled locally (no CDN, NFR-P4) under `assets/illustrations/`; they are
  * decorative (`aria-hidden`) since the message conveys the meaning.
  *

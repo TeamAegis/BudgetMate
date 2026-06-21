@@ -1,7 +1,7 @@
-# Financial Literacy, Accounting & Personal Budgeting — Conceptual Domain Knowledge Base
+# Financial Literacy, Accounting & Personal Budgeting - Conceptual Domain Knowledge Base
 
 > **What this is and how to use it.** This is a **domain reference for validation**, *not* a product
-> spec or a feature backlog. v1 scope is defined solely by `docs/functional-requirements.md` — much of
+> spec or a feature backlog. v1 scope is defined solely by `docs/functional-requirements.md` - much of
 > the material here (taxes, financial ratios, debt amortization, investing) is deliberately **out of
 > v1 scope** and appears only so that what the app *does* build can be checked for financial
 > correctness and for understandability by users with limited or no financial literacy. The
@@ -9,11 +9,11 @@
 > features/screens/copy against this document on two axes: *correctness* (money math, categorisation,
 > MUR formatting, any figures used) and *low-literacy usability* (jargon explained, deterministic
 > reasons shown, sensible defaults). Do not turn the out-of-scope sections into feature requests.
-> **The Mauritius statutory figures are dated (income year 2025/26) and change annually — re-verify
+> **The Mauritius statutory figures are dated (income year 2025/26) and change annually - re-verify
 > against the latest MRA / Bank of Mauritius / Statistics Mauritius publications before relying on any
 > specific figure in code or user-facing copy.**
 
-*A reference file of domain expertise for building a personal budgeting/finance application. Conceptual knowledge only — definitions, principles, formulas, frameworks, taxonomies, and best practices. No code, architecture, or implementation. Mauritius-specific content is clearly marked (MU). Figures current to the 2025/2026 Mauritius income year (1 July 2025 – 30 June 2026).*
+*A reference file of domain expertise for building a personal budgeting/finance application. Conceptual knowledge only - definitions, principles, formulas, frameworks, taxonomies, and best practices. No code, architecture, or implementation. Mauritius-specific content is clearly marked (MU). Figures current to the 2025/2026 Mauritius income year (1 July 2025 - 30 June 2026).*
 
 ## Table of Contents
 1. Personal Financial Literacy Fundamentals
@@ -31,10 +31,10 @@
 
 ## 1. Personal Financial Literacy Fundamentals
 
-**Financial literacy** is the ability to understand and effectively use financial skills — budgeting, saving, investing, borrowing, and risk management — to make informed decisions. It matters because it determines a person's ability to avoid harmful debt, build wealth, withstand emergencies, and reach life goals.
+**Financial literacy** is the ability to understand and effectively use financial skills - budgeting, saving, investing, borrowing, and risk management - to make informed decisions. It matters because it determines a person's ability to avoid harmful debt, build wealth, withstand emergencies, and reach life goals.
 
 ### Core concepts
-- **Income — gross vs net:** Gross income is total earnings before deductions; net (take-home) income is what remains after taxes and statutory deductions. Budgeting should generally be based on net income.
+- **Income - gross vs net:** Gross income is total earnings before deductions; net (take-home) income is what remains after taxes and statutory deductions. Budgeting should generally be based on net income.
 - **Expenses:** Outflows of money. Categorized as fixed, variable, periodic, discretionary, and non-discretionary.
 - **Assets:** Things you own with economic value (cash, deposits, investments, property, vehicles).
 - **Liabilities:** What you owe (loans, credit card balances, mortgages).
@@ -52,19 +52,19 @@ A unit of money today is worth more than the same unit in the future, because it
 - **Present Value:** PV = FV ÷ (1 + r)^n
 - **Simple interest:** I = P × r × t (interest only on principal)
 - **Compound interest:** A = P × (1 + r/n)^(n×t) (interest on principal + accumulated interest)
-- **Rule of 72:** Years to double ≈ 72 ÷ annual % rate. Most accurate for rates of 6–10%; use 69.3/70 for continuous/daily compounding and low rates. Used both for investment growth and for inflation's halving of purchasing power (e.g., at 3% inflation, money loses half its buying power in ~24 years).
+- **Rule of 72:** Years to double ≈ 72 ÷ annual % rate. Most accurate for rates of 6-10%; use 69.3/70 for continuous/daily compounding and low rates. Used both for investment growth and for inflation's halving of purchasing power (e.g., at 3% inflation, money loses half its buying power in ~24 years).
 
 ### Inflation & purchasing power
 Inflation is the general rise in prices over time, eroding purchasing power. Investments must outpace inflation to preserve real wealth. Real return ≈ nominal return − inflation rate.
 
 ### Financial goal setting & SMART goals
 - **Short-term** (<1 yr): emergency fund, small purchases.
-- **Medium-term** (1–5 yrs): car, down payment, debt payoff.
+- **Medium-term** (1-5 yrs): car, down payment, debt payoff.
 - **Long-term** (5+ yrs): retirement, education, mortgage payoff.
 - **SMART:** Specific, Measurable, Achievable, Relevant, Time-bound.
 
 ### Financial life stages
-Needs evolve across a lifetime: (1) Early career/accumulation — build emergency fund, manage student debt, start investing; (2) Family/peak earning — mortgage, children's education, insurance, retirement contributions; (3) Pre-retirement — maximize savings, de-risk; (4) Retirement/decumulation — drawdown, estate planning. Risk tolerance generally declines and liquidity needs rise with age.
+Needs evolve across a lifetime: (1) Early career/accumulation - build emergency fund, manage student debt, start investing; (2) Family/peak earning - mortgage, children's education, insurance, retirement contributions; (3) Pre-retirement - maximize savings, de-risk; (4) Retirement/decumulation - drawdown, estate planning. Risk tolerance generally declines and liquidity needs rise with age.
 
 ---
 
@@ -88,13 +88,13 @@ A **budget** is a plan that allocates income to expenses, savings, and debt repa
 ### Expense classification
 - **Fixed:** Same each period (rent, loan payments, insurance premiums).
 - **Variable:** Fluctuate (groceries, utilities, fuel).
-- **Periodic/irregular:** Occur occasionally (annual insurance, car registration, holidays) — best handled with sinking funds.
+- **Periodic/irregular:** Occur occasionally (annual insurance, car registration, holidays) - best handled with sinking funds.
 - **Discretionary** (wants) vs **non-discretionary** (needs).
 
 ### Needs vs wants vs savings
-- **Needs:** Essentials for living — housing, basic food, utilities, transport, minimum debt payments, insurance.
-- **Wants:** Quality-of-life but non-essential — dining out, entertainment, subscriptions.
-- **Savings:** Future-oriented — emergency fund, investments, extra debt payments.
+- **Needs:** Essentials for living - housing, basic food, utilities, transport, minimum debt payments, insurance.
+- **Wants:** Quality-of-life but non-essential - dining out, entertainment, subscriptions.
+- **Savings:** Future-oriented - emergency fund, investments, extra debt payments.
 
 ### Income categorization
 - **Salary/wages:** Regular, predictable.
@@ -126,7 +126,7 @@ Base the budget on a conservative baseline (lowest typical month or trailing ave
 
 ### Sinking funds & emergency funds
 - **Sinking fund:** Money set aside gradually for a known future expense (car, holiday, insurance renewal), preventing budget shocks.
-- **Emergency fund:** 3–6 months of essential expenses (more — 9–12 months — for single-income households, volatile industries, or the self-employed). Keep in a liquid, safe, accessible account (e.g., high-yield savings), separate from daily spending. Bare minimum: 3 months.
+- **Emergency fund:** 3-6 months of essential expenses (more - 9-12 months - for single-income households, volatile industries, or the self-employed). Keep in a liquid, safe, accessible account (e.g., high-yield savings), separate from daily spending. Bare minimum: 3 months.
 
 ### Common budgeting mistakes & behavioral pitfalls
 Underestimating irregular expenses; not tracking actuals; setting unrealistic limits; ignoring small recurring "leaks"; no buffer; not adjusting as life changes; treating the budget as set-and-forget. The best budgeting method is the one you'll actually stick with.
@@ -145,7 +145,7 @@ Every transaction keeps this equation in balance. An expanded form: Assets = Lia
 ### Double-entry bookkeeping
 Every transaction is recorded with equal and opposite entries (a debit and a credit) so the books always balance. This self-balancing property catches errors. Example: take a loan → Cash (asset) up, Loan payable (liability) up.
 
-### Debits & credits — normal balances
+### Debits & credits - normal balances
 
 | Account type | Increases with | Normal balance |
 |---|---|---|
@@ -171,7 +171,7 @@ A structured list of all accounts, typically organized: Assets (cash, bank accou
 ### Ledgers, journals, trial balance
 - **Journal:** Chronological record of transactions (daybook).
 - **General ledger:** All accounts with their running balances.
-- **Trial balance:** List of all account balances; total debits must equal total credits — a check on accuracy.
+- **Trial balance:** List of all account balances; total debits must equal total credits - a check on accuracy.
 
 ### Reconciliation
 **Bank reconciliation** matches your records against the bank statement to catch errors, omissions, fees, or fraud. Concept applies to any account: compare recorded balance to actual.
@@ -216,7 +216,7 @@ Each payment splits between **interest** (on outstanding balance) and **principa
 ### Credit scores & creditworthiness
 Creditworthiness is assessed on the "5 Cs": Character (history), Capacity (income/DTI), Capital, Collateral, Conditions. In score-based systems (e.g., US FICO), key factors are payment history, amounts owed/utilization, length of history, new credit, credit mix.
 
-**Mauritius does NOT use a US-style numeric credit score.** Creditworthiness is assessed through the **Mauritius Credit Information Bureau (MCIB)** — the only credit bureau in Mauritius — which is "fully owned and operated by the Bank of Mauritius from within its premises." Established under Section 52 of the Bank of Mauritius Act 2004, it came into operation on **1 December 2005**. The MCIB is "a repository of credit information, both positive and negative, on all recipients of credit facilities and guarantors" — covering name, address, date of birth, NIC number, and facility details (original amount, outstanding balance, repayments, arrears, suit-filed/bankruptcy records) from banks, leasing/insurance companies, utilities, and others. Critically, it generates no score or opinion: *"It only gives factual information on borrowers' credit exposures. The final decision to grant a facility or otherwise rests entirely on the lender. The MCIB does not provide any opinion on the applicant."* Consultation is mandatory before approving, increasing, or renewing a facility. Positive information is purged three years after a facility is repaid.
+**Mauritius does NOT use a US-style numeric credit score.** Creditworthiness is assessed through the **Mauritius Credit Information Bureau (MCIB)** - the only credit bureau in Mauritius - which is "fully owned and operated by the Bank of Mauritius from within its premises." Established under Section 52 of the Bank of Mauritius Act 2004, it came into operation on **1 December 2005**. The MCIB is "a repository of credit information, both positive and negative, on all recipients of credit facilities and guarantors" - covering name, address, date of birth, NIC number, and facility details (original amount, outstanding balance, repayments, arrears, suit-filed/bankruptcy records) from banks, leasing/insurance companies, utilities, and others. Critically, it generates no score or opinion: *"It only gives factual information on borrowers' credit exposures. The final decision to grant a facility or otherwise rests entirely on the lender. The MCIB does not provide any opinion on the applicant."* Consultation is mandatory before approving, increasing, or renewing a facility. Positive information is purged three years after a facility is repaid.
 
 ### Debt repayment strategies
 - **Avalanche:** Pay highest-interest debt first (minimums on rest). Mathematically cheapest; saves most interest.
@@ -225,7 +225,7 @@ Creditworthiness is assessed on the "5 Cs": Character (history), Capacity (incom
 - Always pay all minimums to protect credit standing.
 
 ### Common credit products
-Mortgages (long-term secured property loans), personal loans (unsecured installment), car loans (secured), credit cards (revolving unsecured), overdrafts (short-term account borrowing), lines of credit (flexible revolving), BNPL (Buy Now Pay Later — short-term installment, often interest-free if paid on time but can carry fees/penalties).
+Mortgages (long-term secured property loans), personal loans (unsecured installment), car loans (secured), credit cards (revolving unsecured), overdrafts (short-term account borrowing), lines of credit (flexible revolving), BNPL (Buy Now Pay Later - short-term installment, often interest-free if paid on time but can carry fees/penalties).
 
 ### Debt metrics
 - **Debt-to-Income (DTI):** Total monthly debt payments ÷ gross monthly income. Lenders prefer <36%; >43% makes mortgages difficult; >50% signals stress.
@@ -264,10 +264,10 @@ Savings accounts (liquid, variable interest), fixed/term deposits (locked for a 
 Estimate retirement needs, leverage tax-advantaged accounts, contribute consistently, harness compounding, and shift to lower-risk assets near retirement. The **"4% rule"** (target ~25× annual expenses) was introduced by financial planner William P. Bengen in his October 1994 *Journal of Financial Planning* paper; his original analysis yielded ~4.15% as a safe initial withdrawal rate for a 30-year retirement, and in his 2025 book *A Richer Retirement* he revised his "SAFEMAX" upward to 4.7%.
 
 ### Mauritius retail investing infrastructure
-- **Stock Exchange of Mauritius (SEM):** Operated by the Stock Exchange of Mauritius Ltd (established under the Stock Exchange Act 1988; trading began July 1989), regulated by the Financial Services Commission. Two main markets — the Official Market and the Development & Enterprise Market (DEM). Key indices: **SEMDEX** (benchmark all-share, capitalisation-weighted, base 5 July 1989 = 100), **SEMTRI** (total return), and **SEM-10** (ten-largest blue-chip investible index, launched 2 October 2014). Retail investors trade via a licensed investment dealer/stockbroker, with settlement through the Central Depository & Settlement Co (CDS) on a T+3 basis. **Officially listed shares attract no capital gains tax and no withholding tax on dividends.**
+- **Stock Exchange of Mauritius (SEM):** Operated by the Stock Exchange of Mauritius Ltd (established under the Stock Exchange Act 1988; trading began July 1989), regulated by the Financial Services Commission. Two main markets - the Official Market and the Development & Enterprise Market (DEM). Key indices: **SEMDEX** (benchmark all-share, capitalisation-weighted, base 5 July 1989 = 100), **SEMTRI** (total return), and **SEM-10** (ten-largest blue-chip investible index, launched 2 October 2014). Retail investors trade via a licensed investment dealer/stockbroker, with settlement through the Central Depository & Settlement Co (CDS) on a T+3 basis. **Officially listed shares attract no capital gains tax and no withholding tax on dividends.**
 - **Bank deposits:** Savings accounts (variable rate) and fixed/term deposits offered by commercial banks (MCB, SBM, AfrAsia, etc.).
-- **Bank of Mauritius policy rate (the "Key Rate"):** raised to 4.50% on 4 February 2025, held through 2025, and raised 25 bps to **4.75%** on 20 May 2026 (its highest level since 2013). BoM's medium-term inflation target range is 2–5%.
-- **Government retail securities (issued via the Bank of Mauritius):** Treasury Bills (short-term), Treasury Notes (medium-term), and Government of Mauritius Bonds (5–20 year tenors), plus Inflation-Indexed Bonds and dedicated retail **Savings Bonds**. Retail savings bonds have historically carried a minimum of Rs 50,000 (in multiples) and a maximum of Rs 500,000 per holder, with both fixed-coupon and inflation-linked versions — though specific pricing varies by each issue.
+- **Bank of Mauritius policy rate (the "Key Rate"):** raised to 4.50% on 4 February 2025, held through 2025, and raised 25 bps to **4.75%** on 20 May 2026 (its highest level since 2013). BoM's medium-term inflation target range is 2-5%.
+- **Government retail securities (issued via the Bank of Mauritius):** Treasury Bills (short-term), Treasury Notes (medium-term), and Government of Mauritius Bonds (5-20 year tenors), plus Inflation-Indexed Bonds and dedicated retail **Savings Bonds**. Retail savings bonds have historically carried a minimum of Rs 50,000 (in multiples) and a maximum of Rs 500,000 per holder, with both fixed-coupon and inflation-linked versions - though specific pricing varies by each issue.
 
 ---
 
@@ -275,9 +275,9 @@ Estimate retirement needs, leverage tax-advantaged accounts, contribute consiste
 
 | Ratio | Formula | Healthy benchmark |
 |---|---|---|
-| **Savings rate** | Savings ÷ gross (or net) income | 10–20%+; 15–20% for wealth building |
-| **Emergency fund ratio** | Liquid cash ÷ monthly essential expenses | 3–6 months (more if volatile) |
-| **Liquidity ratio** | Liquid assets ÷ monthly expenses | ≥3–6 months |
+| **Savings rate** | Savings ÷ gross (or net) income | 10-20%+; 15-20% for wealth building |
+| **Emergency fund ratio** | Liquid cash ÷ monthly essential expenses | 3-6 months (more if volatile) |
+| **Liquidity ratio** | Liquid assets ÷ monthly expenses | ≥3-6 months |
 | **Debt-to-Income (DTI)** | Monthly debt payments ÷ gross monthly income | <36% |
 | **Front-end housing ratio** | Housing costs ÷ gross income | ≤28% |
 | **Back-end ratio (28/36 rule)** | Total debt ÷ gross income | ≤36% |
@@ -303,27 +303,27 @@ The **28/36 rule:** spend ≤28% of gross income on housing and ≤36% on total 
 - **Withholding/PAYE:** Tax deducted at source by employers.
 - Common taxes: income tax, VAT/GST/sales tax, capital gains tax, property tax, inheritance/estate tax, social security contributions.
 
-### Mauritius-specific (income year 1 July 2025 – 30 June 2026)
+### Mauritius-specific (income year 1 July 2025 - 30 June 2026)
 
 **Administered by the Mauritius Revenue Authority (MRA)** on a self-assessment basis. **Fiscal/income year runs 1 July to 30 June.**
 
-**Personal income tax bands (effective 1 July 2025, per Finance Act 2025 [Act No. 18 of 2025, gazetted 9 August 2025] — reduced from 11 bands to 3):**
+**Personal income tax bands (effective 1 July 2025, per Finance Act 2025 [Act No. 18 of 2025, gazetted 9 August 2025] - reduced from 11 bands to 3):**
 
 | Annual chargeable income (Rs) | Rate |
 |---|---|
 | First 500,000 | 0% |
-| Next 500,000 (500,001–1,000,000) | 10% |
+| Next 500,000 (500,001-1,000,000) | 10% |
 | Remainder (above 1,000,000) | 20% |
 
 - **Exempt employee threshold:** No PAYE on monthly emoluments not exceeding **Rs 38,462** (raised from Rs 30,000 under Finance Act 2025 §2(a); directors excluded).
-- **Young persons aged 18–25** earning up to Rs 1m annually are exempted from income tax.
+- **Young persons aged 18-25** earning up to Rs 1m annually are exempted from income tax.
 - Per the Budget 2025-2026, these changes "are expected to remove 44,000 individuals from the tax net and reduce tax liability for 75,000 more."
 
 **Fair Share Contribution (FSC):** Introduced by Finance Act 2025, effective for the income year commencing 1 July 2025 and the two subsequent years. Per PwC Worldwide Tax Summaries, an individual whose net income (including domestic dividends and resident société/succession dividend shares) exceeds **MUR 12 million** pays FSC at **15% of leviable income above MUR 12 million**, collected under PAYE. (This replaced the former Solidarity Levy, abolished from year of assessment 2023/24.)
 
 **Key personal reliefs/deductions (income year ending 30 June 2026):**
 - 0% rate on first Rs 500,000 (functions as a personal exemption).
-- Medical/health insurance premium relief: Rs 25,000 (self), Rs 25,000 (1st dependent), Rs 20,000 (2nd–4th each).
+- Medical/health insurance premium relief: Rs 25,000 (self), Rs 25,000 (1st dependent), Rs 20,000 (2nd-4th each).
 - Approved personal pension scheme contributions: up to Rs 50,000.
 - Charitable donations (electronic): up to Rs 100,000.
 - Private school fees: up to Rs 60,000 per child.
@@ -336,11 +336,11 @@ The **28/36 rule:** spend ≤28% of gross income on housing and ≤36% on total 
 
 | Contribution | Employee | Employer |
 |---|---|---|
-| **CSG (Contribution Sociale Généralisée)** — basic salary ≤ Rs 50,000/month | 1.5% | 3% |
-| **CSG** — basic salary > Rs 50,000/month | 3% | 6% |
+| **CSG (Contribution Sociale Généralisée)** - basic salary ≤ Rs 50,000/month | 1.5% | 3% |
+| **CSG** - basic salary > Rs 50,000/month | 3% | 6% |
 | **NSF (National Savings Fund)** | 1% | 2.5% |
-| **HRDC Training Levy / SDL** | — | 1.5% |
-| **PRGF (Portable Retirement Gratuity Fund)** | — | ~4.5% |
+| **HRDC Training Levy / SDL** | - | 1.5% |
+| **PRGF (Portable Retirement Gratuity Fund)** | - | ~4.5% |
 
 - CSG has no salary ceiling (except self-employed, who pay a fixed Rs 150/month). NSF has a published insurable-salary ceiling (around Rs 28,570/month for 2025/26).
 - CSG is a pay-as-you-go system funding pensions and allowances (CSG Income Allowance, Child Allowance, School Allowance).
@@ -352,12 +352,12 @@ The **28/36 rule:** spend ≤28% of gross income on housing and ≤36% on total 
 
 **Other Mauritius features:** No capital gains tax, no inheritance tax, no wealth tax, no property tax (only land transfer/registration duties). Corporate income tax generally 15%.
 
-(MU) **Inflation context:** Headline inflation for calendar year 2025 was **3.7%** (Statistics Mauritius, "Consumer Price Index – Year 2025," published 16 January 2026), up marginally from 3.6% in 2024. (BoM's forward projection for 2026 was revised upward to ~5.5% in May 2026 citing fuel/geopolitical risks — a forecast, not a realized figure.)
+(MU) **Inflation context:** Headline inflation for calendar year 2025 was **3.7%** (Statistics Mauritius, "Consumer Price Index - Year 2025," published 16 January 2026), up marginally from 3.6% in 2024. (BoM's forward projection for 2026 was revised upward to ~5.5% in May 2026 citing fuel/geopolitical risks - a forecast, not a realized figure.)
 
 **Pensions/retirement (Mauritius):**
-- **Basic Retirement Pension (BRP)** — universal, non-contributory, tax-funded. Amount payable from January 2025: Rs 15,000/month (ages 60–89), Rs 22,710 (90–99), Rs 27,710 (100+). Finance Act 2025 is gradually raising the eligibility age from 60 to 65 over a phased period (controversial, subject to legal challenge); an Rs 10,000/month income support bridges those aged 60+ not yet eligible.
-- **NSF** — defined-contribution lump sum at retirement.
-- **PRGF** — portable gratuity for private-sector employees.
+- **Basic Retirement Pension (BRP)** - universal, non-contributory, tax-funded. Amount payable from January 2025: Rs 15,000/month (ages 60-89), Rs 22,710 (90-99), Rs 27,710 (100+). Finance Act 2025 is gradually raising the eligibility age from 60 to 65 over a phased period (controversial, subject to legal challenge); an Rs 10,000/month income support bridges those aged 60+ not yet eligible.
+- **NSF** - defined-contribution lump sum at retirement.
+- **PRGF** - portable gratuity for private-sector employees.
 - **Minimum wage:** Rs 17,110/month (from January 2025), plus salary compensation top-ups (Rs 635/month from January 2026 for those earning up to Rs 50,000); a guaranteed minimum income of Rs 20,000 is topped up via the CSG Income Allowance.
 
 ---
@@ -372,7 +372,7 @@ An **exchange rate** is the price of one currency in another. Personal finance a
 - **Issued by:** Bank of Mauritius (central bank, established 1967). Managed float regime.
 - **Banknotes:** Rs 25, 50, 100, 200, 500, 1,000, 2,000. **Coins:** 5c, 20c, 50c, Rs 1, 5, 10, 20.
 - **Formatting:** Symbol precedes the amount (e.g., Rs 1,500.50). Comma thousands separator, period decimal.
-- **Fiscal year:** 1 July – 30 June (government/tax). Calendar year used for some statistics.
+- **Fiscal year:** 1 July - 30 June (government/tax). Calendar year used for some statistics.
 
 ### Date & number conventions
 Mauritius commonly uses DD/MM/YYYY date format. English is the language of business/government.
@@ -384,7 +384,7 @@ Mauritius commonly uses DD/MM/YYYY date format. English is the language of busin
 **Behavioral finance** studies how psychology and cognitive biases lead to irrational financial decisions.
 
 ### Key biases affecting money
-- **Loss aversion:** Losses are felt more intensely than equivalent gains. Tversky & Kahneman (1992, "Advances in Prospect Theory," *Journal of Risk and Uncertainty*) empirically estimated the loss-aversion coefficient at **λ ≈ 2.25** — i.e., losses are weighted roughly 2.25× more heavily than equivalent gains (the concept was first introduced in their 1979 Prospect Theory paper, *Econometrica* 47(2), 263–291). Leads to holding losers too long and avoiding beneficial risk.
+- **Loss aversion:** Losses are felt more intensely than equivalent gains. Tversky & Kahneman (1992, "Advances in Prospect Theory," *Journal of Risk and Uncertainty*) empirically estimated the loss-aversion coefficient at **λ ≈ 2.25** - i.e., losses are weighted roughly 2.25× more heavily than equivalent gains (the concept was first introduced in their 1979 Prospect Theory paper, *Econometrica* 47(2), 263-291). Leads to holding losers too long and avoiding beneficial risk.
 - **Mental accounting:** Treating money differently based on source/label (e.g., spending "bonus" money frivolously) while ignoring fungibility.
 - **Present bias / hyperbolic discounting:** Overvaluing immediate rewards over future benefits; undermines saving.
 - **Anchoring:** Over-relying on first information (e.g., original price).
@@ -423,4 +423,4 @@ Estate planning directs asset transfer at death and minimizes complications: wil
 
 ---
 
-*End of knowledge base. Mauritius statutory figures are drawn from MRA circulars, the Finance Act 2025, Bank of Mauritius, and Statistics Mauritius, current to the 2025/2026 income year. Tax rates, contribution rates, and benefit amounts change annually — verify against the latest MRA and BoM publications before relying on specific figures.*
+*End of knowledge base. Mauritius statutory figures are drawn from MRA circulars, the Finance Act 2025, Bank of Mauritius, and Statistics Mauritius, current to the 2025/2026 income year. Tax rates, contribution rates, and benefit amounts change annually - verify against the latest MRA and BoM publications before relying on specific figures.*

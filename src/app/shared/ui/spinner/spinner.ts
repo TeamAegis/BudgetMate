@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 
 /**
- * Indeterminate loading spinner — inline SVG, inherits `currentColor`, no remote assets (NFR-P4).
+ * Indeterminate loading spinner - inline SVG, inherits `currentColor`, no remote assets (NFR-P4).
  * Used for in-place busy feedback (button saving, processing). For data-load placeholders prefer
  * `app-skeleton`. The spin keyframe is disabled under prefers-reduced-motion (see _animations.scss).
  *

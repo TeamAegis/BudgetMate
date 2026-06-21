@@ -1,4 +1,4 @@
-//! Account commands — thin wrappers over `db::accounts`, using the managed `DbState`.
+//! Account commands - thin wrappers over `db::accounts`, using the managed `DbState`.
 
 use serde::Deserialize;
 use tauri::State;

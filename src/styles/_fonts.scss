@@ -1,8 +1,8 @@
-// Local @font-face declarations — Poppins is BUNDLED, never fetched from a CDN/Google Fonts
+// Local @font-face declarations - Poppins is BUNDLED, never fetched from a CDN/Google Fonts
 // (NFR-P4, .claude/rules/design.md / frontend.md).
 //
 // Place the .woff2 files in src/assets/fonts/ (see src/assets/fonts/README.md). Until they are
-// present the UI falls back to the system-ui stack defined in --font-family (_tokens.scss) —
+// present the UI falls back to the system-ui stack defined in --font-family (_tokens.scss) -
 // layout is unaffected.
 //
 // Weights used by the design system (docs/design/design-system.md §3):

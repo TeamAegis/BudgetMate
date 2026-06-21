@@ -1,5 +1,5 @@
 //! Transaction queries (FR-1.1). A manual transaction is persisted as the `transactions` row plus
-//! a single `tx_splits` row for its category — both inside ONE DB transaction (ACID). Money is
+//! a single `tx_splits` row for its category - both inside ONE DB transaction (ACID). Money is
 //! stored signed (see `domain::transaction`); `base_amount_minor` is recomputed on every write.
 //! The transaction currency is the account's currency and `fx_rate` is "1" for now; the
 //! foreign-currency path (a user-entered rate) arrives with FR-1.4.
@@ -25,7 +25,7 @@ pub struct SplitInput<'a> {
 /// signed from the (shared) category kind. The split magnitudes must sum to the total.
 ///
 /// `currency` defaults to the account's currency when `None`; `fx_rate` (a decimal string)
-/// converts the amount to the base currency and defaults to "1" — together they implement FR-1.4
+/// converts the amount to the base currency and defaults to "1" - together they implement FR-1.4
 /// foreign-currency entry. `base_amount_minor = round(amount_minor * fx_rate)`.
 pub struct TxInput<'a> {
     pub account_id: i64,
@@ -172,7 +172,7 @@ fn clean(opt: Option<&str>) -> Option<String> {
     opt.map(str::trim).filter(|s| !s.is_empty()).map(str::to_string)
 }
 
-/// Insert a manual transaction + its splits on `conn` WITHOUT managing a transaction — the caller
+/// Insert a manual transaction + its splits on `conn` WITHOUT managing a transaction - the caller
 /// owns the surrounding `BEGIN`/`COMMIT`. `source_ref` carries provenance (e.g. a recurring-rule
 /// occurrence key); it is `NULL` for a plain manual entry. Returns the new row id.
 pub(crate) fn insert_in_tx(
@@ -314,7 +314,7 @@ mod tests {
     #[test]
     fn create_persists_multiple_splits_summing_to_total() {
         let conn = db();
-        // 50.00 total split across Groceries (30) + Dining (20) — both expense (cat 1 and 2).
+        // 50.00 total split across Groceries (30) + Dining (20) - both expense (cat 1 and 2).
         let tx = TxInput {
             account_id: 1,
             posted_date: "2026-06-06",

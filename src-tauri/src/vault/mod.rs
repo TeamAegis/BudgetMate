@@ -1,7 +1,7 @@
 //! Vault bootstrap metadata + lock settings.
 //!
 //! The DB key = `KDF(passphrase, salt, params)`, so the salt and the recorded Argon2 parameters
-//! must be readable **while the vault is locked** — they cannot live inside the encrypted DB we
+//! must be readable **while the vault is locked** - they cannot live inside the encrypted DB we
 //! are trying to open. They are stored UNENCRYPTED in `app_data_dir/vault-meta.json`. This is
 //! safe: the salt and KDF cost are not secret; security rests entirely on the user passphrase and
 //! the Argon2 work factor. The DB key and passphrase are NEVER written here (or logged).
@@ -16,7 +16,7 @@ pub const META_FILENAME: &str = "vault-meta.json";
 pub const DB_FILENAME: &str = "budgetmate.db";
 pub const CURRENT_META_VERSION: u32 = 1;
 pub const DEFAULT_IDLE_TIMEOUT_SECS: u32 = 120;
-/// Default base (reporting) currency — design-system §8 (MUR, "Rs").
+/// Default base (reporting) currency - design-system §8 (MUR, "Rs").
 pub const DEFAULT_BASE_CURRENCY: &str = "MUR";
 
 fn default_base_currency() -> String {
@@ -54,7 +54,7 @@ pub struct VaultSettings {
     pub idle_timeout_secs: u32,
     /// Whether biometric unlock is enrolled/enabled (Android only).
     pub biometric_enabled: bool,
-    /// Base (reporting) currency — foreign-currency amounts convert to this via a per-transaction
+    /// Base (reporting) currency - foreign-currency amounts convert to this via a per-transaction
     /// user rate (FR-1.4). `#[serde(default)]` so meta written before this field still loads.
     #[serde(default = "default_base_currency")]
     pub base_currency: String,
@@ -99,9 +99,9 @@ pub fn is_initialised(dir: &Path) -> bool {
 }
 
 /// Classify the on-disk state:
-/// - `Ok(false)` — fresh install (no meta) → first-run set-passphrase.
-/// - `Ok(true)`  — initialised (meta present); the DB is created on unlock if missing.
-/// - `Err(Inconsistent)` — an encrypted DB exists but the salt is gone: unrecoverable, never
+/// - `Ok(false)` - fresh install (no meta) → first-run set-passphrase.
+/// - `Ok(true)`  - initialised (meta present); the DB is created on unlock if missing.
+/// - `Err(Inconsistent)` - an encrypted DB exists but the salt is gone: unrecoverable, never
 ///   silently re-initialise (that would orphan the user's data).
 pub fn consistency(dir: &Path) -> Result<bool, VaultError> {
     let meta = meta_path(dir).exists();

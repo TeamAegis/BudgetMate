@@ -1,4 +1,4 @@
-//! Rule-engine commands (FR-2.3) — thin wrappers over `db::rules`. The evaluation core lives in
+//! Rule-engine commands (FR-2.3) - thin wrappers over `db::rules`. The evaluation core lives in
 //! `rules::engine`; these manage persistence + expose an inspectable preview ("which rule fired").
 
 use serde::{Deserialize, Serialize};

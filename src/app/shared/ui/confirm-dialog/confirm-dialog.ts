@@ -5,7 +5,7 @@ import { Button } from '../button/button';
 /**
  * Two-button destructive-confirm dialog (design-system §8.2): used before delete, restore-replace,
  * over-budget acknowledgement. Built on app-modal so it shares the blurred-scrim/focus-trap chrome.
- * Dumb component — the parent owns the entity being acted on and reacts to `confirm`/`cancel`:
+ * Dumb component - the parent owns the entity being acted on and reacts to `confirm`/`cancel`:
  *
  *   @if (confirmingDelete()) {
  *     <app-confirm-dialog

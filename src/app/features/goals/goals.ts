@@ -94,7 +94,7 @@ export class Goals implements OnInit {
     await this.reload();
   }
 
-  // ── Inline validation messages (A9) — message only when invalid AND touched; null otherwise. ──
+  // ── Inline validation messages (A9) - message only when invalid AND touched; null otherwise. ──
   protected nameError(): string | null {
     const c = this.form.controls.name;
     if (!c.invalid || !c.touched) return null;

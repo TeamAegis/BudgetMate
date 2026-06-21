@@ -15,12 +15,12 @@ These self-hosted `.woff2` files are present here (filenames referenced by `src/
 ## Provenance & licence
 
 Poppins © 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins), licensed
-under the **SIL Open Font License 1.1** — full text in [`OFL.txt`](./OFL.txt).
+under the **SIL Open Font License 1.1** - full text in [`OFL.txt`](./OFL.txt).
 
 The bundled files are the **latin subset** weights, taken from the
 [`@fontsource/poppins`](https://www.npmjs.com/package/@fontsource/poppins) release
 (`files/poppins-latin-<weight>-normal.woff2`) and renamed to the names above. They are committed
-to the repo so the build is fully offline — no Google Fonts / CDN fetch ever occurs (NFR-P4).
+to the repo so the build is fully offline - no Google Fonts / CDN fetch ever occurs (NFR-P4).
 
 To refresh them: `npm install --no-save @fontsource/poppins`, copy
 `node_modules/@fontsource/poppins/files/poppins-latin-{200,300,400,500,700}-normal.woff2` here

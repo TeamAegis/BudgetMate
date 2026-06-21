@@ -43,7 +43,7 @@ fn current_state<R: Runtime>(app: &AppHandle<R>, db: &DbState) -> Result<AppStat
 
 /// Derive the key, open+migrate the DB, and install the connection into managed state. The
 /// `Zeroizing` key and hex are local and zeroise on drop the moment the connection is open. A
-/// failure to open is mapped to a single generic message — never reveal wrong-key vs corruption.
+/// failure to open is mapped to a single generic message - never reveal wrong-key vs corruption.
 fn open_and_unlock(
     db: &DbState,
     dir: &Path,
@@ -56,7 +56,7 @@ fn open_and_unlock(
     let now = chrono::Utc::now().to_rfc3339();
     let conn = db::open_and_migrate(&vault::db_path(dir), &key_hex, &now)
         .map_err(|_| AppError::KeyVerificationFailed)?;
-    // Materialise any due recurring occurrences lazily on app open (FR-1.3) — no background
+    // Materialise any due recurring occurrences lazily on app open (FR-1.3) - no background
     // scheduler. Idempotent, so a failure here must never block unlock; log-and-continue.
     if let Err(e) = db::recurring::materialise_due(&conn, chrono::Utc::now().date_naive()) {
         log::warn!("recurring materialisation skipped: {e}");
@@ -182,7 +182,7 @@ fn update_settings<R: Runtime>(
     Ok(meta.settings)
 }
 
-/// `0` = idle timer disabled; otherwise clamp to a sane 15s–1h window.
+/// `0` = idle timer disabled; otherwise clamp to a sane 15s-1h window.
 fn clamp_timeout(secs: u32) -> u32 {
     if secs == 0 {
         0

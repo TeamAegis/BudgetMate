@@ -15,7 +15,7 @@
 
 // Amount + currency side by side (FR-1.4). Amount flexes; currency is a compact fixed-width field.
 // Top-align: the Amount field carries a hint line that Currency doesn't, so aligning bottoms would
-// push the Currency box down — align the labels/inputs at the top instead.
+// push the Currency box down - align the labels/inputs at the top instead.
 .amount-row {
   display: flex;
   align-items: flex-start;
@@ -142,7 +142,7 @@
   border-radius: var(--radius-md);
 }
 
-// Right-aligned amount; the sign already conveys direction — colour is a secondary cue.
+// Right-aligned amount; the sign already conveys direction - colour is a secondary cue.
 .amount {
   color: var(--c-text);
 }

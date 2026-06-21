@@ -22,7 +22,7 @@ pub struct ImportRule {
     pub active: bool,
 }
 
-/// User-supplied rule fields (no id/ordinal — those are assigned/managed by the store).
+/// User-supplied rule fields (no id/ordinal - those are assigned/managed by the store).
 pub struct RuleInput<'a> {
     pub match_field: &'a str,
     pub match_op: &'a str,

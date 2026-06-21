@@ -21,7 +21,7 @@ export interface SelectOption {
  * On-system single-select dropdown. Native `<select>` popups are OS-rendered and can't be themed
  * in the WebView, so this presentational listbox is built from design tokens instead. Accessible:
  * a `listbox`/`option` ARIA pattern with roving focus, full keyboard support, and click-outside +
- * Escape to dismiss. Dumb component — the parent owns the value (feature → core/bridge).
+ * Escape to dismiss. Dumb component - the parent owns the value (feature → core/bridge).
  */
 @Component({
   selector: 'app-select-field',

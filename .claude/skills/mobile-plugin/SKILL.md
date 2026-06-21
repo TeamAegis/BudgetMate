@@ -5,14 +5,14 @@ description: Implement the Android native side of a Tauri mobile plugin for Budg
 
 # Tauri Android native plugin (BudgetMate)
 
-The only custom plugin today is **OCR** at `src-tauri/plugins/ocr/` — a buildable Rust skeleton
+The only custom plugin today is **OCR** at `src-tauri/plugins/ocr/` - a buildable Rust skeleton
 whose `recognize_text` returns `Error::NotImplemented`. This skill covers implementing the Android
 native side so it returns real data. The same shape applies to any future native plugin.
 
 Contract (already defined, architecture §6.2):
 `invoke("plugin:ocr|recognize_text", { imagePath }) -> { blocks: [{ text, bbox, confidence }] }`.
 Shared types live in `plugins/ocr/src/models.rs` (`OcrBlock`, `BBox`, `OcrResult`,
-`RecognizeTextArgs`). The plugin returns **raw text + boxes only** — deterministic field
+`RecognizeTextArgs`). The plugin returns **raw text + boxes only** - deterministic field
 extraction stays in `app_lib::rules::receipt` and the user confirms before saving (FR-2.1).
 
 ## Layout
@@ -41,15 +41,15 @@ src-tauri/plugins/ocr/
    `Plugin`; a `@Command fun recognize_text(invoke: Invoke)` that parses args with
    `@InvokeArg` + `invoke.parseArgs(...)`, runs **Google ML Kit Text Recognition**, maps results to
    the JSON shape (`blocks[].{text,bbox{x,y,w,h},confidence}`), and `invoke.resolve(...)`.
-4. **Bundled ML Kit model** (Gradle dependency) — the on-device, **bundled** variant, NOT the
+4. **Bundled ML Kit model** (Gradle dependency) - the on-device, **bundled** variant, NOT the
    Play-Services on-demand one, so there is no first-use model download (preserves strict-offline).
 5. **Off the UI thread:** do recognition on `Dispatchers.IO` (coroutine); never block the main
    thread (ANR risk). Resolve/reject back over IPC when done.
 
 ## Hard rules
 - **Zero network.** No HTTP, no remote model fetch. ML Kit must be the bundled model. The
-  AndroidManifest still omits `INTERNET` — sockets are blocked OS-wide; verify guards pass.
-- **No financial decision in native code** — return raw OCR blocks only.
+  AndroidManifest still omits `INTERNET` - sockets are blocked OS-wide; verify guards pass.
+- **No financial decision in native code** - return raw OCR blocks only.
 - Keep the desktop build working: the `#[cfg(not(mobile))]` path must still compile and the
   workspace `cargo test`/`clippy` stay green (CI runs on the desktop target).
 - ACL: the capability already grants `ocr:default` → `allow-recognize-text`. New commands need a

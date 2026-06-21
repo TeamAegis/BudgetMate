@@ -2,18 +2,18 @@
 // CI guards enforcing the product's load-bearing promises (architecture.md §7, §10.4).
 // Pure Node, no dependencies, no network. Exits non-zero on any violation.
 //
-//   1. No-network   — no networking crate as a DIRECT dep (src-tauri/Cargo.toml); no
+//   1. No-network   - no networking crate as a DIRECT dep (src-tauri/Cargo.toml); no
 //                     tauri-plugin-http anywhere in Cargo.lock; no INTERNET in AndroidManifest.
-//   2. No-telemetry — forbidden analytics/crash-reporter crate + npm names.
-//   3. No-float-money — no f32/f64 in Rust money paths (annotate genuine non-money floats with
+//   2. No-telemetry - forbidden analytics/crash-reporter crate + npm names.
+//   3. No-float-money - no f32/f64 in Rust money paths (annotate genuine non-money floats with
 //                       `// guard:allow-float`).
-//   4. Style          - no em/en dashes and no emoji (emoji FAIL, dashes reported). README is
-//                       emoji-exempt; the Claude Code PR-trailer line is whitelisted. See
+//   4. Style          - no em/en dashes and no emoji (all FAIL). README is emoji-exempt (but
+//                       still no dashes); the Claude Code PR-trailer line is whitelisted. See
 //                       .claude/rules/style.md.
 //
 // On Android, Tauri CORE transitively pulls reqwest/hyper via a feature we cannot disable without
 // forking Tauri. That is acknowledged here: per architecture §7.1 the load-bearing Android
-// guarantee is the OMITTED INTERNET permission — without it the OS blocks all sockets regardless
+// guarantee is the OMITTED INTERNET permission - without it the OS blocks all sockets regardless
 // of what is linked. So we forbid networking crates we CONTROL (direct deps) + tauri-plugin-http,
 // and verify the manifest, rather than failing on framework-transitive crates.
 //
@@ -65,14 +65,14 @@ function checkDirectDeps() {
 function checkCargoLock() {
   const lock = join(ROOT, 'src-tauri', 'Cargo.lock');
   if (!existsSync(lock)) {
-    note('Cargo.lock not found (build the Rust core first) — skipping lock scan.');
+    note('Cargo.lock not found (build the Rust core first) - skipping lock scan.');
     return;
   }
   const names = new Set(
     [...readFileSync(lock, 'utf8').matchAll(/^name = "([^"]+)"/gm)].map((m) => m[1]),
   );
   if (names.has('tauri-plugin-http')) {
-    errors.push('[no-network] tauri-plugin-http present in Cargo.lock — never add it.');
+    errors.push('[no-network] tauri-plugin-http present in Cargo.lock - never add it.');
   }
   for (const crate of NETWORK_CRATES) {
     if (names.has(crate) && KNOWN_TRANSITIVE.has(crate)) {
@@ -88,7 +88,7 @@ function checkCargoLock() {
 function checkAndroidManifest() {
   const base = join(ROOT, 'src-tauri', 'gen', 'android');
   if (!existsSync(base)) {
-    note('gen/android not present yet — skipping INTERNET-permission check.');
+    note('gen/android not present yet - skipping INTERNET-permission check.');
     return;
   }
   for (const file of walk(base)) {
@@ -148,7 +148,7 @@ function checkFloatMoney() {
         if (FLOAT_RE.test(code) && !line.includes('guard:allow-float')) {
           errors.push(
             `[no-float-money] f32/f64 in money path: ${relative(ROOT, file)}:${i + 1}` +
-              ` — use i64 minor units / rust_decimal, or annotate with // guard:allow-float`,
+              ` - use i64 minor units / rust_decimal, or annotate with // guard:allow-float`,
           );
         }
       });
@@ -192,10 +192,9 @@ function* walkStyle(dir) {
   }
 }
 
-// 4. Style: emoji are FAILED; em/en dashes are REPORTED while the house-style dashes are burned
-// down across follow-up PRs. README is emoji-exempt; the PR-trailer line is whitelisted.
+// 4. Style: no em/en dashes and no emoji (all FAIL). README is emoji-exempt (but still no dashes);
+// the Claude Code PR-trailer line is whitelisted. Typographic arrows (U+2190..U+21FF) are allowed.
 function checkStyle() {
-  const dashByFile = {};
   for (const file of walkStyle(ROOT)) {
     const rel = relative(ROOT, file).replace(/\\/g, '/');
     if (rel.endsWith('package-lock.json')) continue;
@@ -210,17 +209,13 @@ function checkStyle() {
           `[style] emoji in ${rel}:${i + 1} - remove it (emoji allowed only in README; see .claude/rules/style.md)`,
         );
       }
-      if (EM_DASH.test(line) || EN_DASH.test(line)) dashByFile[rel] = (dashByFile[rel] || 0) + 1;
+      if (EM_DASH.test(line)) {
+        errors.push(`[style] em dash in ${rel}:${i + 1} - replace it (see .claude/rules/style.md)`);
+      }
+      if (EN_DASH.test(line)) {
+        errors.push(`[style] en dash in ${rel}:${i + 1} - replace it (see .claude/rules/style.md)`);
+      }
     });
-  }
-  const files = Object.keys(dashByFile);
-  if (files.length) {
-    const total = files.reduce((n, f) => n + dashByFile[f], 0);
-    note(
-      `[style] ${total} em/en dash occurrence(s) across ${files.length} file(s) to burn down ` +
-        `(report-only for now; see .claude/rules/style.md):`,
-    );
-    for (const f of files.sort((a, b) => dashByFile[b] - dashByFile[a])) note(`    ${dashByFile[f]}  ${f}`);
   }
 }
 

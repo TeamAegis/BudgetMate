@@ -65,7 +65,7 @@ export class Recurring implements OnInit {
   protected readonly showForm = signal(false);
   protected readonly editing = computed(() => this.editingId() !== null);
 
-  /** Themed-dropdown options (native <select> can't be styled in the WebView — see SelectField). */
+  /** Themed-dropdown options (native <select> can't be styled in the WebView - see SelectField). */
   protected readonly scheduleOptions: SelectOption[] = SCHEDULES.map((s) => ({ value: s, label: s }));
   protected readonly accountOptions = computed<SelectOption[]>(() =>
     this.accounts().map((a) => ({ value: a.id, label: `${a.name} · ${a.currency}` })),
@@ -112,7 +112,7 @@ export class Recurring implements OnInit {
     }
   }
 
-  /** Inline validation message (A9) — shown only when invalid AND touched. */
+  /** Inline validation message (A9) - shown only when invalid AND touched. */
   protected amountError(): string | null {
     const c = this.form.controls.amount;
     if (!c.invalid || !c.touched) return null;
@@ -120,10 +120,10 @@ export class Recurring implements OnInit {
   }
 
   protected accountName(id: number): string {
-    return this.accounts().find((a) => a.id === id)?.name ?? '—';
+    return this.accounts().find((a) => a.id === id)?.name ?? '-';
   }
   protected categoryName(id: number): string {
-    return this.categories().find((c) => c.id === id)?.name ?? '—';
+    return this.categories().find((c) => c.id === id)?.name ?? '-';
   }
   protected accountCurrency(r: RecurringRule): string {
     return this.accounts().find((a) => a.id === r.template.accountId)?.currency ?? '';

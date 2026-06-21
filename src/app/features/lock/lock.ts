@@ -10,7 +10,7 @@ import { Card } from '../../shared/ui/card/card';
 import { FormField } from '../../shared/ui/form-field/form-field';
 
 /**
- * Lock screen (FR-5.1 / FR-5.2) — one component, two variants chosen by vault state:
+ * Lock screen (FR-5.1 / FR-5.2) - one component, two variants chosen by vault state:
  *  - **setup** (first run, no passphrase yet): set + confirm a passphrase that derives the DB key.
  *  - **unlock** (initialized): passphrase entry, with a biometric option where available (Android).
  * Built to the design system: tokens only, Lucide icons, the five states (the screen itself is the

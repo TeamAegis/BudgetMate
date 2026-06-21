@@ -1,7 +1,7 @@
 //! OCR receipt commands (FR-2.1). Thin wrapper: call the on-device OCR plugin
 //! (`plugin:ocr|recognize_text`) for raw text + boxes, then run the DETERMINISTIC Rust extractor
 //! (`rules::receipt::extract`) to suggest merchant/date/total. The plugin makes no financial
-//! decision and nothing is saved here — the frontend always confirms with the user before a save.
+//! decision and nothing is saved here - the frontend always confirms with the user before a save.
 //!
 //! Recognition runs off the UI thread (the Android native engine uses `Dispatchers.IO`, and this
 //! command is `async` so it never blocks the WebView). When the native engine is unavailable
@@ -47,7 +47,7 @@ pub async fn extract_receipt<R: Runtime>(
             let fields = receipt::extract(&result.blocks, today);
             Ok(ReceiptExtraction { engine_available: true, fields })
         }
-        // Engine not built on this platform — surface distinctly, not as a hard error.
+        // Engine not built on this platform - surface distinctly, not as a hard error.
         Err(OcrError::NotImplemented) => Ok(ReceiptExtraction {
             engine_available: false,
             fields: ExtractedReceipt::default(),

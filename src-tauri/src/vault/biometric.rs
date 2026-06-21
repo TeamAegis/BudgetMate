@@ -3,7 +3,7 @@
 //! Android uses `tauri-plugin-biometric` to release a keystore-held secret; every other target
 //! (Windows desktop dev, iOS-deferred) has no biometric and the app degrades to **passphrase
 //! only**. Keeping this behind one function means the command surface and the frontend never need
-//! a platform branch — `available` is simply `false` where there is no biometric.
+//! a platform branch - `available` is simply `false` where there is no biometric.
 //!
 //! NOTE: the on-device biometric → keystore secret → DB-key release path is wired up during the
 //! Android bring-up (#4) where it can be tested on a device. Until then `available()` reports

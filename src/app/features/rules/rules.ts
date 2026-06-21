@@ -38,7 +38,7 @@ const OPS: MatchOp[] = ['contains', 'equals'];
 
 /**
  * Rule-engine management (FR-2.3): ordered if-then rules applied at import and on manual entry.
- * Fully inspectable — list shows each rule in precedence order, and the "Test" box shows exactly
+ * Fully inspectable - list shows each rule in precedence order, and the "Test" box shows exactly
  * which rule sets which field (no hidden ML). Evaluation/persistence all live in Rust.
  */
 @Component({
@@ -118,7 +118,7 @@ export class Rules implements OnInit {
     }
   }
 
-  // ── Inline validation messages (A9) — shown only when invalid AND touched. ──
+  // ── Inline validation messages (A9) - shown only when invalid AND touched. ──
   protected matchValueError(): string | null {
     const c = this.form.controls.matchValue;
     return c.invalid && c.touched ? 'Enter a value to match, e.g. uber.' : null;

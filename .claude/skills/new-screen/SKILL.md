@@ -1,16 +1,16 @@
 ---
 name: new-screen
-description: Build or change a BudgetMate UI screen/component to the design system. Use whenever creating or editing any Angular view, screen, or presentational component so it stays on-system — design tokens only, Lucide icons, the shared money pipe, the five required states, accessibility, and bridge-only data. Pair with new-feature (which adds the Rust command first).
+description: Build or change a BudgetMate UI screen/component to the design system. Use whenever creating or editing any Angular view, screen, or presentational component so it stays on-system - design tokens only, Lucide icons, the shared money pipe, the five required states, accessibility, and bridge-only data. Pair with new-feature (which adds the Rust command first).
 ---
 
 # Building a screen to the design system
 
 BudgetMate's UI is fully specified. Build to the spec, don't invent layout. Source of truth:
-- `docs/design/screens.md` — per-screen spec: FR IDs, components, **data shown**, **Rust
+- `docs/design/screens.md` - per-screen spec: FR IDs, components, **data shown**, **Rust
   command(s)** called, and **states**. Find your screen here first.
-- `docs/design/design-system.md` — tokens, type scale, components (§7), icons (§5).
-- `docs/design/ux-blueprint.md` — IA, flows, the five states (§5), accessibility (§7).
-- `.claude/rules/design.md` + `.claude/rules/frontend.md` — the enforced rules.
+- `docs/design/design-system.md` - tokens, type scale, components (§7), icons (§5).
+- `docs/design/ux-blueprint.md` - IA, flows, the five states (§5), accessibility (§7).
+- `.claude/rules/design.md` + `.claude/rules/frontend.md` - the enforced rules.
 
 If the screen needs data from Rust, do the **new-feature** skill first (Rust command + DTO →
 TS model → bridge wrapper), then build the view here.
@@ -23,11 +23,11 @@ TS model → bridge wrapper), then build the view here.
   use `<svg lucideName [size]="24">`. No ad-hoc inline SVG, no icon fonts/CDN, no second library.
   Accessible name on interactive icons (`aria-label`/`title`); `aria-hidden` on decorative ones.
 - **Data only through `core/bridge`.** Never import `@tauri-apps/api` in a feature/screen
-  (eslint blocks it). No business logic in TS — money/dedup/recurrence/validation live in Rust.
+  (eslint blocks it). No business logic in TS - money/dedup/recurrence/validation live in Rust.
 - **Money via the shared `money` pipe**, formatted from integer minor units (default MUR "Rs").
   Never do money arithmetic in TS.
 - **Motion via tokens + the shared library** (`docs/design/design-system.md` §6,
-  `.claude/rules/design.md → Motion`). Page transitions are automatic (app shell) — add nothing per
+  `.claude/rules/design.md → Motion`). Page transitions are automatic (app shell) - add nothing per
   page; entering list rows use `animate.enter="list-item-enter"` with the capped stagger; modals
   animate via `app-modal`. Token-driven durations/easing only; honour `prefers-reduced-motion`.
 - **Standalone component**, signals for state, typed reactive forms for input. Heavy screens
@@ -36,12 +36,12 @@ TS model → bridge wrapper), then build the view here.
 ## The five states (every data screen)
 Implement all five (ux-blueprint §5): **loading** (non-blocking, progressive), **empty**
 (illustration/icon + one line + primary CTA), **populated**, **error** (plain-language + a
-retry/fix action — never a raw stack trace), **busy/processing** (OCR/import/export with progress,
+retry/fix action - never a raw stack trace), **busy/processing** (OCR/import/export with progress,
 UI stays responsive). Plus the special states where they apply: **locked**, **over-budget**
 (danger), **dedup-review** (warning, keep/skip), **low-confidence OCR field** (flagged, editable).
 
 ## Accessibility
-WCAG AA: contrast 4.5:1 body / 3:1 large — use `--c-primary-700` for small coral text/icons on
+WCAG AA: contrast 4.5:1 body / 3:1 large - use `--c-primary-700` for small coral text/icons on
 white (plain `--c-primary` fails AA at small sizes). Never signal meaning by colour alone (pair
 sign/icon/label). Tap targets ≥ `--tap-target-min` (44px). Visible input labels (not
 placeholder-only). Honour `prefers-reduced-motion` and OS dynamic type.
@@ -63,4 +63,4 @@ deterministic reason for any suggested category/duplicate. Nothing saves or dele
 - Hardcoded hex/px/shadow instead of tokens; a one-off `<svg>` instead of a Lucide icon.
 - `invoke(...)` or `@tauri-apps/api` imported in a screen instead of `core/bridge`.
 - Money math/formatting by hand in TS; a screen with only the "populated" state.
-- A remote font/image/script, or an icon font — breaks the offline guarantee.
+- A remote font/image/script, or an icon font - breaks the offline guarantee.

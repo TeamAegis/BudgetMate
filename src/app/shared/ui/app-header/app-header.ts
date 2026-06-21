@@ -5,7 +5,7 @@ import { LucideArrowLeft, LucideSettings } from '@lucide/angular';
 /**
  * The app header (design-system.md §7): a leading back affordance on pushed screens, the
  * title/brand wordmark, and a trailing settings link on the top-level tabs. Fully presentational
- * — the root App owns all routing state and the back behaviour, passed in via inputs/`(back)`.
+ * - the root App owns all routing state and the back behaviour, passed in via inputs/`(back)`.
  * It is the only place a screen name appears (no in-body titles).
  */
 @Component({

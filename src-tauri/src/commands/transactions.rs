@@ -1,4 +1,4 @@
-//! Transaction commands (FR-1.1) — thin wrappers over `db::transactions`, using the managed
+//! Transaction commands (FR-1.1) - thin wrappers over `db::transactions`, using the managed
 //! `DbState`. `amount` is the user's major-unit input (parsed to minor units in Rust); the sign is
 //! derived from the category kind. No money math happens in TypeScript.
 

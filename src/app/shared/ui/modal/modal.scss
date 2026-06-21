@@ -1,4 +1,4 @@
-// app-modal — centred dialog over a blurred, dimmed scrim. ViewEncapsulation.None, so every rule
+// app-modal - centred dialog over a blurred, dimmed scrim. ViewEncapsulation.None, so every rule
 // is scoped under `.app-modal` to avoid leaking globally (the `.modal-body`/`.modal-footer` helpers
 // style the consumer's projected form). Tokens only.
 
@@ -73,7 +73,7 @@
   }
 
   // A SelectField opened inside a modal expands the dialog in-flow instead of overlaying and being
-  // clipped by the scrollable body — so every option is reachable. The body grows up to the dialog
+  // clipped by the scrollable body - so every option is reachable. The body grows up to the dialog
   // max-height, then scrolls (scrollbar hidden globally); the active option is focused into view.
   app-select-field .menu {
     position: static;

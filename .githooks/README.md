@@ -1,6 +1,6 @@
 # Git hooks
 
-Committed hooks that enforce the project's git discipline. Git does not use them automatically —
+Committed hooks that enforce the project's git discipline. Git does not use them automatically -
 **enable once per clone**:
 
 ```sh
@@ -10,7 +10,7 @@ git config core.hooksPath .githooks
 (The `harden-main` skill does this for you and re-checks it.)
 
 ## Hooks
-- **`pre-push`** — blocks **direct pushes to `main`**. All changes go through a feature branch +
+- **`pre-push`** - blocks **direct pushes to `main`**. All changes go through a feature branch +
   PR (see `.claude/skills/feature-branch` and the "Git & CI workflow" section in `CLAUDE.md`). For
   a genuine one-off you can bypass with `git push --no-verify`, but don't make a habit of it.
 

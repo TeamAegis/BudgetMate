@@ -72,7 +72,7 @@ export class Accounts implements OnInit {
     await this.reload();
   }
 
-  // ── Inline validation messages (A9) — message only when invalid AND touched; null otherwise. ──
+  // ── Inline validation messages (A9) - message only when invalid AND touched; null otherwise. ──
   protected nameError(): string | null {
     const c = this.form.controls.name;
     if (!c.invalid || !c.touched) return null;
@@ -156,7 +156,7 @@ export class Accounts implements OnInit {
     }
   }
 
-  /** Open the archive confirmation for an account (A14) — archive never fires straight from the row. */
+  /** Open the archive confirmation for an account (A14) - archive never fires straight from the row. */
   protected confirmArchive(a: Account): void {
     this.error.set(null);
     this.archivingAccount.set(a);

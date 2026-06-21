@@ -1,5 +1,5 @@
 //! Savings-goal queries (FR-3.2). Goals can be hard-deleted (unlike accounts/categories, which
-//! archive) — they carry no ledger history. `completed` is derived on read, never stored. The
+//! archive) - they carry no ledger history. `completed` is derived on read, never stored. The
 //! `goals` table is from migration 0001 (+ `currency` from 0003); `current_minor` is the saved-so-far.
 
 use rusqlite::{params, Connection};

@@ -3,7 +3,7 @@
 //! It is `Option<Connection>` so it can be `None` when the app is **locked**. The app boots locked
 //! (`lib.rs`); the unlock flow derives the key, opens the connection, and calls `unlock()`. On
 //! background/idle the connection is dropped via `lock()`, which closes it and lets SQLCipher free
-//! its in-memory key. The key itself is never stored here — the keyed `Connection` *is* the live
+//! its in-memory key. The key itself is never stored here - the keyed `Connection` *is* the live
 //! secret, and the `Zeroizing` key/hex used to open it are dropped (zeroised) by the unlock
 //! command the instant the connection opens.
 

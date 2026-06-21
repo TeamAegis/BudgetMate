@@ -1,5 +1,5 @@
 //! Deterministic if-then rule engine (FR-2.3). Ordered rules evaluated top-down; the same rules
-//! apply at import time and on manual entry. Fully inspectable — no hidden ML categorisation.
+//! apply at import time and on manual entry. Fully inspectable - no hidden ML categorisation.
 //!
 //! Skeleton: the type surface is defined and unit-tested; persistence (`import_rules` table) and
 //! full field/operator coverage are wired in a later change via the new-feature skill.

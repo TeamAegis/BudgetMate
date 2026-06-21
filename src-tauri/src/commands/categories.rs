@@ -1,4 +1,4 @@
-//! Category commands — thin wrappers over `db::categories`, using the managed `DbState`.
+//! Category commands - thin wrappers over `db::categories`, using the managed `DbState`.
 
 use serde::Deserialize;
 use tauri::State;

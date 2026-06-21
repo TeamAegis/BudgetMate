@@ -1,4 +1,4 @@
-//! Domain entities, money types, and invariants. Pure logic — no Tauri, no DB — so it is
+//! Domain entities, money types, and invariants. Pure logic - no Tauri, no DB - so it is
 //! unit-testable without a WebView (NFR-Maint2).
 
 pub mod account;

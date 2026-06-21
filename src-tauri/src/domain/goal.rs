@@ -1,5 +1,5 @@
 //! Savings-goal entity + validation (FR-3.2). Money stays integer minor units; `completed` is
-//! derived (saved has reached the target), never a stored flag. Pure logic — unit-testable.
+//! derived (saved has reached the target), never a stored flag. Pure logic - unit-testable.
 
 use serde::{Deserialize, Serialize};
 

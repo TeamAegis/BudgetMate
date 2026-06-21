@@ -3,7 +3,7 @@
 // Contract (architecture.md §6.2):
 //   invoke("plugin:ocr|recognize_text", { imagePath }) -> { blocks: [{ text, bbox, confidence }] }
 //
-// Returns RAW recognised text + boxes only — it makes NO financial decision. Deterministic field
+// Returns RAW recognised text + boxes only - it makes NO financial decision. Deterministic field
 // extraction (merchant/date/total) lives in the Rust core (app_lib::rules::receipt) and the user
 // confirms before saving (FR-2.1). Recognition runs on Dispatchers.IO so the UI thread is never
 // blocked (NFR-Rel2). Fully offline: the bundled ML Kit model needs no network.
@@ -75,7 +75,7 @@ class OcrPlugin(private val activity: Activity) : Plugin(activity) {
     }
 
     // Map ML Kit blocks to the contract shape { blocks: [{ text, bbox{x,y,w,h}, confidence }] }.
-    // ML Kit does not expose a per-block confidence, so we emit a sentinel of 1.0 — the Rust
+    // ML Kit does not expose a per-block confidence, so we emit a sentinel of 1.0 - the Rust
     // extractor decides from text + position, not confidence.
     private fun mapResult(visionText: com.google.mlkit.vision.text.Text): JSObject {
         val blocks = JSArray()
