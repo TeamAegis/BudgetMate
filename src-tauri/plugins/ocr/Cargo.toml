@@ -1,7 +1,7 @@
 [package]
 name = "tauri-plugin-ocr"
 version = "0.1.0"
-description = "On-device OCR for BudgetMate — Apple Vision (iOS) / ML Kit (Android). Returns raw text + boxes only."
+description = "On-device OCR for BudgetMate - Apple Vision (iOS) / ML Kit (Android). Returns raw text + boxes only."
 edition = "2021"
 rust-version = "1.80"
 # Required by tauri-plugin build: must equal package.name.

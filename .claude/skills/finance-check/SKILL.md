@@ -15,21 +15,21 @@ person with limited or no financial literacy**.
 
 > Delegation: this skill forks into the **`finance-validator`** subagent. If `context: fork` is not
 > honored by this build, spawn it explicitly with the Agent tool (`subagent_type: finance-validator`)
-> and pass this same instruction. The validator is **read-only** — it produces findings, it does not
+> and pass this same instruction. The validator is **read-only** - it produces findings, it does not
 > fix them.
 
 ## Procedure
 1. **Resolve the target `$1`** and gather its intended behaviour: `docs/functional-requirements.md`
    (the FR text), `docs/design/{screens,ux-blueprint,design-system}.md` (states/components/copy), and
-   the relevant sections of `docs/financial-knowledge.md` (the domain truth — cite §x).
+   the relevant sections of `docs/financial-knowledge.md` (the domain truth - cite §x).
 2. **Trace what exists** across the stack: Rust money/rules/domain (`src-tauri/src/...`), the bridge
    model (`src/app/core/...`), the feature component and its user-facing copy
    (`src/app/features/...`, `shared/ui/`).
-3. **Lens 1 — correctness:** money as minor units/`rust_decimal` (never float); base = `amount_minor ×
+3. **Lens 1 - correctness:** money as minor units/`rust_decimal` (never float); base = `amount_minor ×
    fx_rate` and split-sum invariants; category taxonomy vs §2; envelope/budget math (FR-3.1); MUR
    formatting & multi-currency display vs §8; any tax/ratio/statutory figure matches §6/§7 **and is
    current** (figures are dated 2025/26); deterministic categorisation/dedup reasons are truly correct.
-4. **Lens 2 — usability:** jargon avoided or explained for a novice; sensible beginner defaults
+4. **Lens 2 - usability:** jargon avoided or explained for a novice; sensible beginner defaults
    (MUR, clear envelope setup, helpful empty/onboarding states); meaning never by colour alone; OCR
    (FR-2.1) and import (FR-2.2/2.3/2.4) end in a user-confirmation step that shows the deterministic
    reason and never auto-commit.
@@ -41,11 +41,11 @@ A prioritized list: **Item → Lens (correctness/usability) → Finding → Evid
 high-severity findings.
 
 ## Anti-patterns
-- Don't fix anything — this is validation only. Hand actionable findings to the implementer.
+- Don't fix anything - this is validation only. Hand actionable findings to the implementer.
 - Don't recommend out-of-scope features (tax calculators, ratio dashboards, debt amortization,
-  investing). `docs/financial-knowledge.md` is reference, not a backlog — flag clarity/correctness,
+  investing). `docs/financial-knowledge.md` is reference, not a backlog - flag clarity/correctness,
   not missing scope. A genuine v1 feature gap → hand to `gap-analysis`.
-- Don't trust a statutory figure blindly — the Mauritius figures change annually; flag stale/baked-in
+- Don't trust a statutory figure blindly - the Mauritius figures change annually; flag stale/baked-in
   figures rather than confirming them.
 
 ## References

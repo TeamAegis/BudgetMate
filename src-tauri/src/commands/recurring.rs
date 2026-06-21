@@ -1,4 +1,4 @@
-//! Recurring-rule commands (FR-1.3) — thin wrappers over `db::recurring`. Materialisation itself
+//! Recurring-rule commands (FR-1.3) - thin wrappers over `db::recurring`. Materialisation itself
 //! runs lazily on unlock (see `commands::vault`), not here.
 
 use serde::Deserialize;

@@ -29,7 +29,7 @@ import { Modal } from '../../shared/ui/modal/modal';
 import { ConfirmDialog } from '../../shared/ui/confirm-dialog/confirm-dialog';
 import { SelectField, type SelectOption } from '../../shared/ui/select-field/select-field';
 
-/** A transaction plus its position in the flattened (cross-group) list — drives the capped stagger. */
+/** A transaction plus its position in the flattened (cross-group) list - drives the capped stagger. */
 interface GroupItem {
   tx: Transaction;
   /** Cumulative index across all date groups, so the entrance stagger reads correctly (A12). */
@@ -47,7 +47,7 @@ const DECIMAL = /^\d+(\.\d+)?$/;
 /**
  * Manual transaction entry + list (FR-1.1) with split support (FR-1.2). Smart component: it reads
  * accounts/categories/transactions through the bridge and renders with shared/ui. All money
- * parsing, signing, the split-sum invariant, and `base_amount_minor` happen in Rust — TS only
+ * parsing, signing, the split-sum invariant, and `base_amount_minor` happen in Rust - TS only
  * formats (the `money` pipe) and shows a live "remaining to allocate" hint (Rust re-validates).
  */
 @Component({
@@ -94,14 +94,14 @@ export class Transactions implements OnInit {
   protected readonly error = signal<string | null>(null);
   protected readonly editingId = signal<number | null>(null);
   protected readonly showForm = signal(false);
-  /** True while the modal is editing an existing transaction (vs adding) — drives the footer trash. */
+  /** True while the modal is editing an existing transaction (vs adding) - drives the footer trash. */
   protected readonly editing = computed(() => this.editingId() !== null);
   /** Set while the delete-confirm dialog is open over the edit modal. */
   protected readonly confirmingDelete = signal(false);
   /** Category name a rule suggested from the payee (shown as an inspectable, overridable hint). */
   protected readonly suggestedCategory = signal<string | null>(null);
 
-  /** Themed-dropdown options (native <select> can't be styled in the WebView — see SelectField). */
+  /** Themed-dropdown options (native <select> can't be styled in the WebView - see SelectField). */
   protected readonly accountOptions = computed<SelectOption[]>(() =>
     this.accounts().map((a) => ({ value: a.id, label: `${a.name} · ${a.currency}` })),
   );
@@ -124,7 +124,7 @@ export class Transactions implements OnInit {
   });
 
   constructor() {
-    // With a single split the amount IS the total — keep them in lock-step so the simple case
+    // With a single split the amount IS the total - keep them in lock-step so the simple case
     // needs no per-split entry. With ≥2 splits the user allocates each line explicitly.
     this.form.controls.amount.valueChanges.pipe(takeUntilDestroyed()).subscribe((v) => {
       if (this.splits.length === 1) {
@@ -211,12 +211,12 @@ export class Transactions implements OnInit {
   }
 
   protected accountName(id: number): string {
-    return this.accounts().find((a) => a.id === id)?.name ?? '—';
+    return this.accounts().find((a) => a.id === id)?.name ?? '-';
   }
 
   /** Category label for a list row: the single category, or each split's category for ≥2. */
   protected categoryLabel(t: Transaction): string {
-    if (t.splits.length <= 1) return t.splits[0]?.categoryName ?? '—';
+    if (t.splits.length <= 1) return t.splits[0]?.categoryName ?? '-';
     return t.splits.map((s) => s.categoryName).join(', ');
   }
 
@@ -280,7 +280,7 @@ export class Transactions implements OnInit {
     this.editingId.set(null);
     const account = this.accounts()[0] ?? null;
     const currency = account?.currency ?? this.baseCurrency();
-    // OCR suggestions (FR-2.1) only PREFILL the editable form — the user confirms before Save.
+    // OCR suggestions (FR-2.1) only PREFILL the editable form - the user confirms before Save.
     this.resetForm({
       accountId: account?.id ?? null,
       currency,
@@ -329,7 +329,7 @@ export class Transactions implements OnInit {
     const splitData: { categoryId: number | null; amount: string }[] = opts.splits?.length
       ? opts.splits
       : [{ categoryId: null, amount: opts.amount ?? '' }];
-    // Match the FormArray's control count to the data, then reset everything — including the splits —
+    // Match the FormArray's control count to the data, then reset everything - including the splits -
     // in one call. Resetting splits *within* form.reset (not before it) is essential: a bare
     // form.reset() also resets this FormArray, which would otherwise wipe each split's categoryId.
     this.splits.clear();
@@ -418,7 +418,7 @@ export class Transactions implements OnInit {
   /**
    * Suggest a category from the payee via the rule engine (FR-2.3) when the user hasn't picked one
    * (single-split entry only). Non-destructive + inspectable: it pre-selects the match and shows a
-   * hint the user can override — no hidden categorisation.
+   * hint the user can override - no hidden categorisation.
    */
   protected async suggestCategory(): Promise<void> {
     if (!isTauri() || this.splits.length !== 1) return;

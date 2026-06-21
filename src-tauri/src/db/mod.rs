@@ -1,6 +1,6 @@
 //! SQLCipher-encrypted SQLite access. The DB is opened with the in-memory key set via
 //! `PRAGMA key` BEFORE any read/write. Migrations are forward-only, versioned, recorded in
-//! `schema_migrations`, and each runs inside ONE transaction (ACID — .claude/rules/database.md).
+//! `schema_migrations`, and each runs inside ONE transaction (ACID - .claude/rules/database.md).
 
 use rusqlite::Connection;
 use std::path::Path;
@@ -22,7 +22,7 @@ pub enum DbError {
     Invalid(String),
 }
 
-/// Forward-only migration list. NEVER edit a shipped migration — add a new, higher version
+/// Forward-only migration list. NEVER edit a shipped migration - add a new, higher version
 /// (db-migration skill). Each `&str` is the forward DDL; the runner records the version.
 const MIGRATIONS: &[(i64, &str)] = &[
     (1, include_str!("migrations/0001_init.sql")),

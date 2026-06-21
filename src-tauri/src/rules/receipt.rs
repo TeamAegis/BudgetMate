@@ -1,5 +1,5 @@
 //! Deterministic receipt field extraction (FR-2.1). Turns raw OCR blocks into
-//! `{ merchant, date, total }` using regex + heuristics — NO ML inference makes the decision.
+//! `{ merchant, date, total }` using regex + heuristics - NO ML inference makes the decision.
 //! The result is always shown to the user for confirmation before anything is saved.
 //!
 //! Amounts are returned as integer minor units assuming a 2-decimal currency (the user confirms
@@ -211,7 +211,7 @@ pub fn extract(blocks: &[OcrBlock], today: NaiveDate) -> ExtractedReceipt {
     // keyword block carries no amount of its own. We therefore reason over blocks (keeping their
     // geometry) and, for a keyword block with no inline amount, spatially associate the amount
     // block sharing its row. Cash-tendered / change lines (ESPECES, Rendu, …) are excluded so
-    // they never win — neither as a keyword total nor via the largest-overall fallback.
+    // they never win - neither as a keyword total nor via the largest-overall fallback.
     let total_minor = extract_total(blocks);
 
     // ── Date: most recent plausible date anywhere on the receipt. ──
@@ -248,7 +248,7 @@ mod tests {
         block_at(text, 0.0, y)
     }
 
-    /// A block at an explicit (x, y) — used to model left-label / right-amount column layouts.
+    /// A block at an explicit (x, y) - used to model left-label / right-amount column layouts.
     fn block_at(text: &str, x: f32, y: f32) -> OcrBlock { // guard:allow-float (OCR coordinates)
         OcrBlock {
             text: text.to_string(),
@@ -295,7 +295,7 @@ mod tests {
     fn winners_receipt_keyword_and_amount_in_separate_blocks() {
         // Real Mauritian WINNERS receipt: ML Kit splits the left label column and the right
         // amount column into separate blocks. The TOTAL is 138.00 Rs; 200.00 is ESPECES (cash
-        // tendered) and 62.00 is Rendu (change) — neither must win.
+        // tendered) and 62.00 is Rendu (change) - neither must win.
         let blocks = vec![
             block("WINNERS", 0.0),
             // Item lines (label left, amount right) on their own rows.
@@ -327,7 +327,7 @@ mod tests {
 
     #[test]
     fn total_label_block_with_amount_block_to_the_right() {
-        // Minimal "label left, amount right" layout — exercises row-alignment association
+        // Minimal "label left, amount right" layout - exercises row-alignment association
         // distinctly from the same-block case.
         let blocks = vec![
             block_at("Item A", 0.0, 10.0),

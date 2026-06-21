@@ -69,7 +69,7 @@
     <app-empty-state
       [fill]="true"
       image="assets/illustrations/get-started.svg"
-      message="No goals yet — set a savings target and track your progress."
+      message="No goals yet - set a savings target and track your progress."
       cta="Add your first goal"
       (action)="startCreate()"
     />
@@ -86,7 +86,7 @@
       <app-empty-state
         [fill]="true"
         image="assets/illustrations/get-started.svg"
-        [message]="filter() === 'completed' ? 'No completed goals yet — keep saving!' : 'No goals in progress — add one to get started.'"
+        [message]="filter() === 'completed' ? 'No completed goals yet - keep saving!' : 'No goals in progress - add one to get started.'"
       />
     } @else {
       <ul class="rows">

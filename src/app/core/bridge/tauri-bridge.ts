@@ -213,7 +213,7 @@ export async function pickReceiptImage(): Promise<string | null> {
 
 /**
  * Run on-device OCR over a local receipt image and deterministically extract merchant/date/total
- * (FR-2.1). Heavy work happens off the UI thread in Rust/native. Suggestions only — the caller
+ * (FR-2.1). Heavy work happens off the UI thread in Rust/native. Suggestions only - the caller
  * prefills the manual-entry form and the user confirms before any save. `engineAvailable` is false
  * where the native engine isn't built (desktop dev/test).
  */

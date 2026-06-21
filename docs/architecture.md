@@ -1,4 +1,4 @@
-# Architecture — Private Offline Budget App (*Vault*)
+# Architecture - Private Offline Budget App (*Vault*)
 
 **Audience:** engineers and Claude Code working in this repo.
 **Last verified:** June 2026 against Tauri 2.11.x, Angular 18+, official plugin docs.
@@ -57,7 +57,7 @@ WebView and keeps money math out of JavaScript.
 | WebView | WKWebView (iOS) / Android System WebView | Native, small, OS-maintained. |
 | Frontend | **Angular 18+ standalone**, CSR static build | User-committed; no SSR (Tauri serves static files). |
 | Charts | **Chart.js** via `ng2-charts` (bundled) | Canvas, small, fast on mobile, MIT, no CDN. |
-| Icons | **`@lucide/angular`** (bundled, tree-shaken inline SVG) | Single-weight outline, MIT, no CDN/icon-font. The single icon source — see `docs/design/design-system.md` §5. |
+| Icons | **`@lucide/angular`** (bundled, tree-shaken inline SVG) | Single-weight outline, MIT, no CDN/icon-font. The single icon source - see `docs/design/design-system.md` §5. |
 | Core logic | **Rust** | Memory-safe, fast, testable, owns money + crypto. |
 | DB | **SQLite + SQLCipher**, via `rusqlite` (`sqlcipher` feature) or `sqlx`+`libsqlite3-sys` `bundled-sqlcipher` | Encrypted at rest; ACID. **Not** the official SQL plugin (no SQLCipher support). |
 | Money | `rust_decimal` and/or integer minor units | Never float. |
@@ -75,7 +75,7 @@ SDK. Their presence is a build failure (see §7).
 ## 3. Frontend (Angular)
 
 ### 3.1 Build configuration
-- Modern Angular standalone components (no NgModules required), **CSR only — no SSR /
+- Modern Angular standalone components (no NgModules required), **CSR only - no SSR /
   Angular Universal**. Tauri serves static files; SSR would have nothing to serve from.
 - `angular.json`:
   - `outputPath` → `dist/vault` (build emits to `dist/vault/browser` with the
@@ -90,7 +90,7 @@ SDK. Their presence is a build failure (see §7).
 ```
 src/app/
 ├── core/              # singletons: TauriBridge, models, guards (lock guard)
-│   ├── bridge/        # typed wrappers around invoke<T>() — ONE place that calls Tauri
+│   ├── bridge/        # typed wrappers around invoke<T>() - ONE place that calls Tauri
 │   ├── models/        # TS interfaces mirroring Rust DTOs (kept in sync)
 │   └── lock/          # biometric/passphrase unlock flow, idle-lock
 ├── features/
@@ -103,7 +103,7 @@ src/app/
 │   └── settings/      # backup/restore/export, currency base, lock timeout
 └── shared/            # dumb UI components, chart wrappers, pipes (money/date)
 ```
-> **UI/UX source of truth:** `docs/design/` — `design-system.md` (tokens: coral + Poppins, MUR
+> **UI/UX source of truth:** `docs/design/` - `design-system.md` (tokens: coral + Poppins, MUR
 > default), `ux-blueprint.md` (IA, flows, states), and `screens.md` (per-screen FR ↔ Rust-command
 > map). Canonical bottom nav: **Home · Expenses · Goals · Analytics**; Settings via the header
 > icon; Budgets/Import are nested actions (folder names above are retained; routes/titles follow
@@ -112,10 +112,10 @@ src/app/
 ### 3.3 Frontend rules
 - **All** access to data goes through `core/bridge` (`invoke`); feature components never call
   Tauri directly. This keeps the IPC surface auditable and the ACL minimal.
-- No business logic (money math, dedup, recurrence, categorisation) in TypeScript — call
+- No business logic (money math, dedup, recurrence, categorisation) in TypeScript - call
   Rust. TS only formats and presents.
 - Charts: import only the Chart.js controllers/elements actually used (tree-shake).
-- Icons: use **`@lucide/angular`** for every icon — import only the icons a component uses
+- Icons: use **`@lucide/angular`** for every icon - import only the icons a component uses
   (tree-shaken inline SVG, no CDN). See `.claude/rules/design.md` and `docs/design/design-system.md` §5.
 
 ---
@@ -170,12 +170,12 @@ updated in the same change (see `CLAUDE.md`).
   plaintext.
 - The app **boots locked**: managed state holds no connection until the user unlocks. The key is
   derived inside the unlock command, used to open the SQLCipher connection, and the `Zeroizing`
-  key/hex are dropped immediately — the keyed connection itself is the only live secret.
+  key/hex are dropped immediately - the keyed connection itself is the only live secret.
 - The per-install **salt** and the **recorded Argon2 parameters** (frozen at enrolment so future
   opens reproduce the key) plus non-sensitive lock settings live in an unencrypted sidecar
   `app_data_dir/vault-meta.json`. They must be readable before the DB is open and are not secret;
   security rests on the passphrase + Argon2 cost. An encrypted DB with no sidecar is treated as an
-  inconsistent (unrecoverable) state — never silently re-initialised.
+  inconsistent (unrecoverable) state - never silently re-initialised.
 - The biometric flow unlocks a key stored in the platform secure enclave / Android Keystore;
   that releases (or decrypts) the DB key into **memory only**. Biometric is Android-only; desktop
   (dev) and the not-yet-enrolled case degrade to passphrase entry.
@@ -190,7 +190,7 @@ restore) runs inside a single transaction. A crash mid-operation rolls back clea
 
 ---
 
-## 6. OCR Subsystem (FR-2.1) — the trickiest part
+## 6. OCR Subsystem (FR-2.1) - the trickiest part
 
 ### 6.1 Decision
 **There is no maintained off-the-shelf Tauri OCR plugin.** Vault ships a **custom Tauri
@@ -206,8 +206,8 @@ mobile plugin** that wraps the OS OCR engines:
 dependency, small models, Latin-only, CPU-only, early-preview accuracy). Use only if
 maintaining two native code paths is undesirable and lower accuracy is acceptable.
 
-**Rejected:** Tesseract.js (WASM) as primary — too large and slow on mobile, hurts
-size/cold-start budgets. Rust Tesseract FFI (leptess) — fragile mobile cross-compilation.
+**Rejected:** Tesseract.js (WASM) as primary - too large and slow on mobile, hurts
+size/cold-start budgets. Rust Tesseract FFI (leptess) - fragile mobile cross-compilation.
 
 ### 6.2 Plugin contract
 ```
@@ -219,7 +219,7 @@ The plugin returns **raw recognised text + boxes only**. It makes no financial d
 **Status:** implemented on **Android** (Google ML Kit Text Recognition, bundled Latin model, runs
 on `Dispatchers.IO`). The plugin's Rust core splits desktop/mobile (`plugins/ocr/src/{desktop,mobile}.rs`):
 mobile dispatches to the Kotlin `OcrPlugin` via `run_mobile_plugin`; desktop (dev/test) returns
-`NotImplemented`. iOS (Apple Vision) is deferred. **`confidence`** is informational only — ML Kit's
+`NotImplemented`. iOS (Apple Vision) is deferred. **`confidence`** is informational only - ML Kit's
 text API exposes no per-block confidence, so the Android engine emits a sentinel of `1.0`; the
 deterministic extractor (§6.3) decides from text + position, never from confidence.
 
@@ -235,13 +235,13 @@ A pure-Rust post-processor turns OCR blocks into `{ merchant, date, total }`:
 
 ### 6.4 Threading
 OCR runs off the UI thread (NFR-Rel2). On Android, native plugin calls must not block the
-main thread — use coroutines and post the result back over IPC.
+main thread - use coroutines and post the result back over IPC.
 
 ---
 
 ## 7. Offline Enforcement & Security (NFR-P1, P4)
 
-Two independent layers — neither alone is sufficient:
+Two independent layers - neither alone is sufficient:
 
 ### 7.1 OS network (the real block)
 - **Android:** the generated `AndroidManifest.xml` **omits** `android.permission.INTERNET`.
@@ -362,7 +362,7 @@ uses coroutines (NFR-Rel2).
 ## 11. Maturity, Risks & Open Items
 
 > **Platform scope (v1, locked 2026-06-05).** v1 targets **Android only**. **Windows desktop is
-> a dev/test target only** (fast UI + IPC bridge iteration via WebView2) — it is not a shipping
+> a dev/test target only** (fast UI + IPC bridge iteration via WebView2) - it is not a shipping
 > target. **iOS is deferred** (its build is macOS/Xcode-only and the current dev machine is
 > Windows). iOS-specific notes below (Apple Vision OCR, ATS, `PrivacyInfo.xcprivacy`,
 > `gen/apple`) are retained as future work and are **not** part of the v1 build.
@@ -387,10 +387,10 @@ uses coroutines (NFR-Rel2).
 
 ## 12. Glossary
 
-- **CSR** — Client-Side Rendering (the only mode used; no SSR).
-- **SQLCipher** — SQLite with transparent page-level AES encryption.
-- **ACL / capabilities** — Tauri's permission system gating which commands the frontend may
+- **CSR** - Client-Side Rendering (the only mode used; no SSR).
+- **SQLCipher** - SQLite with transparent page-level AES encryption.
+- **ACL / capabilities** - Tauri's permission system gating which commands the frontend may
   invoke; governs the IPC bridge, **not** OS network access.
-- **Minor units** — integer smallest currency unit (e.g. cents) used for all money storage.
-- **Materialise (recurrence)** — turn a recurring rule into concrete ledger rows, done lazily
+- **Minor units** - integer smallest currency unit (e.g. cents) used for all money storage.
+- **Materialise (recurrence)** - turn a recurring rule into concrete ledger rows, done lazily
   on app open (no background scheduler).

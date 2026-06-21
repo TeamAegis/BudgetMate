@@ -2,7 +2,7 @@
 
 **Project:** Private Offline Budget App (codename: *Vault*)
 **Platform:** Mobile (iOS + Android) via Tauri 2.x
-**Status:** Greenfield — requirements baselined against verified technical feasibility (June 2026)
+**Status:** Greenfield - requirements baselined against verified technical feasibility (June 2026)
 
 > This document supersedes the original draft spec. Claims that were inaccurate or
 > over-optimistic in the original have been corrected here and are flagged with a
@@ -16,12 +16,12 @@
 A high-performance, strictly offline mobile application for **manual** expense tracking
 and financial planning. The app prioritises, in order:
 
-1. **Data sovereignty** — all data stays on the device; nothing leaves it unless the user
+1. **Data sovereignty** - all data stays on the device; nothing leaves it unless the user
    explicitly exports/shares a file.
-2. **Zero-AI logic** — categorisation, dedup, and rules are deterministic and inspectable.
+2. **Zero-AI logic** - categorisation, dedup, and rules are deterministic and inspectable.
    (On-device OCR for receipt *reading* is permitted; it is not "AI logic" that decides the
    user's finances.)
-3. **Minimal footprint** — small install size, fast start, no background battery drain.
+3. **Minimal footprint** - small install size, fast start, no background battery drain.
 
 The app does **not** connect to banks, sync to a cloud, or phone home.
 
@@ -42,7 +42,7 @@ reference it.
   (validated before save).
 - **FR-1.3 Recurring Expenses.** The user defines a schedule (daily/weekly/monthly/custom)
   for a fixed transaction (e.g. rent, subscriptions). Occurrences are materialised into the
-  ledger **lazily on app open** — there is no background scheduler (see NFR-Performance,
+  ledger **lazily on app open** - there is no background scheduler (see NFR-Performance,
   zero background processes). Each materialised occurrence is editable/deletable.
 - **FR-1.4 Multi-Currency.** The user may record transactions in any currency. Conversion to
   the base currency uses a **user-defined rate** stored with the transaction. No external
@@ -80,7 +80,7 @@ reference it.
   based on local account balances / manual contributions. Show milestone progress.
 - **FR-3.3 Local Reporting.** Generate pie and line charts from standard aggregations
   (spend by category, spend over time). Rendering uses a **locally bundled** chart library
-  (Chart.js) — no remote scripts or fonts.
+  (Chart.js) - no remote scripts or fonts.
 
 ### 2.4 Offline Tools
 
@@ -130,13 +130,13 @@ reference it.
 
 ### 3.2 Performance
 
-- **NFR-Perf1 Install/Binary Size — target ≤ 25 MB, stretch ≤ 20 MB.**
+- **NFR-Perf1 Install/Binary Size - target ≤ 25 MB, stretch ≤ 20 MB.**
   - **[Revised]** The original hard target was *<20 MB*. With Angular + a chart lib + native
     OCR this is achievable on a stripped Android build but **not guaranteed**, and iOS IPAs
-    typically run larger. Realistic budget is **~20–35 MB**; ≤20 MB is a stretch goal
+    typically run larger. Realistic budget is **~20-35 MB**; ≤20 MB is a stretch goal
     contingent on native (not bundled) OCR and full release-size optimisation
     (`lto`, `strip`, `panic="abort"`, `codegen-units=1`, asset optimisation).
-- **NFR-Perf2 Cold Start — target ≤ 800 ms on mid-range hardware, stretch ≤ 500 ms.**
+- **NFR-Perf2 Cold Start - target ≤ 800 ms on mid-range hardware, stretch ≤ 500 ms.**
   - **[Revised]** The original *<500 ms* is plausible on modern flagships but not across
     low/mid-range Android, where WebView init adds overhead. First paint is protected by a
     splash + lazy-loading of OCR/chart modules.
@@ -173,7 +173,7 @@ reference it.
 - No web or desktop build in v1 as a **shipping** target (architecture leaves the door open,
   but mobile is the target). **Note (locked 2026-06-05):** v1 ships **Android only**; **iOS is
   deferred** (macOS/Xcode-only build, current dev machine is Windows). Windows desktop is used
-  **only** as a dev/test target for UI + IPC iteration via WebView2 — it is not shipped.
+  **only** as a dev/test target for UI + IPC iteration via WebView2 - it is not shipped.
 
 ---
 

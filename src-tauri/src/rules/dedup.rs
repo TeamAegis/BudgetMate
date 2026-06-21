@@ -1,5 +1,5 @@
 //! Deduplication (FR-2.4). Flags likely duplicates by comparing date (within a configurable
-//! window), exact amount, and account. Dedup NEVER deletes — it sets a `pending_review` flag the
+//! window), exact amount, and account. Dedup NEVER deletes - it sets a `pending_review` flag the
 //! UI surfaces for user confirmation.
 //!
 //! Skeleton: the comparison predicate is defined and unit-tested; wiring against existing rows +

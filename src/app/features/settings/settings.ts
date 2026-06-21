@@ -185,7 +185,7 @@ export class Settings implements OnInit {
     { value: 0, label: 'Never' },
   ];
 
-  // A small curated set (no full ISO list — binary/UX size); any 3-letter code is valid in Rust.
+  // A small curated set (no full ISO list - binary/UX size); any 3-letter code is valid in Rust.
   protected readonly currencyOptions: SelectOption[] = [
     { value: 'MUR', label: 'MUR · Mauritian rupee' },
     { value: 'USD', label: 'USD · US dollar' },

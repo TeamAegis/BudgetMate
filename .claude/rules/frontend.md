@@ -1,25 +1,25 @@
-# Rules — Frontend (`src/`)
+# Rules - Frontend (`src/`)
 
 Applies to the Angular app. Read alongside root `CLAUDE.md`.
 
 ## Framework
 - Angular 18+, **standalone components only** (no NgModules unless a dependency forces it).
-- **CSR static build — never enable SSR / Angular Universal.** Tauri serves static files.
+- **CSR static build - never enable SSR / Angular Universal.** Tauri serves static files.
 - Prefer **signals** for component state and **typed reactive forms** for input.
 - Build output must land in `dist/vault/browser` with `baseHref: "/"` (the application/esbuild
-  builder adds the `browser/` subfolder — `frontendDist` must point inside it or you get a blank
+  builder adds the `browser/` subfolder - `frontendDist` must point inside it or you get a blank
   window). The path is set in `CLAUDE.md` commands; keep them consistent.
 - Use the new control flow (`@if` / `@for` / `@switch`), not `*ngIf` / `*ngFor`. **`@for` always
-  needs a `track`** (e.g. `track tx.id`) — without it you get DOM churn / wrong-row bugs. Prefer
+  needs a `track`** (e.g. `track tx.id`) - without it you get DOM churn / wrong-row bugs. Prefer
   `inject()` over constructor injection.
 
 ## Reactivity & change detection
 - Target **zoneless** + `ChangeDetectionStrategy.OnPush`; drive the UI from signals.
-- IPC results resolve **outside Angular's awareness** — update a signal in the `.then()`/event
+- IPC results resolve **outside Angular's awareness** - update a signal in the `.then()`/event
   callback to re-render. **Never mutate an array/object signal in place** (`sig().push(x)` does
   nothing); replace the reference: `sig.set([...])` / `sig.update(a => [...a, x])`.
 - `computed()` for derived state (pure, no writes); use `effect()` only to sync signal state to
-  imperative APIs — **never** to derive one signal from another, and never read+write the same
+  imperative APIs - **never** to derive one signal from another, and never read+write the same
   signal in one effect (infinite loop).
 - Lazy-loaded heavy views (`import`, `reports`) may also use `@defer`; deferred deps must be
   standalone and not referenced outside the block (incl. `@ViewChild`) or they load eagerly.
@@ -31,16 +31,16 @@ Applies to the Angular app. Read alongside root `CLAUDE.md`.
 - **All IPC goes through `core/bridge`.** Add a typed wrapper there
   (`invoke<ReturnType>('cmd', args)`); feature code imports the wrapper, never `@tauri-apps/api`
   directly. This keeps the ACL auditable.
-- Keep the Tauri command surface small — if a screen needs new data, prefer extending an
+- Keep the Tauri command surface small - if a screen needs new data, prefer extending an
   existing Rust query over adding many fine-grained calls.
 
 ## Structure
-- `core/` — bridge, models (mirror Rust DTOs 1:1), lock/unlock flow, guards.
-- `features/<name>/` — one folder per feature area (transactions, budgets, goals, reports,
+- `core/` - bridge, models (mirror Rust DTOs 1:1), lock/unlock flow, guards.
+- `features/<name>/` - one folder per feature area (transactions, budgets, goals, reports,
   import, settings). Smart components here.
-- `shared/` — dumb/presentational components, money/date pipes, chart wrappers. Reusable UI
+- `shared/` - dumb/presentational components, money/date pipes, chart wrappers. Reusable UI
   components live in `shared/ui/` (one folder per component, `app-<name>` selector). **Reuse or
-  extend these rather than re-inlining markup/SCSS in a feature** — see the `ui-component` skill.
+  extend these rather than re-inlining markup/SCSS in a feature** - see the `ui-component` skill.
 
 ## Performance
 - Lazy-load `import` (OCR review) and `reports` (charts) routes; they must not block first

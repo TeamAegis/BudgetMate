@@ -50,7 +50,7 @@ pub enum MoneyParseError {
 }
 
 /// Minor-unit digits for a currency (the ISO-4217 "exponent"). Defaults to 2 and covers the common
-/// 0- and 3-digit exceptions; extend as needed. Kept deliberately small (no full code list — binary
+/// 0- and 3-digit exceptions; extend as needed. Kept deliberately small (no full code list - binary
 /// size). Money parsing/scaling lives in Rust, never TS.
 pub fn minor_unit_digits(currency: &str) -> u32 {
     match currency {

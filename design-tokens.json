@@ -2,7 +2,7 @@
   "$meta": {
     "name": "BudgetMate Design Tokens",
     "source": "Figma PhqmuOWsxpnKjqIW6yJXge; docs/design/design-system.md",
-    "notes": "Self-hosted Poppins only — never load fonts/assets from a CDN (NFR-P4)."
+    "notes": "Self-hosted Poppins only - never load fonts/assets from a CDN (NFR-P4)."
   },
   "color": {
     "primary": "#FF7755",

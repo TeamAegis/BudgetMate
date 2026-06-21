@@ -3,7 +3,7 @@ import { unlockGuard } from './core/lock/unlock.guard';
 
 // Canonical IA (docs/design/ux-blueprint.md §2): bottom nav = Home · Expenses · Goals ·
 // Analytics; Settings via the header icon. Budgets (Envelopes) and Import/Scan are nested
-// actions reachable from Settings/Expenses — routed, but not in the bottom nav.
+// actions reachable from Settings/Expenses - routed, but not in the bottom nav.
 // Lazy-load `analytics` (charts) and `import` (OCR) so they don't block first paint (NFR-Perf2).
 //
 // `data.title` drives the AppHeader's titled variant; Home omits it so the header falls back to

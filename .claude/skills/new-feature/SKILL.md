@@ -8,7 +8,7 @@ description: Scaffold a new end-to-end feature in Vault the correct way - Rust c
 Vault's golden path is **Rust first, presentation last**. Logic lives in Rust; Angular formats
 and presents. Follow this order every time.
 
-## Step 1 — Rust domain + command (`src-tauri/src/`)
+## Step 1 - Rust domain + command (`src-tauri/src/`)
 1. Add/extend the domain logic in `domain/` (money as minor units / `rust_decimal`; enforce
    invariants).
 2. If it touches the DB, add the query/write in `db/` inside a transaction (see
@@ -18,30 +18,30 @@ and presents. Follow this order every time.
 4. Register the command in `lib.rs`.
 5. Unit-test the domain logic (must run without Tauri).
 
-## Step 2 — Tauri ACL
+## Step 2 - Tauri ACL
 Grant the new command to the window's capability in `src-tauri/capabilities/*.json`. Grant the
-minimum — only this command. Do not widen existing broad grants.
+minimum - only this command. Do not widen existing broad grants.
 
-## Step 3 — Mirror the DTO (`src/app/core/models/`)
+## Step 3 - Mirror the DTO (`src/app/core/models/`)
 Add/update the TypeScript interface so it matches the Rust DTO 1:1. **Same change, same PR.**
 
-## Step 4 — Bridge wrapper (`src/app/core/bridge/`)
+## Step 4 - Bridge wrapper (`src/app/core/bridge/`)
 Add a typed function: `export const getX = (args): Promise<X> => invoke<X>('get_x', args)`.
-Feature code calls this — never `@tauri-apps/api` directly.
+Feature code calls this - never `@tauri-apps/api` directly.
 
-## Step 5 — Angular feature (`src/app/features/<name>/`)
+## Step 5 - Angular feature (`src/app/features/<name>/`)
 - Standalone component, signals for state, typed forms for input.
 - Call the bridge wrapper; format money with the shared `money` pipe; render with shared/dumb
   components.
 - If the feature is heavy (OCR/charts), make its route lazy-loaded; nav follows the canonical IA
   (Home · Expenses · Goals · Analytics + Settings).
-- **Build the UI to the design spec — use the `new-screen` skill.** In short: check
+- **Build the UI to the design spec - use the `new-screen` skill.** In short: check
   `docs/design/screens.md` for the screen's spec (FR, components, commands, states); style with
   **design tokens only** (`src/styles/_tokens.scss`, never hardcoded hex/px); use **`@lucide/angular`**
   for every icon; cover the five states (loading/empty/populated/error/busy); follow
   `.claude/rules/design.md`.
 
-## Step 6 — Verify the rules
+## Step 6 - Verify the rules
 - No business logic leaked into TS.
 - No network/telemetry added.
 - Money never a float.
@@ -49,13 +49,13 @@ Feature code calls this — never `@tauri-apps/api` directly.
 - DTO ↔ model in sync.
 - Tests + clippy + lint green.
 
-## Step 7 — Docs
+## Step 7 - Docs
 If the feature changes behaviour or adds an FR, update `docs/functional-requirements.md` and,
 if it affects structure/flow, `docs/architecture.md`.
 
 ## Anti-patterns to reject
 - Doing money math or dedup/recurrence in TypeScript.
 - Calling `invoke` from a feature component instead of the bridge.
-- Adding a networking crate "just to fetch FX rates" — multi-currency uses **user-defined**
+- Adding a networking crate "just to fetch FX rates" - multi-currency uses **user-defined**
   rates, no API.
 - Bundling a heavy OCR/ML dependency without checking the size budget.

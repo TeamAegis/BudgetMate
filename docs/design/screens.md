@@ -1,9 +1,9 @@
-# BudgetMate — Screen Specifications
+# BudgetMate - Screen Specifications
 
 Each screen maps to its **Figma node(s)**, the **FR IDs** it satisfies, the **components** it
 uses (from `design-system.md` §7), the **data shown**, the **Rust command(s)** it calls via
 `core/bridge`, and its **states**. Screens marked **[NEW]** are required by the FRs but absent
-in the current Figma — design them to this spec.
+in the current Figma - design them to this spec.
 
 > Figma file: `PhqmuOWsxpnKjqIW6yJXge` (page `0:1`). Mobile artboards are 412×917.
 
@@ -34,7 +34,7 @@ in the current Figma — design them to this spec.
 - **Commands:** `init_vault(passphrase)`, `enable_biometric()`.
 - **States:** mismatch error, weak-passphrase warning, biometric-unavailable fallback.
 - **a11y:** passphrase fields **must allow paste** (don't block it) and offer a **show/hide
-  toggle** — WCAG 2.2 SC 3.3.7 (Redundant Entry) and SC 3.3.8 (Accessible Authentication, so a
+  toggle** - WCAG 2.2 SC 3.3.7 (Redundant Entry) and SC 3.3.8 (Accessible Authentication, so a
   password manager can fill it).
 
 ---
@@ -50,7 +50,7 @@ in the current Figma — design them to this spec.
 - **States:** prompting, authenticating, fail/retry, locked-out fallback to passphrase.
 - **Behaviour:** shown on cold start and after idle/background (key zeroised on lock).
 - **a11y:** the passphrase fallback field **must allow paste** and offer a **show/hide toggle**
-  — WCAG 2.2 SC 3.3.7 (Redundant Entry) and SC 3.3.8 (Accessible Authentication; let a password
+  - WCAG 2.2 SC 3.3.7 (Redundant Entry) and SC 3.3.8 (Accessible Authentication; let a password
   manager fill it).
 
 ---
@@ -61,12 +61,12 @@ in the current Figma — design them to this spec.
 - **Figma:** `124:224` (Mobile Home). Tokens validated from this node.
 - **FR:** FR-3.x preview, entry points to FR-1.x/2.x.
 - **Components:** AppHeader (brand + settings icon `124:297`), BalanceCard (`124:302`),
-  TrendChart (`130:7` — rebuild in Chart.js), QuickActionChip row (`132:395` →
+  TrendChart (`130:7` - rebuild in Chart.js), QuickActionChip row (`132:395` →
   *Add Transaction / Add Goal / Scan Receipt*), GoalProgressRow ×N (`130:36`), BottomNav
   (`124:355`).
 - **Data:** current balance, usable balance, balance-trend series, top goals.
 - **Commands:** `get_dashboard()` → `{ balance, usable, trend[], goals[] }`.
-- **States:** loading (progressive), empty (`133:641` — "No goals? Create one!"), populated.
+- **States:** loading (progressive), empty (`133:641` - "No goals? Create one!"), populated.
 
 ### 3.2 Dashboard (empty)
 - **Figma:** `133:641`.
@@ -84,7 +84,7 @@ in the current Figma — design them to this spec.
   (Daily/Weekly/Monthly `133:799`), TransactionListItem ×N, FAB (`132:510`), BottomNav.
 - **Data:** balance summary, period trend, transactions for period.
 - **Commands:** `list_transactions(period, filter)`, `get_trend(period)`.
-- **States:** loading, empty ("no transactions yet" — add to design), populated, busy
+- **States:** loading, empty ("no transactions yet" - add to design), populated, busy
   (import/scan running).
 - **Layout:** the transaction list reserves `padding-bottom` ≥ ≈84px so the FAB never occludes the
   last row (see `design-system.md` §7 FAB).
@@ -111,19 +111,19 @@ in the current Figma — design them to this spec.
 - **Components:** ReceiptScanSheet (camera/preview), progress, editable
   merchant/date/total fields, *Use* → prefilled Add Transaction.
 - **Data:** image (local only), extracted fields + confidence.
-- **Commands:** `extract_receipt(imagePath)` — one thin Rust command that calls
+- **Commands:** `extract_receipt(imagePath)` - one thin Rust command that calls
   `plugin:ocr|recognize_text` then runs the deterministic `rules::receipt::extract`, returning
   `{ engineAvailable, fields: { merchant, date, totalMinor } }`. Image picked via the file-open
   dialog (bridge `pickReceiptImage`). On "Use these details" the screen prefills the Add
-  Transaction modal (`/expenses` router state) — it does **not** save.
-- **States:** picking, processing (off-thread — `extract_receipt` is async, native engine on
+  Transaction modal (`/expenses` router state) - it does **not** save.
+- **States:** picking, processing (off-thread - `extract_receipt` is async, native engine on
   Dispatchers.IO), review (editable), low-confidence (all fields empty → flagged + manual-entry
   CTA), engine-unavailable (plugin `NotImplemented` on desktop/iOS), failed (retry/manual entry).
-  **Never auto-saves** — the user confirms in the Add Transaction modal.
+  **Never auto-saves** - the user confirms in the Add Transaction modal.
 
 ### 4.5 Import Wizard **[NEW]**
 - **FR:** FR-2.2/2.3/2.4.
-- **Components:** ImportWizard steps — file picker (dialog), CSV column-mapping,
+- **Components:** ImportWizard steps - file picker (dialog), CSV column-mapping,
   parsed-row preview, rule-applied list (shows matched rule), **dedup review** (keep/skip),
   confirm.
 - **Data:** file (CSV/OFX/QFX), staged rows, rule matches, duplicate flags.
@@ -136,7 +136,7 @@ in the current Figma — design them to this spec.
 
 ## 5. Goals
 
-### 5.1 Goals — Ongoing / Completed **[built]**
+### 5.1 Goals - Ongoing / Completed **[built]**
 - **Figma:** `132:237` (Ongoing), `137:3` (Completed), empty `133:557`.
 - **FR:** FR-3.2.
 - **Components:** AppHeader ("Goals"), `GoalProgressRow` ×N (tap to edit), Add button, BottomNav.
@@ -166,14 +166,14 @@ in the current Figma — design them to this spec.
 ## 6. Analytics
 
 ### 6.1 Analytics (populated) **[partly NEW]**
-- **Figma:** `132:298` (header shell only — charts not yet designed).
+- **Figma:** `132:298` (header shell only - charts not yet designed).
 - **FR:** FR-3.3.
 - **Components:** AppHeader ("Analytics"), pie chart (spend by category), line chart (spend
   over time), period/category filters, BottomNav. **Charts via bundled Chart.js.**
 - **Data:** aggregations by category and over time.
 - **Commands:** `get_spend_by_category(period)`, `get_spend_over_time(period)`.
 - **States:** loading, empty (`133:806` "No Data" + illustration), populated, error (aggregation
-  failed — plain-language + retry), busy (recomputing on filter/period change, UI stays responsive).
+  failed - plain-language + retry), busy (recomputing on filter/period change, UI stays responsive).
 
 ---
 
@@ -185,7 +185,7 @@ in the current Figma — design them to this spec.
   Budgets/Envelopes, Rules, Export, Backup/Restore, About/Privacy note.
 - **Commands:** `get_settings()`, `update_settings(dto)`.
 
-### 7.1a Accounts **[NEW — FR-1.x foundation]**
+### 7.1a Accounts **[NEW - FR-1.x foundation]**
 - **FR:** underpins FR-1.1 (account picker), FR-1.4 (per-account currency), FR-3.x.
 - **Components:** AppHeader (titled "Accounts" + back); in-content **Add** action button; list of
   accounts (name · type · currency · opening balance via the money pipe, Rs) + create/edit form
@@ -198,7 +198,7 @@ in the current Figma — design them to this spec.
 - **Notes:** v1 is effectively single default account (multi-account schema, **no switcher**).
   Opening-balance money entry lands with the CurrencyField (FR-1.4); accounts start at Rs 0.
 
-### 7.1b Categories **[NEW — FR-1.x/FR-2.3 foundation]**
+### 7.1b Categories **[NEW - FR-1.x/FR-2.3 foundation]**
 - **FR:** underpins category pickers (FR-1.1), the rule engine (FR-2.3), analytics (FR-3.3).
 - **Components:** AppHeader (titled "Categories" + back); in-content **Add** action button; list
   (name · kind · parent) + create/edit form (name, kind ∈ expense|income|transfer, optional parent)
@@ -212,8 +212,8 @@ in the current Figma — design them to this spec.
 - **FR:** FR-3.1.
 - **Components:** EnvelopeCard ×N (category cap, spent/remaining bar, warning/over states).
 - **Commands:** `list_envelopes()`, `save_envelope(dto)`.
-- **States:** loading, empty (no caps set + CTA), populated — under / approaching (warning) / over
-  (danger), error (load/save failed — plain-language + retry), busy (saving a cap).
+- **States:** loading, empty (no caps set + CTA), populated - under / approaching (warning) / over
+  (danger), error (load/save failed - plain-language + retry), busy (saving a cap).
 
 ### 7.3 Rules (if-then)
 - **FR:** FR-2.3.
@@ -228,7 +228,7 @@ in the current Figma — design them to this spec.
 
 ### 7.5 Backup / Restore
 - **FR:** FR-4.1/4.3.
-- **Components:** BackupRestorePanel — *Create encrypted backup* → save/share;
+- **Components:** BackupRestorePanel - *Create encrypted backup* → save/share;
   *Restore* → pick `.vaultbak` → passphrase → replace/merge.
 - **Commands:** `create_backup()` → file via dialog/fs (Android: `tauri-plugin-android-fs`);
   `restore_backup(path, passphrase, mode)` (ACID).
@@ -239,8 +239,8 @@ in the current Figma — design them to this spec.
 ## 8. Modals & shared
 
 ### 8.0 Forms are modals (canonical pattern)
-- **Every add/edit form in the app is a `Modal`** (`app-modal`) — a centred card over a dimmed +
-  blurred backdrop — **not** a pushed full-screen route. This covers Add/Edit **Transaction**
+- **Every add/edit form in the app is a `Modal`** (`app-modal`) - a centred card over a dimmed +
+  blurred backdrop - **not** a pushed full-screen route. This covers Add/Edit **Transaction**
   (incl. Split editor), **Rule**, **Recurring rule**, **Account**, **Category**, and **Goal**
   (FR-3.2). The list/screen behind stays visible-but-blurred; dismiss (Escape, backdrop click, or
   *Cancel*) returns to it unchanged.
@@ -248,12 +248,12 @@ in the current Figma — design them to this spec.
   **edit** modal a **trash** icon-button sits at the far left and deletes via a ConfirmDialog
   (§8.2); add modals omit it. Features with only a reversible *archive* (Accounts, Categories)
   keep archive on the list row; Recurring has no delete (managed by pause/resume).
-- **Dropdowns** inside modals use `SelectField` (themed listbox — native `<select>` can't be
+- **Dropdowns** inside modals use `SelectField` (themed listbox - native `<select>` can't be
   styled in the WebView). An open dropdown expands the dialog (in-flow) so every option is
   reachable; the body scrolls with the scrollbar hidden (native-app feel).
 
 ### 8.1 Transaction popup
-- **Figma:** `133:517` (POP-UP – Transaction). Superseded by the §8.0 Modal pattern above; the
+- **Figma:** `133:517` (POP-UP - Transaction). Superseded by the §8.0 Modal pattern above; the
   Add/Edit Transaction modal is the canonical entry point from the list.
 
 ### 8.2 Confirm / destructive dialog
@@ -269,7 +269,7 @@ in the current Figma — design them to this spec.
 
 ## 9. Cleanup backlog (Figma hygiene)
 - Delete leftover delivery-app frames: **`2:5` Order Tracking**, **`2:244` Set Location**
-  (hidden; contain map, "delivery man", street address — unrelated to BudgetMate).
+  (hidden; contain map, "delivery man", street address - unrelated to BudgetMate).
 - Normalise BottomNav: one label set (**Analytics**, not "Charts"), evenly spaced.
 - Replace duplicate "Transaction" quick-action labels with real actions.
 - Consolidate duplicate intro frames (`122:69` / `131:157`).

@@ -1,6 +1,6 @@
 //! Desktop (Windows/macOS/Linux dev & test target) OCR engine.
 //!
-//! There is no native desktop OCR engine in v1 — desktop is a dev/test target for the UI and
+//! There is no native desktop OCR engine in v1 - desktop is a dev/test target for the UI and
 //! bridge. `recognize_text` returns `Error::NotImplemented` so callers fail explicitly. A pure-Rust
 //! `ocrs`/RTen fallback is the documented (but unimplemented) option here; see architecture §6.1.
 

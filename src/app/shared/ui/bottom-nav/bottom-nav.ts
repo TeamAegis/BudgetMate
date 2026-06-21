@@ -3,8 +3,8 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
 import { LucideHouse, LucideWallet, LucideTarget, LucidePieChart } from '@lucide/angular';
 
 /**
- * Canonical bottom navigation (design-system.md §7): four evenly-spaced tabs —
- * Home · Expenses · Goals · Analytics — active tab in accessible coral. Fully self-contained:
+ * Canonical bottom navigation (design-system.md §7): four evenly-spaced tabs -
+ * Home · Expenses · Goals · Analytics - active tab in accessible coral. Fully self-contained:
  * it owns its routes, icons, and active styling, with no dependence on the host.
  */
 @Component({

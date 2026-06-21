@@ -3,7 +3,7 @@
 // matching interface here in the SAME change (CLAUDE.md / new-feature skill).
 //
 // Money is always integer MINOR UNITS (e.g. cents) + a currency code. Never a float, and never
-// do money arithmetic in TypeScript — format only.
+// do money arithmetic in TypeScript - format only.
 
 export type Iso4217 = string; // e.g. "USD", "GBP"
 
@@ -116,7 +116,7 @@ export interface TxSplit {
 
 /**
  * Mirrors Rust `Transaction`. `amountMinor` is SIGNED (expenses negative, income/transfers
- * positive) and is computed in Rust — never derive or re-sign it in TS. Categorisation is via
+ * positive) and is computed in Rust - never derive or re-sign it in TS. Categorisation is via
  * `splits` (one for a manual entry; ≥2 once FR-1.2 lands).
  */
 export interface Transaction {
@@ -266,7 +266,7 @@ export interface RulePreviewInput {
 
 /**
  * Deterministically extracted receipt fields (mirrors Rust `rules::receipt::ExtractedReceipt`).
- * Suggestions only — the user confirms/edits before anything is saved. `totalMinor` is integer
+ * Suggestions only - the user confirms/edits before anything is saved. `totalMinor` is integer
  * minor units (2-decimal assumption); the account currency is applied on save. Any field can be
  * `null` when nothing recognisable was found (low-confidence/manual state).
  */
@@ -281,7 +281,7 @@ export interface ExtractedReceipt {
 /**
  * Result of `extract_receipt` (mirrors Rust `commands::ocr::ReceiptExtraction`). `engineAvailable`
  * is false when the native OCR engine is not built on this platform (desktop dev/test, iOS
- * deferred) — the UI shows an "OCR engine not available yet" state instead of an error.
+ * deferred) - the UI shows an "OCR engine not available yet" state instead of an error.
  */
 export interface ReceiptExtraction {
   engineAvailable: boolean;
@@ -290,7 +290,7 @@ export interface ReceiptExtraction {
 
 /**
  * A draft transaction handed to the manual-entry form to PREFILL it (e.g. from an OCR scan,
- * FR-2.1). Not an IPC DTO — purely a frontend hand-off via router state. The user must still
+ * FR-2.1). Not an IPC DTO - purely a frontend hand-off via router state. The user must still
  * review/edit and explicitly Save; nothing is auto-committed. `totalMinor` is integer minor units.
  */
 export interface TransactionPrefill {

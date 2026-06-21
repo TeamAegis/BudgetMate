@@ -14,7 +14,7 @@ import type { AppState } from '../models';
 /**
  * App lock state + key lifecycle (FR-5.1 / FR-5.2). The DB key lives only in the Rust core; this
  * service mirrors the unlock state, drives unlock/lock IPC, and arms the security timers:
- *  - an idle timer (single `setTimeout`, reset on passive user activity — no polling) that locks
+ *  - an idle timer (single `setTimeout`, reset on passive user activity - no polling) that locks
  *    after the configured timeout, and
  *  - a Page-Visibility listener that locks immediately when the app/window is hidden
  *    (backgrounding clears the in-memory key).

@@ -15,7 +15,7 @@ let nextModalId = 0;
 
 /**
  * App-wide modal: a centred dialog card over a blurred, dimmed scrim. Every form in the app is a
- * modal (design-system §7) — the consumer renders this with `@if` and projects a `<form>`:
+ * modal (design-system §7) - the consumer renders this with `@if` and projects a `<form>`:
  *
  *   <app-modal [title]="editing() ? 'Modify a Rule' : 'Add a Rule'" (dismiss)="cancel()">
  *     <form class="modal-form" [formGroup]="form" (ngSubmit)="save()">
@@ -31,7 +31,7 @@ let nextModalId = 0;
  *
  * Keeping the footer inside the projected `<form>` preserves `type="submit"` / Enter-to-save while
  * the modal pins it below a scrollable body. Dumb component: no data, no business logic. It owns
- * dialog behaviour only — focus trap + restore, body scroll-lock, Escape and click-outside dismiss.
+ * dialog behaviour only - focus trap + restore, body scroll-lock, Escape and click-outside dismiss.
  * `busy` blocks dismissal while a save is in flight. Styling uses `ViewEncapsulation.None` scoped
  * under `.app-modal` so the projected `.modal-body`/`.modal-footer` can be laid out (same approach
  * as form-field), without leaking global rules.

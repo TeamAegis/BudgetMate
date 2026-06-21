@@ -10,11 +10,11 @@ arguments: [target]
 # Doc ↔ code alignment review
 
 Review **$1** (a doc path like `docs/architecture.md`, an area like `design` / `rust`, or `all`) and
-report where the documentation no longer matches the code — and which side should change.
+report where the documentation no longer matches the code - and which side should change.
 
 > Delegation: this skill forks into the **`doc-alignment-reviewer`** subagent. If `context: fork` is
 > not honored, spawn it explicitly with the Agent tool (`subagent_type: doc-alignment-reviewer`). The
-> reviewer is **read-only** — it proposes reconciliations; edits are a follow-up by you or the
+> reviewer is **read-only** - it proposes reconciliations; edits are a follow-up by you or the
 > `fullstack-engineer`.
 
 ## Procedure
@@ -34,9 +34,9 @@ Grouped by document: **Doc claim (path + quoted line) → Reality (`file:line`) 
 reconciliation** (the specific doc wording to change, or the code fix to make).
 
 ## Anti-patterns
-- Don't edit docs or code — output a reconciliation list only.
+- Don't edit docs or code - output a reconciliation list only.
 - Don't report style/typos; report substantive, misleading deviations.
-- Don't flag a deviation from memory — confirm against the current files first.
+- Don't flag a deviation from memory - confirm against the current files first.
 
 ## References
 All of `docs/`, `.claude/rules/`, `CLAUDE.md`. When a deviation is actually a missing feature rather

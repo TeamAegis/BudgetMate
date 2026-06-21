@@ -9,7 +9,7 @@ import { Injectable, NgZone, inject } from '@angular/core';
  * do, so fixed/pinned bottom UI (modal footers, the bottom nav) would hide behind it; and
  * `env(safe-area-inset-*)` is unreliable there (returns 0 on older Chromium / edge-to-edge mode).
  * See `.claude/rules/android.md`. Layout reads `var(--keyboard-inset)` to lift bottom-anchored
- * content. Verify on a real device — desktop WebView2 won't exercise this path.
+ * content. Verify on a real device - desktop WebView2 won't exercise this path.
  *
  * Idempotent; listeners run outside Angular (they only mutate a CSS variable, never app state).
  */
@@ -28,7 +28,7 @@ export class ViewportInsetsService {
     this.started = true;
 
     const update = (): void => {
-      // The portion of the layout viewport hidden below the visual viewport — i.e. the keyboard
+      // The portion of the layout viewport hidden below the visual viewport - i.e. the keyboard
       // (plus any bottom system UI the visual viewport excludes). Clamp to ≥0.
       const inset = Math.max(0, win.innerHeight - vv.height - vv.offsetTop);
       this.doc.documentElement.style.setProperty('--keyboard-inset', `${Math.round(inset)}px`);

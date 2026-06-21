@@ -1,4 +1,4 @@
-// ViewEncapsulation.None — everything is scoped under `.form-field` (set on the host) so these
+// ViewEncapsulation.None - everything is scoped under `.form-field` (set on the host) so these
 // rules reach the projected <input>/<select> without leaking to the rest of the app.
 .form-field {
   display: block;

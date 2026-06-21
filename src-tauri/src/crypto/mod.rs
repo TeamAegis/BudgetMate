@@ -14,7 +14,7 @@ pub enum CryptoError {
 
 /// Argon2id parameters, **recorded per-install** (in the vault meta sidecar) so a future open
 /// derives the identical key even if the crate's defaults change between versions. NEVER mutate
-/// these for an existing install — it would change the derived key and lock the user out.
+/// these for an existing install - it would change the derived key and lock the user out.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct KdfParams {
     /// Always "argon2id" for now; recorded for forward-compatibility.
@@ -70,7 +70,7 @@ pub fn derive_key_with_params(
 }
 
 /// Encode a raw key as the lowercase hex SQLCipher expects in `PRAGMA key = "x'<hex>'"`.
-/// The returned string contains key material — do not log it.
+/// The returned string contains key material - do not log it.
 pub fn key_to_sqlcipher_hex(key: &[u8; 32]) -> Zeroizing<String> {
     let mut s = String::with_capacity(64);
     for b in key.iter() {

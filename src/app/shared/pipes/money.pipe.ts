@@ -2,7 +2,7 @@ import { Pipe, PipeTransform } from '@angular/core';
 import type { Money } from '../../core/models';
 
 /**
- * Formats integer minor units + currency for display. PRESENTATION ONLY — performs no money
+ * Formats integer minor units + currency for display. PRESENTATION ONLY - performs no money
  * arithmetic (all money math stays in Rust, per CLAUDE.md). Uses Intl for locale-aware grouping
  * and the correct minor-unit scale per currency.
  */

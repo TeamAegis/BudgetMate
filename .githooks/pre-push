@@ -1,5 +1,5 @@
 #!/bin/sh
-# BudgetMate pre-push hook — blocks DIRECT pushes to main.
+# BudgetMate pre-push hook - blocks DIRECT pushes to main.
 #
 # main is protected client-side (server-side branch protection needs a paid/public repo).
 # All changes go through a feature branch + PR (see .claude/skills/feature-branch and

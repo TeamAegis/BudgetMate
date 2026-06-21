@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 import { Spinner } from '../spinner/spinner';
 
 /**
- * Pill button — the single source of the `.btn` styling that was previously copy-pasted across
+ * Pill button - the single source of the `.btn` styling that was previously copy-pasted across
  * features. Dumb/presentational: the consumer keeps the `(click)` handler on `<app-button>` (the
  * native click bubbles from the inner button) and owns any Lucide icon, projected into the
  * `[icon]` slot. Text goes in the default slot.

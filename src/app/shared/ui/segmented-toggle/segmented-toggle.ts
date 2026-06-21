@@ -6,7 +6,7 @@ export interface SegmentOption {
 }
 
 /**
- * Pill segmented toggle (design-system §7) — a small set of mutually-exclusive options shown as a
+ * Pill segmented toggle (design-system §7) - a small set of mutually-exclusive options shown as a
  * single pill, the active one filled coral. Used for Daily/Weekly/Monthly period and
  * Ongoing/Completed goal filters. Dumb/presentational and two-way bound:
  *

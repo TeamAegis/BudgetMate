@@ -6,7 +6,7 @@ description: Create and apply a safe, forward-only, versioned SQLCipher schema m
 # Database migrations (SQLCipher)
 
 Vault uses SQLite encrypted with SQLCipher (bundled `rusqlite` 0.37 with the
-`bundled-sqlcipher-vendored-openssl` feature — **not** `tauri-plugin-sql`). Migrations are
+`bundled-sqlcipher-vendored-openssl` feature - **not** `tauri-plugin-sql`). Migrations are
 forward-only and versioned.
 
 ## This project's mechanism (concrete)
@@ -20,10 +20,10 @@ Implemented in [`src-tauri/src/db/mod.rs`](../../../src-tauri/src/db/mod.rs):
   ];
   ```
 - `run_migrations(conn, now_iso)` creates `schema_migrations` if needed, reads
-  `MAX(version)`, and applies every higher migration — each inside its **own** transaction
+  `MAX(version)`, and applies every higher migration - each inside its **own** transaction
   together with its `INSERT INTO schema_migrations(version, applied_at)`. It runs at startup
   **after** `open_encrypted` sets `PRAGMA key`.
-- The SQL file contains **only** the forward DDL — the runner records the version; do **not** put
+- The SQL file contains **only** the forward DDL - the runner records the version; do **not** put
   the `schema_migrations` insert or `BEGIN/COMMIT` in the `.sql` file.
 
 ## Rules

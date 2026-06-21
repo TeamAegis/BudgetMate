@@ -22,7 +22,7 @@ pub fn init<R: Runtime, C: DeserializeOwned>(
     let handle = api
         .register_android_plugin(PLUGIN_IDENTIFIER, "OcrPlugin")
         .map_err(|e| Error::Plugin(e.to_string()))?;
-    // iOS (Apple Vision) is deferred — no native plugin is registered in v1.
+    // iOS (Apple Vision) is deferred - no native plugin is registered in v1.
     #[cfg(not(target_os = "android"))]
     let handle: PluginHandle<R> = unimplemented!("iOS OCR (Apple Vision) is deferred for v1");
     Ok(Ocr(handle))

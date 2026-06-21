@@ -1,4 +1,4 @@
-//! Savings-goal commands (FR-3.2) — thin wrappers over `db::goals`, using the managed `DbState`.
+//! Savings-goal commands (FR-3.2) - thin wrappers over `db::goals`, using the managed `DbState`.
 //! `target`/`saved` are the user's major-unit input (e.g. "10000.00"); Rust parses them to integer
 //! minor units. No money math happens in TypeScript.
 

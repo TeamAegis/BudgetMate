@@ -1,6 +1,6 @@
-// Global keyframes + enter/leave classes — see docs/design/design-system.md §6 (subtle, fast,
+// Global keyframes + enter/leave classes - see docs/design/design-system.md §6 (subtle, fast,
 // progressive). We use Angular's native CSS animation hooks (animate.enter / animate.leave,
-// Angular 20.2+) instead of the deprecated @angular/animations DSL — lighter bundle, hardware
+// Angular 20.2+) instead of the deprecated @angular/animations DSL - lighter bundle, hardware
 // accelerated, and reduced-motion is honoured by the @media guard below (no JS engine needed).
 //
 // Durations reference the motion tokens, which are zeroed under prefers-reduced-motion; the guard
@@ -67,7 +67,7 @@
 // ---- Enter classes (for [animate.enter]) ----
 // List items rise-and-fade as they enter; stagger them by setting an inline delay, capped for long
 // lists: [style.animation-delay]="(i < 12 ? i * 40 : 0) + 'ms'".  (Routed-page entrance is handled
-// centrally by the app shell — see src/app/app.scss `router-outlet + *` — so pages need no class.)
+// centrally by the app shell - see src/app/app.scss `router-outlet + *` - so pages need no class.)
 .list-item-enter {
   animation: fade-in-up var(--motion-standard) var(--easing) both;
 }

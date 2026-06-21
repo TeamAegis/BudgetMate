@@ -1,4 +1,4 @@
-//! Recurring-rule scheduling (FR-1.3). Pure date logic — no DB, no Tauri — so it is unit-testable.
+//! Recurring-rule scheduling (FR-1.3). Pure date logic - no DB, no Tauri - so it is unit-testable.
 //! Occurrences are materialised lazily on app open (never a background scheduler, NFR-Perf3); this
 //! module computes WHICH dates are due and the next run date, idempotently.
 
@@ -52,7 +52,7 @@ pub struct Plan {
 }
 
 /// Compute due occurrences from `next_run` up to and including `today`, skipping any already
-/// covered by `last_materialised` (defensive — keeps it idempotent even if the pointers drift).
+/// covered by `last_materialised` (defensive - keeps it idempotent even if the pointers drift).
 /// Stepping is bounded so malformed data can never loop forever.
 pub fn plan(
     schedule: Schedule,
@@ -64,7 +64,7 @@ pub fn plan(
     let mut d = next_run;
     let mut guard = 0;
     while d <= today {
-        // (avoid Option::is_none_or — newer than the project MSRV 1.80)
+        // (avoid Option::is_none_or - newer than the project MSRV 1.80)
         if last_materialised.map_or(true, |lm| d > lm) {
             due.push(d);
         }

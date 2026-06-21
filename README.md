@@ -5,7 +5,7 @@
 > **Your money, your control.**
 
 A **strictly offline**, privacy-first mobile budget app. Manual expense tracking, on-device OCR
-receipt scanning, deterministic categorisation. Your financial data never leaves your device —
+receipt scanning, deterministic categorisation. Your financial data never leaves your device -
 **no network, no cloud, no AI logic, no telemetry.**
 
 - **Platforms (v1):** Android. **Windows desktop** is a dev/test target only (fast UI + IPC
@@ -20,12 +20,12 @@ and [`CLAUDE.md`](CLAUDE.md) for the operating rules.
 ## Layout
 ```
 src/                     Angular app (core/bridge · core/models · features · shared)
-src/styles/_tokens.scss  Design tokens (coral / Poppins) — mirrors docs/design/design-system.md
+src/styles/_tokens.scss  Design tokens (coral / Poppins) - mirrors docs/design/design-system.md
 design-tokens.json       Same tokens, machine-readable (for tooling / sync)
 docs/design/             UI/UX spec: design-system · ux-blueprint · screens (FR↔command map)
 src-tauri/src/           Rust core: db (SQLCipher) · crypto (Argon2id) · domain (money)
                          · rules (receipt/engine/dedup) · import · export · commands
-src-tauri/plugins/ocr/   Custom OCR plugin — Android ML Kit text recognition (raw text+boxes; desktop NotImplemented)
+src-tauri/plugins/ocr/   Custom OCR plugin - Android ML Kit text recognition (raw text+boxes; desktop NotImplemented)
 src-tauri/capabilities/  Tauri ACL (minimal grants)
 scripts/guards.mjs       no-network / no-telemetry / no-float-money CI guards
 .claude/rules,skills     Agent rules (frontend · rust · database · design) + skills
@@ -40,14 +40,14 @@ scripts/guards.mjs       no-network / no-telemetry / no-float-money CI guards
   Command-line Tools; set `ANDROID_HOME`, `NDK_HOME`, `JAVA_HOME` (Android Studio JBR);
   `rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android`.
 - **After cloning, enable the git hooks** (protects `main`; blocks direct pushes):
-  `git config core.hooksPath .githooks`. Work happens on feature branches + PRs — see the
+  `git config core.hooksPath .githooks`. Work happens on feature branches + PRs - see the
   `feature-branch` / `merge-pr` skills and the "Git & CI workflow" section of `CLAUDE.md`.
 
 ## Commands
 ```
 npm run start                 # Angular dev server on :4200 (browser preview)
 npm run build                 # static build -> dist/vault/browser
-npm run tauri dev             # desktop dev (WebView2) — UI + Rust bridge
+npm run tauri dev             # desktop dev (WebView2) - UI + Rust bridge
 npm run tauri android init    # first-time: generate src-tauri/gen/android (COMMIT it)
 npm run tauri android dev     # run on emulator/device
 npm run lint                  # eslint (enforces the core/bridge IPC boundary)
@@ -70,14 +70,14 @@ npm run lint && npm test && npm run guards \
   [`docs/design/`](docs/design/); tokens are in
   [`src/styles/_tokens.scss`](src/styles/_tokens.scss) + [`design-tokens.json`](design-tokens.json)
   and the build rule is [`.claude/rules/design.md`](.claude/rules/design.md).
-- Fonts (**Poppins**) are **bundled** — drop the `.woff2` files into
+- Fonts (**Poppins**) are **bundled** - drop the `.woff2` files into
   [`src/assets/fonts/`](src/assets/fonts/README.md) (no CDN). The UI falls back to `system-ui`
   until then.
 - All IPC goes through `src/app/core/bridge` (lint-enforced). Add features via the `new-feature`
   skill (Rust command + DTO first, then mirror the TS model, bridge wrapper, component).
 - **OCR (FR-2.1):** the Android engine is the native **ML Kit** text recogniser (Apple Vision is
   deferred with iOS; desktop returns `NotImplemented`). The plugin returns **raw text + boxes
-  only** — merchant/date/total extraction is deterministic Rust (`src-tauri/src/rules/receipt`),
+  only** - merchant/date/total extraction is deterministic Rust (`src-tauri/src/rules/receipt`),
   and every result is **confirmed by the user before saving** (never auto-committed).
 - The Rust core compiles and links bundled SQLCipher on Windows; an encrypted on-disk round-trip
   test proves encryption + key rejection at runtime. SQLCipher cross-compile to Android is

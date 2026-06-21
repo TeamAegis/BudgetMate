@@ -17,7 +17,7 @@ describe('GoalProgressRow', () => {
     return fixture;
   }
 
-  it('clamps the fill fraction to 0–100', () => {
+  it('clamps the fill fraction to 0-100', () => {
     expect(make(500_000, 1_000_000).componentInstance['percent']()).toBe(50);
     expect(make(0, 1_000_000).componentInstance['percent']()).toBe(0);
     // Over-saved goals never exceed a full bar.

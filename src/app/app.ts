@@ -70,11 +70,11 @@ export class App implements OnInit {
 
   async ngOnInit(): Promise<void> {
     // Publish the keyboard inset as --keyboard-inset for keyboard-aware bottom layout (Android
-    // WebView doesn't resize for the keyboard — see core/layout/viewport-insets.service.ts).
+    // WebView doesn't resize for the keyboard - see core/layout/viewport-insets.service.ts).
     this.viewportInsets.start();
 
     if (!isTauri()) {
-      // Plain browser preview (ng serve) — the Rust core isn't present.
+      // Plain browser preview (ng serve) - the Rust core isn't present.
       this.coreError.set('Running in browser preview (no Tauri core).');
       return;
     }

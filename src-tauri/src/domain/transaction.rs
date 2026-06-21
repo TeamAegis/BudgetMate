@@ -4,7 +4,7 @@
 //! Categorisation is modelled through `tx_splits` (the `transactions` row has no category column),
 //! so a manual entry is the transaction plus exactly one split; FR-1.2 generalises to ≥2.
 //!
-//! The stored `amount_minor` is SIGNED — expenses are negative, income/transfers positive —
+//! The stored `amount_minor` is SIGNED - expenses are negative, income/transfers positive -
 //! derived from the chosen category's kind so all sign/money logic stays in Rust (never TS).
 
 use std::str::FromStr;

@@ -9,7 +9,7 @@
   min-height: var(--layout-header-h);
   padding: var(--space-4) var(--space-6);
   // Respect notch / safe-area. Uses --safe-area-top (defaults to env(), can be overridden at
-  // runtime by the visualViewport workaround / a native inset source — see android.md).
+  // runtime by the visualViewport workaround / a native inset source - see android.md).
   padding-top: max(var(--space-4), var(--safe-area-top));
 
   // Brand wordmark (Home). Fills the row so the trailing icon stays right-aligned.
@@ -46,7 +46,7 @@
     }
   }
 
-  // The back affordance is a button, not a link — strip the native chrome.
+  // The back affordance is a button, not a link - strip the native chrome.
   .back {
     padding: 0;
     background: none;

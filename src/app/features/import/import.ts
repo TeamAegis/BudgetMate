@@ -54,7 +54,7 @@ export class Import {
   protected readonly baseCurrency = signal('MUR');
   /** Total (minor units) from the extractor, kept aside so the hand-off uses exact integer money. */
   private readonly totalMinor = signal<number | null>(null);
-  /** True when extraction ran but found nothing usable — surfaced as a low-confidence hint. */
+  /** True when extraction ran but found nothing usable - surfaced as a low-confidence hint. */
   protected readonly lowConfidence = computed(
     () =>
       this.phase() === 'review' &&
@@ -70,7 +70,7 @@ export class Import {
     total: this.fb.nonNullable.control('', Validators.pattern(DECIMAL)),
   });
 
-  /** Money preview for the read-only "extracted total" chip (display only — no TS money math). */
+  /** Money preview for the read-only "extracted total" chip (display only - no TS money math). */
   protected readonly totalPreview = computed(() => {
     const minor = this.totalMinor();
     return minor === null ? null : { amountMinor: minor, currency: this.baseCurrency() };
@@ -97,7 +97,7 @@ export class Import {
     } finally {
       this.lockService.endTrustedExcursion();
     }
-    if (!path) return; // cancelled — stay on the current phase
+    if (!path) return; // cancelled - stay on the current phase
 
     this.phase.set('processing');
     try {
@@ -149,7 +149,7 @@ export class Import {
     void this.router.navigate(['/expenses']);
   }
 
-  /** Exact major-unit string for the 2-dp extractor total (display/edit only — no money math). */
+  /** Exact major-unit string for the 2-dp extractor total (display/edit only - no money math). */
   private majorAmount(minor: number): string {
     return (Math.abs(minor) / 100).toFixed(2);
   }

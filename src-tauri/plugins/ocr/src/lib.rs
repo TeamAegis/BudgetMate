@@ -3,13 +3,13 @@
 //! Contract (architecture.md §6.2):
 //!   invoke("plugin:ocr|recognize_text", { imagePath }) -> { blocks: [{ text, bbox, confidence }] }
 //!
-//! The plugin returns **raw recognised text + boxes only** — it makes no financial decision.
+//! The plugin returns **raw recognised text + boxes only** - it makes no financial decision.
 //! Field extraction (merchant/date/total) is deterministic Rust in `app_lib::rules::receipt`,
 //! and results are always confirmed by the user before saving.
 //!
-//! Native engines: **Android** uses Google ML Kit Text Recognition (bundled, on-device) — see
+//! Native engines: **Android** uses Google ML Kit Text Recognition (bundled, on-device) - see
 //! `mobile.rs` + `android/`. **iOS** (Apple Vision) is DEFERRED. On **desktop** (dev/test target)
-//! the engine is a stub returning `Error::NotImplemented` so callers fail explicitly — see
+//! the engine is a stub returning `Error::NotImplemented` so callers fail explicitly - see
 //! `desktop.rs`. The command surface, types, ACL, and bridge wiring are identical across targets.
 
 mod models;

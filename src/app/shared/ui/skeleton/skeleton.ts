@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 
 /**
- * Loading placeholder — pulsing token-coloured blocks shown while data loads, so a screen reveals
+ * Loading placeholder - pulsing token-coloured blocks shown while data loads, so a screen reveals
  * its shape progressively instead of a blank "Loading…" (design-system §6). Decorative: the host
  * carries `aria-hidden`/`aria-busy`, so screen readers skip the bones and announce the busy region.
  * The pulse is disabled under prefers-reduced-motion (see _animations.scss).

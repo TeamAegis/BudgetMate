@@ -13,9 +13,9 @@ import { MoneyPipe } from '../../pipes/money.pipe';
 /**
  * Savings-goal progress row (FR-3.2, design-system §7 GoalProgressRow). Label + pill track with a
  * fill knob + `current / target` amounts. The fill animates from 0 on mount (honours
- * reduced-motion). **Completed** state: full track + trailing check icon + strikethrough title —
+ * reduced-motion). **Completed** state: full track + trailing check icon + strikethrough title -
  * meaning is conveyed by icon + text, never colour alone (a11y). Display-only: progress is derived
- * from the saved amount, not dragged. Dumb component — the whole row is a button that emits `edit`;
+ * from the saved amount, not dragged. Dumb component - the whole row is a button that emits `edit`;
  * the feature opens the edit modal in response.
  */
 @Component({
@@ -27,7 +27,7 @@ import { MoneyPipe } from '../../pipes/money.pipe';
       type="button"
       class="goal-row"
       (click)="edit.emit()"
-      [attr.aria-label]="name() + (completed() ? ' — completed' : '')"
+      [attr.aria-label]="name() + (completed() ? ' - completed' : '')"
     >
       <div class="head">
         <span class="name" [class.done]="completed()">{{ name() }}</span>
@@ -60,7 +60,7 @@ export class GoalProgressRow {
   /** Flips true after first render so the fill transitions from 0 → percent (reduced-motion safe). */
   protected readonly ready = signal(false);
 
-  /** Fill fraction, clamped to 0–100 (a guard, not money math — the value comes from Rust). */
+  /** Fill fraction, clamped to 0-100 (a guard, not money math - the value comes from Rust). */
   protected readonly percent = computed(() => {
     const target = this.targetMinor();
     if (target <= 0) return 0;

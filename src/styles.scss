@@ -1,4 +1,4 @@
-// Global styles — design tokens, bundled fonts, base reset.
+// Global styles - design tokens, bundled fonts, base reset.
 // Tokens are plain CSS custom properties (no SCSS mixins). See docs/design/design-system.md.
 @use 'styles/tokens';
 @use 'styles/fonts';
@@ -9,7 +9,7 @@
 }
 
 // Native-app feel: content still scrolls, but the scrollbar is never shown (it's an app, not a
-// website). Applies to every scroll container — page, modal body, dropdown menus.
+// website). Applies to every scroll container - page, modal body, dropdown menus.
 * {
   scrollbar-width: none; // Firefox
   -ms-overflow-style: none; // legacy Edge
@@ -17,7 +17,7 @@
 *::-webkit-scrollbar {
   width: 0;
   height: 0;
-  display: none; // Chromium — Android System WebView / WebView2
+  display: none; // Chromium - Android System WebView / WebView2
 }
 
 html,

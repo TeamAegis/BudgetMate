@@ -1,4 +1,4 @@
-# BudgetMate — UX Blueprint
+# BudgetMate - UX Blueprint
 
 How the product behaves: principles, information architecture, navigation, the core flows,
 screen states, offline-specific UX, accessibility, and an honest map of what the current
@@ -51,8 +51,8 @@ App Shell (header + bottom nav)
 
 Accounts & Categories are managed under Settings (foundational data; seeded with a default
 account + category set on first run). v1 is single-account in practice (multi-account schema, no
-switcher). **Recurring** rules live as a Settings sub-screen (`/settings/recurring`) — matching the
-code — not under Expenses; occurrences still materialise lazily on app open (FR-1.3), this is just
+switcher). **Recurring** rules live as a Settings sub-screen (`/settings/recurring`) - matching the
+code - not under Expenses; occurrences still materialise lazily on app open (FR-1.3), this is just
 where the templates are managed.
 
 Onboarding (first run, before the shell): intro → income setup → first goal (the
@@ -62,9 +62,9 @@ Onboarding (first run, before the shell): intro → income setup → first goal 
 
 ## 3. Navigation map (primary)
 - **Bottom nav** is the spine: Home · Expenses · Goals · Analytics (always one canonical
-  label set — fix the Figma "Charts/Analytics" drift).
+  label set - fix the Figma "Charts/Analytics" drift).
 
-**Bottom-nav binding** (one source of truth — kills the "Charts" drift at the route level):
+**Bottom-nav binding** (one source of truth - kills the "Charts" drift at the route level):
 | Tab | Label | Route path | `aria-label` | Route `data.title` |
 |---|---|---|---|---|
 | Home | Home | `/home` | "Home" | "BudgetMate" (brand header) |
@@ -95,7 +95,7 @@ Sets the SQLCipher passphrase (FR-5.1, NFR-P2) and base currency.
 
 ### 4.2 App open (returning)
 `Cold start → splash → LockScreen (biometric/passphrase) → unlock key in memory → Dashboard.`
-On open, recurring rules materialise lazily (FR-1.3) — show a subtle "updated" note if new
+On open, recurring rules materialise lazily (FR-1.3) - show a subtle "updated" note if new
 occurrences were added.
 
 ### 4.3 Add a transaction (manual)
@@ -103,20 +103,20 @@ occurrences were added.
 optional: Split (SplitEditor, remaining must = 0) / Recurring / Currency+rate → Save (ACID).`
 Applicable rules auto-fill category, with the matched rule shown and overridable.
 
-### 4.4 Scan a receipt (OCR) — [NEW, FR-2.1]
+### 4.4 Scan a receipt (OCR) - [NEW, FR-2.1]
 `Expenses → Scan Receipt → camera/preview → on-device OCR (progress, off-thread) →
 extracted merchant/date/total shown as EDITABLE fields → user confirms/corrects → continues
 into Add Transaction prefilled.`
 100% on-device (native Vision/ML Kit). Never auto-saves. If extraction confidence is low,
 fields are flagged for review, not hidden.
 
-### 4.5 Import a bank file — [NEW, FR-2.2/2.3/2.4]
+### 4.5 Import a bank file - [NEW, FR-2.2/2.3/2.4]
 `Expenses → Import → pick CSV/OFX/QFX → (CSV) map columns → preview parsed rows →
 rule engine applies categories (each shows matched rule) → dedup scan flags likely
 duplicates for review → user resolves → confirm → ACID batch insert.`
 Nothing is dropped silently; duplicates are flagged for the user to keep/skip.
 
-### 4.6 Set & track a budget envelope — [NEW, FR-3.1]
+### 4.6 Set & track a budget envelope - [NEW, FR-3.1]
 `Settings → Budgets → add category cap → Dashboard/Analytics show spent vs remaining;
 approaching cap = warning colour, over = danger.`
 
@@ -124,7 +124,7 @@ approaching cap = warning colour, over = danger.`
 `Goals → FAB → Add Goal (name, target, optional date) → contribute / track →
 Ongoing list shows progress rows; completed move to Completed tab.`
 
-### 4.8 Export & backup — [NEW, FR-4.x]
+### 4.8 Export & backup - [NEW, FR-4.x]
 `Settings → Export → choose CSV/XLSX → system save dialog → file written.`
 `Settings → Backup → produce encrypted .vaultbak → system save/share to chosen location.`
 `Settings → Restore → pick .vaultbak → enter passphrase → replace or merge (ACID).`
@@ -135,29 +135,29 @@ Ongoing list shows progress rows; completed move to Completed tab.`
 Every list/data screen must define all five:
 - **Loading:** brief, non-blocking; progressive content; no full-screen spinner on launch.
 - **Empty:** illustration + one-line explanation + primary CTA (Figma already has good
-  empties for Goals and Analytics — reuse that pattern everywhere).
+  empties for Goals and Analytics - reuse that pattern everywhere).
 - **Populated:** the normal case.
-- **Error:** inline, plain-language, with a retry/fix action (e.g. "Couldn't read this file —
+- **Error:** inline, plain-language, with a retry/fix action (e.g. "Couldn't read this file -
   check the format" for a bad OFX). Never a raw stack trace.
-- **Busy/processing:** OCR running, import parsing, export writing — show determinate or
+- **Busy/processing:** OCR running, import parsing, export writing - show determinate or
   clearly indeterminate progress, keep UI responsive, allow cancel where safe.
 
 Special states required by the FRs:
-- **Locked** (pre-unlock) — LockScreen.
-- **Over-budget** envelope — danger treatment.
-- **Dedup review** — flagged rows visually distinct (warning), with keep/skip.
-- **Low-confidence OCR field** — flagged for attention, still editable.
+- **Locked** (pre-unlock) - LockScreen.
+- **Over-budget** envelope - danger treatment.
+- **Dedup review** - flagged rows visually distinct (warning), with keep/skip.
+- **Low-confidence OCR field** - flagged for attention, still editable.
 
 ---
 
 ## 6. Offline-specific & privacy UX (ties to NFR-P1/P4, research §4/§7)
-- **No network affordances anywhere** — no "sync", "share to cloud", "sign in", online avatars,
+- **No network affordances anywhere** - no "sync", "share to cloud", "sign in", online avatars,
   or remote images. Their absence is intentional and should be explained once in onboarding
   ("BudgetMate works entirely on your device").
-- **All assets bundled** — fonts (Poppins), icons, illustrations are local. A missing remote
+- **All assets bundled** - fonts (Poppins), icons, illustrations are local. A missing remote
   asset must be impossible by construction.
-- **Backups are files, not clouds** — the mental model is "save a file you control".
-- **Trust signals** — a small, honest note in Settings: data is encrypted on-device
+- **Backups are files, not clouds** - the mental model is "save a file you control".
+- **Trust signals** - a small, honest note in Settings: data is encrypted on-device
   (SQLCipher), nothing leaves the phone, no analytics.
 
 ---
@@ -168,7 +168,7 @@ Special states required by the FRs:
 - **Colour is never the only signal:** income/expense use sign + colour; over-budget uses
   icon + colour; dedup uses label + colour.
 - **Targets:** ≥48px tap targets (Android v1 primary target; ≥ the WCAG 2.2 SC 2.5.8 24px floor
-  and the iOS 44pt minimum) — nav, chips, FAB, list rows. Token `--tap-target-min`.
+  and the iOS 44pt minimum) - nav, chips, FAB, list rows. Token `--tap-target-min`.
 - **Dynamic type:** respect OS font scaling; layouts reflow, no clipping.
 - **Labels:** all icons have accessible names; inputs have visible labels (not placeholder-only).
 - **Motion:** honour `prefers-reduced-motion`.
@@ -176,7 +176,7 @@ Special states required by the FRs:
 
 ---
 
-## 8. Coverage gap analysis — Figma vs FRs
+## 8. Coverage gap analysis - Figma vs FRs
 
 What the **current Figma covers** (designed, needs normalisation only):
 | Area | Figma screens | FRs |
@@ -190,8 +190,8 @@ What the **current Figma covers** (designed, needs normalisation only):
 What is **missing and must be designed** (specified in this blueprint + `design-system.md`):
 | Missing screen / flow | FR | Priority |
 |---|---|---|
-| **Lock screen** (biometric/passphrase) | FR-5.1 | **High** — app entry gate |
-| **Receipt scan + OCR confirm** | FR-2.1 | **High** — headline feature |
+| **Lock screen** (biometric/passphrase) | FR-5.1 | **High** - app entry gate |
+| **Receipt scan + OCR confirm** | FR-2.1 | **High** - headline feature |
 | **Import wizard** (CSV/OFX/QFX → rules → dedup review) | FR-2.2/2.3/2.4 | **High** |
 | **Add/Edit Transaction** full form | FR-1.1 | **High** |
 | **Split editor** | FR-1.2 | Medium |
@@ -206,12 +206,12 @@ What is **missing and must be designed** (specified in this blueprint + `design-
 
 Also flagged for cleanup in the Figma (see `screens.md` for nodes):
 - "Charts" vs "Analytics" nav label inconsistency; uneven nav spacing across screens.
-- Duplicate "Transaction" quick-action labels (placeholder) — normalise to the canonical set
+- Duplicate "Transaction" quick-action labels (placeholder) - normalise to the canonical set
   **"Add Transaction / Add Goal / Scan Receipt"**.
 - Modal/dialog titles use the spec'd copy **"Add X" / "Edit X"** (e.g. "Add Goal", "Edit
-  Transaction") — never "Modify"/"New".
-- Two near-duplicate intro frames — consolidate.
-- Leftover delivery-app frames ("Order Tracking", "Set Location") — unrelated, delete.
+  Transaction") - never "Modify"/"New".
+- Two near-duplicate intro frames - consolidate.
+- Leftover delivery-app frames ("Order Tracking", "Set Location") - unrelated, delete.
 - Coral-on-white small text accessibility failures.
 
 ---
