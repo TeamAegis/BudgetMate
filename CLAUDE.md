@@ -80,7 +80,7 @@ only (WebView2); **iOS is deferred** (macOS/Xcode-only build). See `docs/archite
   ux-blueprint, screens) plus `ui-ux-principles.md` (the UI/UX heuristics knowledge base — UX laws,
   WCAG 2.2, anti-patterns — validate against it with `/design-check`, **not** a feature backlog);
   `docs/financial-knowledge.md` — financial-domain reference (definitions,
-  budgeting frameworks, category taxonomy, MUR formatting, 🇲🇺 statutory figures) used to validate
+  budgeting frameworks, category taxonomy, MUR formatting, Mauritius statutory figures) used to validate
   correctness + low-literacy usability, **not** a feature backlog. Update these when behaviour/UI
   changes.
 - `.claude/agents/` — **role subagents** (personas, scoped tools). `.claude/skills/` — **task

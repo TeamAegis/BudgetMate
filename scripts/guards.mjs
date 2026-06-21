@@ -7,6 +7,9 @@
 //   2. No-telemetry — forbidden analytics/crash-reporter crate + npm names.
 //   3. No-float-money — no f32/f64 in Rust money paths (annotate genuine non-money floats with
 //                       `// guard:allow-float`).
+//   4. Style          - no em/en dashes and no emoji (emoji FAIL, dashes reported). README is
+//                       emoji-exempt; the Claude Code PR-trailer line is whitelisted. See
+//                       .claude/rules/style.md.
 //
 // On Android, Tauri CORE transitively pulls reqwest/hyper via a feature we cannot disable without
 // forking Tauri. That is acknowledged here: per architecture §7.1 the load-bearing Android
@@ -17,7 +20,7 @@
 // Run: npm run guards   (also part of the pre-PR gate).
 
 import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
-import { join, dirname, relative } from 'node:path';
+import { join, dirname, relative, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -165,16 +168,73 @@ function* walk(dir) {
   }
 }
 
-console.log('Running BudgetMate guards (no-network / no-telemetry / no-float-money)…');
+const EM_DASH = new RegExp(String.fromCodePoint(0x2014));
+const EN_DASH = new RegExp(String.fromCodePoint(0x2013));
+// Emoji ranges: pictographs, regional-indicator flags, misc-symbols + dingbats, and the variation
+// selector. Kept narrow on purpose so typographic arrows (U+2190..U+21FF) are NOT matched.
+const EMOJI =
+  /[\u{1F000}-\u{1FAFF}]|[\u{1F1E6}-\u{1F1FF}]|[\u{2600}-\u{27BF}]|[\u{2B00}-\u{2BFF}]|\u{FE0F}/u;
+// The Claude Code PR-trailer is mandatory (CLAUDE.md / feature-branch). Built from a code point so
+// this file stays emoji-free; any line containing it is exempt from the emoji rule.
+const TRAILER = `${String.fromCodePoint(0x1f916)} Generated with [Claude Code](https://claude.com/claude-code)`;
+const STYLE_EXTS = new Set([
+  '.md', '.ts', '.tsx', '.js', '.mjs', '.cjs', '.rs', '.scss', '.css', '.html',
+  '.json', '.yml', '.yaml', '.kt', '.kts', '.swift', '.toml', '.sh',
+]);
+const STYLE_PRUNE = new Set(['node_modules', 'target', 'dist', '.git', '.angular', 'gen']);
+
+function* walkStyle(dir) {
+  for (const entry of readdirSync(dir)) {
+    if (STYLE_PRUNE.has(entry)) continue;
+    const full = join(dir, entry);
+    if (statSync(full).isDirectory()) yield* walkStyle(full);
+    else yield full;
+  }
+}
+
+// 4. Style: emoji are FAILED; em/en dashes are REPORTED while the house-style dashes are burned
+// down across follow-up PRs. README is emoji-exempt; the PR-trailer line is whitelisted.
+function checkStyle() {
+  const dashByFile = {};
+  for (const file of walkStyle(ROOT)) {
+    const rel = relative(ROOT, file).replace(/\\/g, '/');
+    if (rel.endsWith('package-lock.json')) continue;
+    const inGithooks = rel.startsWith('.githooks/');
+    if (!STYLE_EXTS.has(extname(file)) && !inGithooks) continue;
+    const isReadme = rel === 'README.md';
+    const lines = readFileSync(file, 'utf8').split('\n');
+    lines.forEach((line, i) => {
+      if (line.includes(TRAILER)) return;
+      if (!isReadme && EMOJI.test(line)) {
+        errors.push(
+          `[style] emoji in ${rel}:${i + 1} - remove it (emoji allowed only in README; see .claude/rules/style.md)`,
+        );
+      }
+      if (EM_DASH.test(line) || EN_DASH.test(line)) dashByFile[rel] = (dashByFile[rel] || 0) + 1;
+    });
+  }
+  const files = Object.keys(dashByFile);
+  if (files.length) {
+    const total = files.reduce((n, f) => n + dashByFile[f], 0);
+    note(
+      `[style] ${total} em/en dash occurrence(s) across ${files.length} file(s) to burn down ` +
+        `(report-only for now; see .claude/rules/style.md):`,
+    );
+    for (const f of files.sort((a, b) => dashByFile[b] - dashByFile[a])) note(`    ${dashByFile[f]}  ${f}`);
+  }
+}
+
+console.log('Running BudgetMate guards (no-network / no-telemetry / no-float-money / style)…');
 checkDirectDeps();
 checkCargoLock();
 checkAndroidManifest();
 checkTelemetry();
 checkFloatMoney();
+checkStyle();
 
 if (errors.length) {
-  console.error(`\n✖ ${errors.length} guard violation(s):`);
+  console.error(`\n[x] ${errors.length} guard violation(s):`);
   for (const e of errors) console.error(`  ${e}`);
   process.exit(1);
 }
-console.log('✔ All guards passed.');
+console.log('[ok] All guards passed.');

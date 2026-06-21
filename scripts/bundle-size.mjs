@@ -30,7 +30,7 @@ const ERROR_KB = 500;
 const kb = (bytes) => (bytes / 1024).toFixed(2);
 
 function fail(msg) {
-  console.error(`✖ ${msg}`);
+  console.error(`[x] ${msg}`);
   process.exit(1);
 }
 
@@ -114,7 +114,7 @@ if (totalRawKb >= ERROR_KB) {
 }
 if (totalRawKb >= WARN_KB) {
   console.error(
-    `⚠ initial raw bundle ${kb(total.raw)} kB is over the ${WARN_KB} kB warning threshold (budget ${ERROR_KB} kB).`,
+    `[warn] initial raw bundle ${kb(total.raw)} kB is over the ${WARN_KB} kB warning threshold (budget ${ERROR_KB} kB).`,
   );
 }
-console.log(`✔ initial bundle within budget (${kb(total.raw)} kB raw / ${kb(total.gzip)} kB gzip).`);
+console.log(`[ok] initial bundle within budget (${kb(total.raw)} kB raw / ${kb(total.gzip)} kB gzip).`);

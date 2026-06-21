@@ -31,7 +31,7 @@ prioritized, evidence-backed gap list. You do not edit files.
 ## Reference map
 - `docs/functional-requirements.md`, `docs/architecture.md`, `docs/design/*`.
 - `docs/financial-knowledge.md` — financial-domain reference (taxonomy, MUR formatting, ratios,
-  🇲🇺 figures) when a gap touches money/categorisation/budgeting semantics.
+  Mauritius figures) when a gap touches money/categorisation/budgeting semantics.
 - `.claude/rules/{rust,frontend,design,database}.md` for the conventions a gap might violate.
 
 ## Output contract
