@@ -224,13 +224,114 @@ function checkStyle() {
   }
 }
 
-console.log('Running BudgetMate guards (no-network / no-telemetry / no-float-money / style)…');
+// 5. IPC contract: every Rust serde DTO must have a field-for-field TS mirror in core/models.
+// See .claude/rules/type-safety.md and docs/adr/0001. Pure regex (no Rust toolchain) so it runs in
+// the fast frontend CI job. It compares camelCased Rust struct field NAMES to the matching TS
+// interface; types and optionality stay human-owned (the curated bridge carries those invariants).
+const snakeToCamel = (s) => s.replace(/_([a-z0-9])/g, (_, c) => c.toUpperCase());
+
+// Rust serde structs that deliberately do NOT cross IPC (no TS mirror expected).
+const DTO_SKIP = new Set(['VaultMeta']);
+// Rust struct name -> TS interface name, for intentional renames.
+const DTO_NAME_MAP = { PreviewInput: 'RulePreviewInput' };
+
+function parseRustDtos() {
+  const dtos = {};
+  const dirs = ['domain', 'commands', 'vault', 'db', 'rules'].map((d) =>
+    join(ROOT, 'src-tauri', 'src', d),
+  );
+  const re = /((?:#\[[^\]]*\]\s*)+)pub struct (\w+)\s*\{([^}]*)\}/g;
+  for (const dir of dirs) {
+    if (!existsSync(dir)) continue;
+    for (const file of walk(dir)) {
+      if (!file.endsWith('.rs')) continue;
+      const text = readFileSync(file, 'utf8');
+      let m;
+      while ((m = re.exec(text))) {
+        const [, attrs, name, body] = m;
+        if (!/derive\([^)]*(Serialize|Deserialize)/.test(attrs)) continue;
+        if (!/rename_all\s*=\s*"camelCase"/.test(attrs)) continue;
+        const fields = new Set();
+        for (const fm of body.matchAll(/(?:^|\n)\s*pub\s+(\w+)\s*:/g)) {
+          fields.add(snakeToCamel(fm[1]));
+        }
+        dtos[name] = fields;
+      }
+    }
+  }
+  return dtos;
+}
+
+function parseTsInterfaces() {
+  const file = join(ROOT, 'src', 'app', 'core', 'models', 'index.ts');
+  if (!existsSync(file)) return {};
+  const text = readFileSync(file, 'utf8');
+  const fieldsOf = {};
+  const parentsOf = {};
+  const re = /export interface (\w+)(?:\s+extends\s+([\w,\s]+?))?\s*\{([^}]*)\}/g;
+  let m;
+  while ((m = re.exec(text))) {
+    const [, name, parents, body] = m;
+    const fields = new Set();
+    for (const fm of body.matchAll(/(?:^|\n)\s*(\w+)\??\s*:/g)) fields.add(fm[1]);
+    fieldsOf[name] = fields;
+    parentsOf[name] = parents ? parents.split(',').map((s) => s.trim()) : [];
+  }
+  const resolve = (name, seen = new Set()) => {
+    if (seen.has(name)) return new Set();
+    seen.add(name);
+    const out = new Set(fieldsOf[name] || []);
+    for (const p of parentsOf[name] || []) for (const f of resolve(p, seen)) out.add(f);
+    return out;
+  };
+  const resolved = {};
+  for (const name of Object.keys(fieldsOf)) resolved[name] = resolve(name);
+  return resolved;
+}
+
+function checkIpcContract() {
+  const rust = parseRustDtos();
+  const ts = parseTsInterfaces();
+  for (const [rname, rfields] of Object.entries(rust)) {
+    if (DTO_SKIP.has(rname)) continue;
+    const tname = DTO_NAME_MAP[rname] || rname;
+    const tfields = ts[tname];
+    if (!tfields) {
+      note(
+        `[ipc-contract] Rust DTO ${rname} has no TS interface ${tname} in core/models; ` +
+          `add the mirror, or list it in DTO_NAME_MAP / DTO_SKIP (scripts/guards.mjs).`,
+      );
+      continue;
+    }
+    for (const f of rfields) {
+      if (!tfields.has(f)) {
+        errors.push(
+          `[ipc-contract] ${rname}.${f} (Rust) has no counterpart in TS ${tname} - ` +
+            `update the mirror (.claude/rules/type-safety.md).`,
+        );
+      }
+    }
+    for (const f of tfields) {
+      if (!rfields.has(f)) {
+        errors.push(
+          `[ipc-contract] ${tname}.${f} (TS) has no counterpart in Rust ${rname} - ` +
+            `update the mirror (.claude/rules/type-safety.md).`,
+        );
+      }
+    }
+  }
+}
+
+console.log(
+  'Running BudgetMate guards (no-network / no-telemetry / no-float-money / style / ipc-contract)…',
+);
 checkDirectDeps();
 checkCargoLock();
 checkAndroidManifest();
 checkTelemetry();
 checkFloatMoney();
 checkStyle();
+checkIpcContract();
 
 if (errors.length) {
   console.error(`\n[x] ${errors.length} guard violation(s):`);

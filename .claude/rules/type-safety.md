@@ -18,8 +18,9 @@ decision to defer codegen: `docs/adr/0001-ipc-type-safety.md`.
   typed and serialisable (see `src-tauri/src/error.rs` and `.claude/rules/rust.md` Error handling).
   The TS side models the rejection as the `AppError` discriminated union in `core/models`.
 - The contract guard (`scripts/guards.mjs`, run by `npm run guards`) must pass: it fails CI when a
-  Rust serde DTO has a field with no counterpart in the mirrored TS interface (or vice versa), or an
-  optionality mismatch. Do not work around a guard failure; fix the mirror.
+  Rust serde DTO has a field with no counterpart in the mirrored TS interface (or vice versa). Field
+  NAMES are checked; types and optionality stay human-owned. Do not work around a guard failure; fix
+  the mirror (or, for an intentional rename / non-IPC struct, the `DTO_NAME_MAP` / `DTO_SKIP` lists).
 - All wrappers live in `src/app/core/bridge`; feature code never imports `@tauri-apps/api` (enforced
   by eslint `no-restricted-imports`). A new command means a new typed wrapper here.
 
@@ -51,7 +52,8 @@ decision to defer codegen: `docs/adr/0001-ipc-type-safety.md`.
 - serde rename mismatch: a Rust field renamed but not the TS interface (or the `#[serde]` attribute)
   goes silently `undefined` at runtime. The guard catches the field-name half; you still own renames.
 - Optionality: Rust `Option<T>` maps to TS `field?: T | null`. A non-optional Rust field mirrored as
-  optional TS (or the reverse) is a real bug the guard flags.
+  optional TS (or the reverse) is a real bug; the guard checks field names only, so verify
+  optionality by hand.
 - Enums: a Rust `#[serde(rename_all = "...")]` enum mirrors as a TS string-literal union (for example
   `'cash' | 'bank' | ...`). Adding a Rust variant without adding the TS literal is drift.
 - Money is ALWAYS minor units (`i64`) plus currency, or a decimal STRING for fx / major-unit input.

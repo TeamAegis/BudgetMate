@@ -115,4 +115,44 @@ mod tests {
         assert_eq!(parse_minor("1.005", "MUR"), Err(MoneyParseError::TooPrecise));
         assert_eq!(parse_minor("1.5", "JPY"), Err(MoneyParseError::TooPrecise));
     }
+
+    use proptest::prelude::*;
+
+    proptest! {
+        /// `splits_sum_to_parent` is true exactly when the splits add up to the parent.
+        #[test]
+        fn prop_splits_sum_to_parent(splits in prop::collection::vec(-1_000_000i64..1_000_000, 0..20)) {
+            let total: i64 = splits.iter().sum();
+            prop_assert!(splits_sum_to_parent(total, &splits));
+            prop_assert!(!splits_sum_to_parent(total + 1, &splits));
+        }
+
+        /// An identity fx rate leaves the amount unchanged.
+        #[test]
+        fn prop_base_amount_identity_rate(amount in -100_000_000i64..100_000_000) {
+            prop_assert_eq!(base_amount_minor(amount, dec!(1)), amount);
+        }
+
+        /// The base amount is the exact product rounded to the nearest minor unit (|error| <= 0.5).
+        #[test]
+        fn prop_base_amount_is_rounded_product(
+            amount in -1_000_000i64..1_000_000,
+            hundredths in 1i64..1_000_000,
+        ) {
+            let rate = Decimal::from(hundredths) / Decimal::from(100);
+            let base = base_amount_minor(amount, rate);
+            let exact = Decimal::from(amount) * rate;
+            prop_assert!((Decimal::from(base) - exact).abs() <= dec!(0.5));
+        }
+
+        /// Formatting integer minor units to a major-unit string and parsing back is the identity
+        /// (2-dp currency).
+        #[test]
+        fn prop_parse_minor_roundtrips_2dp(minor in -1_000_000_000i64..1_000_000_000) {
+            let sign = if minor < 0 { "-" } else { "" };
+            let abs = minor.unsigned_abs();
+            let major = format!("{sign}{}.{:02}", abs / 100, abs % 100);
+            prop_assert_eq!(parse_minor(&major, "MUR"), Ok(minor));
+        }
+    }
 }

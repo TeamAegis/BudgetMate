@@ -65,6 +65,9 @@ tauri-plugin-android-fs = "28"
 
 [dev-dependencies]
 rust_decimal_macros = "1"
+# Property-based testing for the pure money/invariant logic (.claude/rules/engineering.md).
+# Dev-only: adds no binary size.
+proptest = "1"
 
 # Size-optimised release profile (architecture.md §10.1 / NFR-Perf1).
 [profile.release]
