@@ -5,6 +5,11 @@ uses (from `design-system.md` §7), the **data shown**, the **Rust command(s)** 
 `core/bridge`, and its **states**. Screens marked **[NEW]** are required by the FRs but absent
 in the current Figma - design them to this spec.
 
+> **Build status (added 2026-06-25).** A **Status:** line flags screens whose Rust commands are
+> **not yet implemented** - the command names listed are the intended contract, not callable today.
+> `[NEW]` is about Figma coverage; `[built]` and the Status lines are about code. See
+> `architecture.md` §11 "Build status" for the full tally.
+
 > Figma file: `PhqmuOWsxpnKjqIW6yJXge` (page `0:1`). Mobile artboards are 412×917.
 
 ---
@@ -25,6 +30,8 @@ in the current Figma - design them to this spec.
 - **Components:** TextField (underline) for income, type-of-income selector, *Add a Goal* card.
 - **Data:** initial income, base currency (default MUR).
 - **Commands:** `set_onboarding_profile(income, base_currency)`.
+- **Status (2026-06):** spec - `set_onboarding_profile` is not implemented; there is no income or
+  onboarding-profile capture in the Rust core or Angular yet.
 - **States:** empty/validation (amount required, numeric).
 
 ### 1.3 Set Passphrase + Biometrics **[NEW]**
@@ -67,6 +74,8 @@ in the current Figma - design them to this spec.
   Chart.js), GoalProgressRow ×N (`130:36`), BottomNav (`124:355`).
 - **Data:** current balance, usable balance, balance-trend series, top goals.
 - **Commands:** `get_dashboard()` → `{ balance, usable, trend[], goals[] }`.
+- **Status (2026-06):** spec - `get_dashboard` is not implemented; the home screen currently shows
+  a hardcoded placeholder (Rs 0). Depends on the reporting aggregations (FR-3.3).
 - **States:** loading (progressive), empty (`133:641` - "No goals? Create one!"), populated.
 
 ### 3.2 Dashboard (empty)
@@ -135,6 +144,9 @@ in the current Figma - design them to this spec.
 - **Data:** file (CSV/OFX/QFX), staged rows, rule matches, duplicate flags.
 - **Commands:** `parse_import(path, format)`, `apply_rules(rows)`, `scan_duplicates(rows)`,
   `commit_import(resolved)` (ACID batch).
+- **Status (2026-06):** spec - none of these commands exist yet. Parsing crates are selected and
+  the dedup matcher is written (`rules/dedup.rs`) but unwired; the wizard is not built
+  (`architecture.md` §8).
 - **States:** picking, parsing, mapping (CSV), reviewing, dedup-flagged, committing, error
   (bad/again).
 
@@ -180,6 +192,8 @@ in the current Figma - design them to this spec.
   over time), period/category filters, BottomNav. **Charts via bundled Chart.js.**
 - **Data:** aggregations by category and over time.
 - **Commands:** `get_spend_by_category(period)`, `get_spend_over_time(period)`.
+- **Status (2026-06):** spec - neither aggregation command exists yet; the Analytics screen is an
+  empty-state placeholder and Chart.js is not yet wired (FR-3.3).
 - **States:** loading, empty (`133:806` "No Data" + illustration), populated, error (aggregation
   failed - plain-language + retry), busy (recomputing on filter/period change, UI stays responsive).
 
@@ -225,6 +239,9 @@ in the current Figma - design them to this spec.
 - **FR:** FR-3.1.
 - **Components:** EnvelopeCard ×N (category cap, spent/remaining bar, warning/over states).
 - **Commands:** `list_envelopes()`, `save_envelope(dto)`.
+- **Status (2026-06):** spec - the `budgets` table exists but there is no envelope command or
+  spent-vs-remaining logic in code yet (FR-3.1). This is the flagship budgeting feature and is not
+  built.
 - **States:** loading, empty (no caps set + CTA), populated - under / approaching (warning) / over
   (danger), error (load/save failed - plain-language + retry), busy (saving a cap).
 
@@ -242,6 +259,8 @@ in the current Figma - design them to this spec.
 - **FR:** FR-4.2.
 - **Components:** format choice (CSV/XLSX), range, *Export* → system save dialog.
 - **Commands:** `export_transactions(format, range)` (`rust_xlsxwriter`/csv) + dialog/fs.
+- **Status (2026-06):** spec - `export_transactions` is not implemented (export crates selected,
+  no command yet). FR-4.2.
 - **States:** generating, saved, error. Plaintext-export warning shown.
 
 ### 7.5 Backup / Restore
@@ -250,6 +269,8 @@ in the current Figma - design them to this spec.
   *Restore* → pick `.vaultbak` → passphrase → replace/merge.
 - **Commands:** `create_backup()` → file via dialog/fs (Android: `tauri-plugin-android-fs`);
   `restore_backup(path, passphrase, mode)` (ACID).
+- **Status (2026-06):** spec - neither `create_backup` nor `restore_backup` is implemented yet
+  (FR-4.1 / FR-4.3).
 - **States:** creating, written, restoring, merge/replace choice, wrong-passphrase error.
 
 ---

@@ -25,6 +25,9 @@ the `fullstack-engineer`/`bug-hunter`.
 - Category taxonomy is sane and complete vs `docs/financial-knowledge.md` §2 (needs/wants split;
   fixed/variable/periodic; standard expense taxonomy table).
 - Budget/envelope math is right (FR-3.1): spent vs remaining, over-budget detection, period handling.
+- Income and cash-flow figures are grounded: budgeting is based on **net (take-home) income**
+  (§1 gross vs net, §2), and any "money in vs out" / "left to spend" / savings-rate figure is a
+  correct cash-flow computation (income minus expenses; §6), done in Rust, never in TS.
 - MUR formatting & multi-currency display match §8 (symbol "Rs" precedes amount; comma thousands,
   period decimal; foreign rows show original + base conversion).
 - Any tax/ratio/statutory **figure** used in code or copy matches §6/§7 **and is still current** - the
@@ -39,6 +42,16 @@ the `fullstack-engineer`/`bug-hunter`.
   novice should understand the screen without prior finance knowledge.
 - Budgeting concepts are presented accessibly; defaults are sensible for a beginner (default currency
   MUR, conservative/clear envelope setup, gentle empty/onboarding guidance).
+- The **over-budget state is gentle, not punitive** (where it appears): it does not turn an envelope
+  alarm-red the instant it goes 1% over, reads as informative ("Rs X left" / "Rs Y over") rather than
+  as failure, distinguishes approaching vs over vs well-over, and tolerates carrying a small overage
+  forward rather than shaming. A binary red-at-1%-over wall drives abandonment.
+- Where goals or onboarding appear, an **emergency fund is framed as the sensible first goal**
+  (§2, §10 priority sequence: budget -> starter emergency fund -> ...), surfaced clearly rather than
+  buried among equal options, and never nagged or forced.
+- Any **behavioral nudge** (reminders, streaks, review prompts, savings suggestions) is sound per §9:
+  it counters a known bias (present bias, inertia) without being manipulative or guilt-based, and
+  stays deterministic and offline (no AI, no network).
 - Meaning is **never signalled by colour alone** (income/expense, over-budget, dedup) - paired with
   sign/icon/label (see `.claude/rules/design.md`).
 - The product's trust promises hold where the user must stay in control: OCR (FR-2.1) and import

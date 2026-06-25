@@ -177,16 +177,26 @@ reference it.
 
 ---
 
-## 5. Traceability
+## 5. Traceability & build status
 
-| Requirement | Realised in (see architecture.md) |
-|---|---|
-| FR-1.x | §4 Domain & Data Model, §3 Frontend |
-| FR-2.1 OCR | §6 OCR Subsystem |
-| FR-2.2 Import | §8 Import Pipeline |
-| FR-2.3 / FR-2.4 | §8 Rule Engine & Dedup |
-| FR-3.x | §3 Frontend (charts), §4 aggregations |
-| FR-4.x | §9 Backup/Export |
-| FR-5.x / NFR-P2/P3 | §5 Storage & Crypto, §7 Security |
-| NFR-P1 | §7 Offline Enforcement |
-| NFR-Perf* | §10 Performance & Build |
+The middle column names the `architecture.md` section that **designs** each requirement; it is
+**not** a claim that the requirement is implemented. The **Status** column records what is actually
+built in the code as of 2026-06-25: **Built** (implemented and wired), **Partial** (some logic
+present, not fully wired), **Specified** (designed in the docs, little or no runtime code yet). See
+`architecture.md` §11 "Build status" for the detailed tally. This document keeps stating the full
+v1 scope as requirements regardless of status; Status only reflects current progress toward it.
+
+| Requirement | Designed in (architecture.md) | Status (2026-06-25) |
+|---|---|---|
+| FR-1.1/1.2/1.3/1.4 (entry, splits, recurring, multi-currency) | §4 Domain & Data Model, §3 Frontend | Built |
+| FR-2.1 OCR | §6 OCR Subsystem | Built (Android; iOS deferred) |
+| FR-2.2 Import (CSV/OFX/QFX) | §8 Import Pipeline | Specified |
+| FR-2.3 Rule engine | §8 Rule Engine | Built (rule management + preview); applied-at-import pending with FR-2.2 |
+| FR-2.4 Dedup | §8 Dedup | Partial (logic written, not yet wired into import or manual entry) |
+| FR-3.1 Envelope budgeting | §3 Frontend, §4 aggregations | Specified (schema only; no spent-vs-remaining logic yet) |
+| FR-3.2 Savings goals | §3 Frontend, §4 | Built |
+| FR-3.3 Local reporting (charts) | §3 Frontend (charts), §4 aggregations | Specified (no aggregation queries yet) |
+| FR-4.1/4.2/4.3 Backup, export, restore | §9 Backup/Export | Specified |
+| FR-5.1/5.2 / NFR-P2/P3 (unlock, lock, encryption, biometric) | §5 Storage & Crypto, §7 Security | Built (Android; iOS deferred) |
+| NFR-P1 Zero-internet | §7 Offline Enforcement | Built |
+| NFR-Perf* | §10 Performance & Build | Partial (web payload size tracked; Android install-size metric pending issue #4) |

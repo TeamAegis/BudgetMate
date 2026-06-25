@@ -11,6 +11,10 @@ BudgetMate's UI is fully specified. Build to the spec, don't invent layout. Sour
 - `docs/design/design-system.md` - tokens, type scale, components (§7), icons (§5).
 - `docs/design/ux-blueprint.md` - IA, flows, the five states (§5), accessibility (§7).
 - `.claude/rules/design.md` + `.claude/rules/frontend.md` - the enforced rules.
+- `docs/financial-knowledge.md` - domain truth for any money copy: §2 (category taxonomy), §8 (MUR
+  formatting), §9 (plain-language framing). Avoid jargon or use the glossary in
+  `.claude/rules/design.md`; keep the over-budget state gentle (§5 of `ux-blueprint.md`); validate
+  with `/finance-check`.
 
 If the screen needs data from Rust, do the **new-feature** skill first (Rust command + DTO →
 TS model → bridge wrapper), then build the view here.

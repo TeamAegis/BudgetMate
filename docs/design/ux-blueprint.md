@@ -129,7 +129,7 @@ Nothing is dropped silently; duplicates are flagged for the user to keep/skip.
 
 ### 4.6 Set & track a budget envelope - [NEW, FR-3.1]
 `Settings → Budgets → add category cap → Dashboard/Analytics show spent vs remaining;
-approaching cap = warning colour, over = danger.`
+approaching cap = warning, over = a gentle "over by Rs X" state (see §5; not a punitive red wall).`
 
 ### 4.7 Goals
 `Goals → FAB → Add goal (/goals/new page: name, target, optional date) → contribute / track →
@@ -156,7 +156,11 @@ Every list/data screen must define all five:
 
 Special states required by the FRs:
 - **Locked** (pre-unlock) - LockScreen.
-- **Over-budget** envelope - danger treatment.
+- **Over-budget** envelope - **gentle, not punitive.** Differentiate approaching (warning) / over /
+  well-over rather than a binary red wall; phrase it as information ("Rs X left", "Rs Y over"), not
+  as failure; tolerate carrying a small overage forward rather than shaming; pair with icon + label,
+  never colour alone. A red-at-1%-over treatment reads as failure and drives abandonment
+  (`docs/financial-knowledge.md` §9).
 - **Dedup review** - flagged rows visually distinct (warning), with keep/skip.
 - **Low-confidence OCR field** - flagged for attention, still editable.
 

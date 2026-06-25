@@ -76,11 +76,30 @@ the UI/UX principles, UX laws, WCAG 2.2, and anti-patterns - lives in
   explainer - the app must be usable by someone with little or no financial literacy (validate with
   the `/finance-check` skill).
 
+## Plain-language glossary (show users the right side)
+Avoid the raw term in UI copy, or pair it with the plain-language phrasing below. Validate copy with
+`/finance-check`. The *why* (low-literacy usability, behavioral framing) is in
+`docs/financial-knowledge.md` §9.
+
+| Term (avoid showing raw) | Show / explain as |
+|---|---|
+| Envelope (budget) | "monthly limit for a category" / "category budget" |
+| Materialised (recurring) | "added automatically" / "created for you" |
+| Splits | "share one transaction across categories" |
+| Base currency | "the currency your reports add up in" |
+| FX / exchange rate | "how much 1 [foreign] is worth in [base]" |
+| Sinking fund | "money set aside a bit at a time for a known future cost" |
+| Net / take-home income | "what actually lands in your account after deductions" |
+
 ## States
 - Every data screen implements all five states: loading (non-blocking), empty (illustration +
   CTA), populated, error (plain-language + action), busy/processing (OCR/import/export with
   progress, UI stays responsive). Plus the special states in `ux-blueprint.md` §5
   (locked, over-budget, dedup-review, low-confidence-OCR).
+- **Over-budget is gentle, not punitive.** Do not flip an envelope to alarm-red the moment it
+  crosses 100%. Differentiate approaching (warning) / over / well-over, phrase it as information
+  ("Rs X left", "Rs Y over") rather than as failure, and pair the state with icon + label, never
+  colour alone. Rationale and detail: `ux-blueprint.md` §5 and `docs/financial-knowledge.md` §9.
 
 ## Motion / Animation
 Canonical spec: `docs/design/design-system.md` §6. Keep motion subtle and fast (<800ms-feel; never
