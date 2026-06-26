@@ -100,6 +100,7 @@
 
   // ---- Z-index scale (keep stacking explicit; only these layers float) ----
   --z-dropdown: 20;         // select-field listbox menu
+  --z-fab-menu: 900;        // the FAB speed-dial scrim + items (above the page/nav, below modals)
   --z-modal: 1000;          // modal scrim + dialog (above everything in-page)
   --z-modal-nested: 1010;   // a dialog layered over another modal (e.g. ConfirmDialog over an edit form)
 

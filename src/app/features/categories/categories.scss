@@ -10,12 +10,6 @@
   justify-content: flex-end;
 }
 
-.muted {
-  color: var(--c-text-muted);
-}
-
-// Form layout (stacked fields, scrollable body, pinned footer) is owned by app-modal.
-
 .rows {
   list-style: none;
   margin: 0;

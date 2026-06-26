@@ -133,7 +133,7 @@ export class Import {
       totalMinor: editedMinor ?? this.totalMinor(),
       currency: this.baseCurrency(),
     };
-    void this.router.navigate(['/expenses'], { state: { transactionPrefill: prefill } });
+    void this.router.navigate(['/expenses/new'], { state: { transactionPrefill: prefill } });
   }
 
   /** Discard the scan and start over. */
@@ -144,9 +144,9 @@ export class Import {
     this.form.reset({ merchant: '', date: '', total: '' });
   }
 
-  /** Skip OCR entirely and enter a transaction by hand (empty prefill = a plain Add modal). */
+  /** Skip OCR entirely and enter a transaction by hand (the empty Add expense page). */
   protected manualEntry(): void {
-    void this.router.navigate(['/expenses']);
+    void this.router.navigate(['/expenses/new']);
   }
 
   /** Exact major-unit string for the 2-dp extractor total (display/edit only - no money math). */

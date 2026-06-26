@@ -15,3 +15,5 @@ Consequences, and Alternatives considered.
 ## Index
 - [0001](0001-ipc-type-safety.md): IPC type safety. Manual mirror + AppError + contract guard;
   tauri-specta deferred.
+- [0002](0002-page-based-forms-no-modals.md): Page-based forms. Add/edit forms are full-screen routes
+  with Save in the header (keyboard-safe); ConfirmDialog is the only remaining overlay.

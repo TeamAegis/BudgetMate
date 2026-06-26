@@ -1,6 +1,7 @@
-// app-modal - centred dialog over a blurred, dimmed scrim. ViewEncapsulation.None, so every rule
-// is scoped under `.app-modal` to avoid leaking globally (the `.modal-body`/`.modal-footer` helpers
-// style the consumer's projected form). Tokens only.
+// app-modal - the small centred confirm/alert dialog over a blurred, dimmed scrim (the app's only
+// overlay; forms are full-screen pages now). ViewEncapsulation.None, so every rule is scoped under
+// `.app-modal` to avoid leaking globally (the `.modal-footer` helper styles ConfirmDialog's projected
+// button row). Sizes to content. Tokens only.
 
 .app-modal {
   .modal-scrim {
@@ -40,25 +41,7 @@
     color: var(--c-text);
   }
 
-  // ---- Projected form layout: scrollable body + pinned footer ----
-  .modal-form {
-    display: flex;
-    flex-direction: column;
-    min-height: 0; // let the body scroll instead of overflowing the dialog
-    flex: 1;
-  }
-
-  .modal-body {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-4);
-    min-height: 0;
-    overflow-y: auto;
-    // keep the focus ring of edge controls from being clipped by overflow
-    padding: var(--space-1);
-    margin: calc(var(--space-1) * -1);
-  }
-
+  // ---- ConfirmDialog's projected button row ----
   .modal-footer {
     display: flex;
     align-items: center;
@@ -67,18 +50,9 @@
     padding-top: var(--space-4);
     border-top: 1px solid var(--c-border);
   }
-  // Pushes Cancel/Save to the right; an optional leading trash sits before it.
+  // Pushes Cancel/Confirm to the right.
   .modal-footer-spacer {
     flex: 1;
-  }
-
-  // A SelectField opened inside a modal expands the dialog in-flow instead of overlaying and being
-  // clipped by the scrollable body - so every option is reachable. The body grows up to the dialog
-  // max-height, then scrolls (scrollbar hidden globally); the active option is focused into view.
-  app-select-field .menu {
-    position: static;
-    margin-top: var(--space-1);
-    box-shadow: none;
   }
 }
 

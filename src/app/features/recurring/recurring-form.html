@@ -1,0 +1,61 @@
+<section class="form-page">
+  @if (error(); as err) {
+    <app-banner>{{ err }}</app-banner>
+  }
+
+  @if (loading()) {
+    <div class="form-loading" aria-busy="true">
+      <app-spinner [size]="28" label="Loading" />
+    </div>
+  } @else {
+    <!-- Save lives in the app header (keyboard-safe); ngSubmit keeps Enter-to-save working. -->
+    <form class="form-body" [formGroup]="form" (ngSubmit)="save()">
+      <app-form-field label="Schedule">
+        <app-select-field
+          ariaLabel="Schedule"
+          [options]="scheduleOptions"
+          [value]="form.controls.schedule.value"
+          (valueChange)="setSchedule($event)"
+        />
+      </app-form-field>
+
+      <app-form-field label="Next run date" hint="The first (or next) occurrence to materialise.">
+        <input type="date" formControlName="nextRunDate" />
+      </app-form-field>
+
+      <app-form-field label="Account">
+        <app-select-field
+          ariaLabel="Account"
+          [options]="accountOptions()"
+          [value]="form.controls.accountId.value"
+          (valueChange)="setAccount($event)"
+        />
+      </app-form-field>
+
+      <app-form-field label="Category">
+        <app-select-field
+          ariaLabel="Category"
+          [options]="categoryOptions()"
+          [value]="form.controls.categoryId.value"
+          (valueChange)="setCategory($event)"
+        />
+      </app-form-field>
+
+      <app-form-field
+        label="Amount"
+        hint="Expense or income is set by the category."
+        [error]="amountError()"
+      >
+        <input type="text" inputmode="decimal" formControlName="amount" placeholder="0.00" class="numeric" />
+      </app-form-field>
+
+      <app-form-field label="Payee (optional)">
+        <input type="text" formControlName="payee" placeholder="e.g. Landlord" />
+      </app-form-field>
+
+      <app-form-field label="Note (optional)">
+        <input type="text" formControlName="note" />
+      </app-form-field>
+    </form>
+  }
+</section>

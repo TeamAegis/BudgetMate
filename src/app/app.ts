@@ -5,6 +5,7 @@ import { filter } from 'rxjs/operators';
 import { getAppInfo, dbHealth, isTauri } from './core/bridge';
 import { LockService } from './core/lock/lock.service';
 import { ViewportInsetsService } from './core/layout/viewport-insets.service';
+import { HeaderActionService } from './core/layout/header-action.service';
 import type { AppInfo, DbHealth } from './core/models';
 import { AppHeader } from './shared/ui/app-header/app-header';
 import { BottomNav } from './shared/ui/bottom-nav/bottom-nav';
@@ -20,6 +21,8 @@ export class App implements OnInit {
   private readonly location = inject(Location);
   protected readonly lock = inject(LockService);
   private readonly viewportInsets = inject(ViewportInsetsService);
+  // The active page's trailing header action (e.g. a form's Save); see HeaderActionService.
+  protected readonly headerAction = inject(HeaderActionService);
 
   // Walking-skeleton diagnostics proving the Angular ↔ Rust bridge end to end.
   protected readonly appInfo = signal<AppInfo | null>(null);
@@ -33,6 +36,9 @@ export class App implements OnInit {
   protected readonly hasBack = signal(false);
   // The lock screens (/setup, /unlock) render without the app header / status / bottom nav.
   protected readonly chromeless = signal(false);
+  // Full-screen task pages (the add/edit form routes) keep the header but hide the bottom nav, so
+  // the user is focused on one task and exits via Back/Cancel (old-Juice page-flow model).
+  protected readonly hideNav = signal(false);
 
   constructor() {
     this.router.events
@@ -66,6 +72,7 @@ export class App implements OnInit {
     this.isBrand.set(!title);
     this.hasBack.set(!!route.data['back']);
     this.chromeless.set(!!route.data['chromeless']);
+    this.hideNav.set(!!route.data['hideNav']);
   }
 
   async ngOnInit(): Promise<void> {

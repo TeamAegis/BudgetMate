@@ -1,0 +1,68 @@
+<section class="form-page">
+  @if (error(); as err) {
+    <app-banner>{{ err }}</app-banner>
+  }
+
+  @if (loading()) {
+    <div class="form-loading" aria-busy="true">
+      <app-spinner [size]="28" label="Loading" />
+    </div>
+  } @else {
+    <!-- Save lives in the app header (keyboard-safe); ngSubmit keeps Enter-to-save working. -->
+    <form class="form-body" [formGroup]="form" (ngSubmit)="save()">
+      <p class="form-line">If</p>
+      <app-form-field label="Field">
+        <app-select-field
+          ariaLabel="Match field"
+          [options]="fieldOptions"
+          [value]="form.controls.matchField.value"
+          (valueChange)="setMatchField($event)"
+        />
+      </app-form-field>
+      <app-form-field label="Operator">
+        <app-select-field
+          ariaLabel="Operator"
+          [options]="opOptions"
+          [value]="form.controls.matchOp.value"
+          (valueChange)="setMatchOp($event)"
+        />
+      </app-form-field>
+      <app-form-field label="Value" [error]="matchValueError()">
+        <input type="text" formControlName="matchValue" placeholder="e.g. uber" />
+      </app-form-field>
+
+      <p class="form-line">Then</p>
+      <app-form-field label="Set field">
+        <app-select-field
+          ariaLabel="Set field"
+          [options]="fieldOptions"
+          [value]="form.controls.setField.value"
+          (valueChange)="setSetField($event)"
+        />
+      </app-form-field>
+      <app-form-field label="To value" [error]="setValueError()">
+        <input type="text" formControlName="setValue" placeholder="e.g. Transport" />
+      </app-form-field>
+
+      @if (editing()) {
+        <div class="danger-zone">
+          <app-button variant="danger" (click)="confirmingDelete.set(true)" [disabled]="busy()" [block]="true">
+            <svg icon lucideTrash2 [size]="18"></svg>
+            <span>Delete rule</span>
+          </app-button>
+        </div>
+      }
+    </form>
+  }
+
+  @if (confirmingDelete()) {
+    <app-confirm-dialog
+      title="Delete rule?"
+      message="This removes the rule from the engine. Existing transactions keep their categories."
+      confirmLabel="Delete"
+      [busy]="busy()"
+      (confirm)="deleteConfirmed()"
+      (cancelled)="confirmingDelete.set(false)"
+    />
+  }
+</section>

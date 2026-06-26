@@ -1,0 +1,20 @@
+// Full-screen Add/Edit Recurring rule page. The page scrolls inside .app-content (Save is in the
+// header), so this is just a stacked field layout - no scrollable-body / pinned-footer dance.
+
+.form-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.form-loading {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-8) 0;
+}
+
+.form-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}

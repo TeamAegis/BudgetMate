@@ -53,4 +53,31 @@
     border: none;
     cursor: pointer;
   }
+
+  // Trailing primary action (Save) on full-screen form pages. A text button, accessible coral, in
+  // the header so the soft keyboard can never hide it (unlike a bottom action bar). Tap-target safe.
+  .header-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: var(--tap-target-min);
+    padding: var(--space-2) var(--space-3);
+    background: none;
+    border: none;
+    border-radius: var(--radius-sm);
+    color: var(--c-primary-700);
+    font: inherit;
+    font-size: var(--t-title);
+    font-weight: var(--fw-medium);
+    cursor: pointer;
+
+    &:focus-visible {
+      outline: 2px solid var(--c-primary-700);
+      outline-offset: 1px;
+    }
+    &:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+  }
 }

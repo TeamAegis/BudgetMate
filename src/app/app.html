@@ -4,6 +4,7 @@
       [title]="pageTitle()"
       [isBrand]="isBrand()"
       [hasBack]="hasBack()"
+      [action]="headerAction.action()"
       (back)="goBack()"
     />
 
@@ -29,7 +30,7 @@
     <router-outlet />
   </main>
 
-  @if (!chromeless()) {
+  @if (!chromeless() && !hideNav()) {
     <app-bottom-nav />
   }
 </div>

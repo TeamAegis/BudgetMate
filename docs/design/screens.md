@@ -61,9 +61,10 @@ in the current Figma - design them to this spec.
 - **Figma:** `124:224` (Mobile Home). Tokens validated from this node.
 - **FR:** FR-3.x preview, entry points to FR-1.x/2.x.
 - **Components:** AppHeader (brand + settings icon `124:297`), BalanceCard (`124:302`),
-  TrendChart (`130:7` - rebuild in Chart.js), QuickActionChip row (`132:395` →
-  *Add Transaction / Add Goal / Scan Receipt*), GoalProgressRow ×N (`130:36`), BottomNav
-  (`124:355`).
+  a grid of **labelled** quick-action tiles (old-MCB-Juice layout: balance/summary on top, then the
+  tile grid) - *Add expense* (-> `/expenses/new`), *Scan receipt* (-> `/import`), *Add goal*
+  (-> `/goals/new`); labelled tiles only, never icon-only - TrendChart (`130:7` - rebuild in
+  Chart.js), GoalProgressRow ×N (`130:36`), BottomNav (`124:355`).
 - **Data:** current balance, usable balance, balance-trend series, top goals.
 - **Commands:** `get_dashboard()` → `{ balance, usable, trend[], goals[] }`.
 - **States:** loading (progressive), empty (`133:641` - "No goals? Create one!"), populated.
@@ -81,7 +82,8 @@ in the current Figma - design them to this spec.
 - **Figma:** `131:21` (Mobile expenses), chart `132:477`, items `132:391`/`133:789`.
 - **FR:** FR-1.1, FR-3.3 (trend), entry to FR-2.1/2.2.
 - **Components:** AppHeader (titled "Expenses"), TrendChart, SegmentedToggle
-  (Daily/Weekly/Monthly `133:799`), TransactionListItem ×N, FAB (`132:510`), BottomNav.
+  (Daily/Weekly/Monthly `133:799`), TransactionListItem ×N, FabMenu (`app-fab-menu`, `132:510` -
+  labelled *Add expense* -> `/expenses/new` / *Scan receipt* -> `/import`), BottomNav.
 - **Data:** balance summary, period trend, transactions for period.
 - **Commands:** `list_transactions(period, filter)`, `get_trend(period)`.
 - **States:** loading, empty ("no transactions yet" - add to design), populated, busy
@@ -91,10 +93,14 @@ in the current Figma - design them to this spec.
 
 ### 4.2 Add / Edit Transaction **[partly NEW]**
 - **FR:** FR-1.1 (+ FR-1.2/1.3/1.4 via sub-editors).
-- **Presentation:** a **Modal** (§8.0), not a pushed route.
-- **Components:** CurrencyField (amount + currency + rate), date picker, category picker
-  (SelectField), account picker (SelectField), note; inline split editor ("+ Split"); modal
-  footer *Cancel* / *Save* (+ trash on edit, → ConfirmDialog).
+- **Presentation:** a **full-screen page** (§8.0) - routes `expenses/new` and `expenses/:id/edit`,
+  lazy-loaded, route data `{ title, back: true, hideNav: true }`. The canonical form-page example
+  (`transaction-form`). **Amount-first:** the amount is the hero field; Split and FX are
+  progressively disclosed.
+- **Components:** CurrencyField (amount + currency + rate, the hero field), date picker, category
+  picker (SelectField, inline on the page), account picker (SelectField), note; inline split editor
+  ("+ Split"). Back arrow = *Cancel*; *Save* published into the global header via
+  `HeaderActionService`. On the edit page a Delete button sits in a `.danger-zone` (→ ConfirmDialog).
 - **Data:** draft transaction; categories; accounts; applicable rule preview.
 - **Commands:** `save_transaction(dto)` (ACID), `preview_rules(draft)`.
 - **States:** validation (amount>0, split sum=0 remaining), rule-applied indicator, save error.
@@ -114,12 +120,12 @@ in the current Figma - design them to this spec.
 - **Commands:** `extract_receipt(imagePath)` - one thin Rust command that calls
   `plugin:ocr|recognize_text` then runs the deterministic `rules::receipt::extract`, returning
   `{ engineAvailable, fields: { merchant, date, totalMinor } }`. Image picked via the file-open
-  dialog (bridge `pickReceiptImage`). On "Use these details" the screen prefills the Add
-  Transaction modal (`/expenses` router state) - it does **not** save.
+  dialog (bridge `pickReceiptImage`). On "Use these details" the screen prefills the Add expense
+  page (`/expenses/new` router state) - it does **not** save.
 - **States:** picking, processing (off-thread - `extract_receipt` is async, native engine on
   Dispatchers.IO), review (editable), low-confidence (all fields empty → flagged + manual-entry
   CTA), engine-unavailable (plugin `NotImplemented` on desktop/iOS), failed (retry/manual entry).
-  **Never auto-saves** - the user confirms in the Add Transaction modal.
+  **Never auto-saves** - the user confirms on the Add expense page.
 
 ### 4.5 Import Wizard **[NEW]**
 - **FR:** FR-2.2/2.3/2.4.
@@ -149,9 +155,11 @@ in the current Figma - design them to this spec.
 
 ### 5.2 Add / Edit Goal **[built]**
 - **FR:** FR-3.2.
-- **Presentation:** a **Modal** (§8.0), not a pushed route.
+- **Presentation:** a **full-screen page** (§8.0) - routes `goals/new` and `goals/:id/edit`,
+  lazy-loaded, route data `{ title, back: true, hideNav: true }`.
 - **Components:** FormField name, target + currency (amount row), "Saved so far", optional target
-  date; modal footer *Cancel* / *Save* (+ trash on edit → ConfirmDialog).
+  date. Back arrow = *Cancel*; *Save* published into the global header via `HeaderActionService`.
+  On the edit page a Delete button sits in a `.danger-zone` (→ ConfirmDialog).
 - **Commands:** `create_goal` / `update_goal` (major-unit `target`/`current` parsed to minor units
   in Rust), `delete_goal`.
 - **States:** validation (name required, target > 0), save error, busy.
@@ -188,9 +196,12 @@ in the current Figma - design them to this spec.
 ### 7.1a Accounts **[NEW - FR-1.x foundation]**
 - **FR:** underpins FR-1.1 (account picker), FR-1.4 (per-account currency), FR-3.x.
 - **Components:** AppHeader (titled "Accounts" + back); in-content **Add** action button; list of
-  accounts (name · type · currency · opening balance via the money pipe, Rs) + create/edit form
-  (name, type ∈ cash|bank|card|wallet|other, ISO-4217 currency) + archive. Lucide icons (`wallet`,
-  `pencil`, `archive`). Reached from Settings.
+  accounts (name · type · currency · opening balance via the money pipe, Rs). The create/edit form is
+  a **full-screen page** (§8.0) - routes `settings/accounts/new` and `settings/accounts/:id/edit`,
+  route data `{ title, back: true, hideNav: true }` - with fields (name, type ∈
+  cash|bank|card|wallet|other, ISO-4217 currency); the edit page has an **Archive** button in its
+  `.danger-zone` (→ ConfirmDialog). Lucide icons (`wallet`, `pencil`, `archive`). Reached from
+  Settings.
 - **Commands:** `list_accounts(includeArchived)`, `create_account`, `update_account`,
   `archive_account`.
 - **States:** loading · empty (seeded "Cash" account on first run, so rarely empty) · populated ·
@@ -201,9 +212,11 @@ in the current Figma - design them to this spec.
 ### 7.1b Categories **[NEW - FR-1.x/FR-2.3 foundation]**
 - **FR:** underpins category pickers (FR-1.1), the rule engine (FR-2.3), analytics (FR-3.3).
 - **Components:** AppHeader (titled "Categories" + back); in-content **Add** action button; list
-  (name · kind · parent) + create/edit form (name, kind ∈ expense|income|transfer, optional parent)
-  + archive. Tree via `parent_id`; the backend rejects cycles/self-parent. Lucide
-  `tags`/`pencil`/`archive`.
+  (name · kind · parent). The create/edit form is a **full-screen page** (§8.0) - routes
+  `settings/categories/new` and `settings/categories/:id/edit`, route data
+  `{ title, back: true, hideNav: true }` - with fields (name, kind ∈ expense|income|transfer,
+  optional parent); the edit page has an **Archive** button in its `.danger-zone` (→ ConfirmDialog).
+  Tree via `parent_id`; the backend rejects cycles/self-parent. Lucide `tags`/`pencil`/`archive`.
 - **Commands:** `list_categories(includeArchived)`, `create_category`, `update_category`,
   `archive_category`.
 - **States:** loading · empty (default set seeded on first run) · populated · error · busy.
@@ -217,7 +230,12 @@ in the current Figma - design them to this spec.
 
 ### 7.3 Rules (if-then)
 - **FR:** FR-2.3.
-- **Components:** RuleBuilderRow ×N (ordered), add/reorder/delete.
+- **Components:** RuleBuilderRow ×N (ordered), add/reorder/delete. The add/edit form is a
+  **full-screen page** (§8.0) - routes `settings/rules/new` and `settings/rules/:id/edit`, route data
+  `{ title, back: true, hideNav: true }`; the edit page has a Delete button in its `.danger-zone`
+  (→ ConfirmDialog). Recurring (`/settings/recurring`) follows the same page pattern
+  (`settings/recurring/new`, `settings/recurring/:id/edit`) but has **no delete** - pause/resume
+  stays on its list.
 - **Commands:** `list_rules()`, `save_rules(ordered)`.
 
 ### 7.4 Export
@@ -236,30 +254,41 @@ in the current Figma - design them to this spec.
 
 ---
 
-## 8. Modals & shared
+## 8. Forms, overlays & shared
 
-### 8.0 Forms are modals (canonical pattern)
-- **Every add/edit form in the app is a `Modal`** (`app-modal`) - a centred card over a dimmed +
-  blurred backdrop - **not** a pushed full-screen route. This covers Add/Edit **Transaction**
-  (incl. Split editor), **Rule**, **Recurring rule**, **Account**, **Category**, and **Goal**
-  (FR-3.2). The list/screen behind stays visible-but-blurred; dismiss (Escape, backdrop click, or
-  *Cancel*) returns to it unchanged.
-- **Footer convention:** ghost *Cancel* (left of the primary) + primary *Save* (right). On an
-  **edit** modal a **trash** icon-button sits at the far left and deletes via a ConfirmDialog
-  (§8.2); add modals omit it. Features with only a reversible *archive* (Accounts, Categories)
-  keep archive on the list row; Recurring has no delete (managed by pause/resume).
-- **Dropdowns** inside modals use `SelectField` (themed listbox - native `<select>` can't be
-  styled in the WebView). An open dropdown expands the dialog (in-flow) so every option is
-  reachable; the body scrolls with the scrollbar hidden (native-app feel).
+### 8.0 Forms are pages (canonical pattern)
+- **Every add/edit form in the app is a full-screen routed page**, **not** a modal. Each former
+  modal is a pair of lazy routes `<area>/new` and `<area>/:id/edit` carrying route data
+  `{ title, back: true, hideNav: true }` (so the bottom nav is hidden on the task page). This covers
+  Add/Edit **Transaction** (incl. Split editor; `expenses/new`, `expenses/:id/edit`), **Rule**
+  (`settings/rules/...`), **Recurring rule** (`settings/recurring/...`), **Account**
+  (`settings/accounts/...`), **Category** (`settings/categories/...`), and **Goal**
+  (`goals/...`, FR-3.2). The list navigates to the page and hands the entity over via router state;
+  the back arrow = *Cancel* returns to origin unchanged. `transaction-form` is the canonical example.
+- **Header action convention:** the back arrow is *Cancel*; the primary *Save* is published into the
+  global app header via `HeaderActionService` (so Save stays above the Android soft keyboard, not
+  behind it). The page body scrolls inside `.app-content`, which is extended by
+  `var(--keyboard-inset)` so the focused bottom field clears the keyboard.
+- **Destructive actions** live in a `.danger-zone` on the **edit** page only: **Delete**
+  (Transaction, Goal, Rule) or **Archive** (Account, Category), each opening a `ConfirmDialog`
+  (§8.2). Add pages omit it. Recurring has no delete (managed by pause/resume on its list).
+- **Dropdowns** on a form page use `SelectField` (themed listbox - native `<select>` can't be styled
+  in the WebView); it sits inline on the page and overlays normally (no in-flow dialog expansion -
+  forms are pages now). The body scrolls with the scrollbar hidden (native-app feel).
+- Rationale and decision: `docs/adr/0002-page-based-forms-no-modals.md`; evidence:
+  `docs/design/research/mobile-ux-and-old-juice.md`.
 
 ### 8.1 Transaction popup
-- **Figma:** `133:517` (POP-UP - Transaction). Superseded by the §8.0 Modal pattern above; the
-  Add/Edit Transaction modal is the canonical entry point from the list.
+- **Figma:** `133:517` (POP-UP - Transaction). Superseded by the §8.0 form-page pattern above; the
+  Add/Edit Transaction page (`expenses/new`, `expenses/:id/edit`) is the canonical entry point from
+  the list. The old centred pop-up/modal is retired for forms.
 
 ### 8.2 Confirm / destructive dialog
-- **Built:** `ConfirmDialog` (`app-confirm-dialog`), built on `Modal`. Used for delete,
-  restore-replace, over-budget acknowledgement. Two-button, danger styling on the destructive
-  action; emits `confirm` / `cancelled`.
+- **Built:** `ConfirmDialog` (`app-confirm-dialog`), built on `app-modal`. It is the **only** overlay
+  in the app: a small, content-sized centred dialog with `role="alertdialog"` and its message wired
+  via `aria-describedby`. Used for delete, archive, restore-replace, over-budget acknowledgement.
+  Two-button, danger styling on the destructive action; emits `confirm` / `cancelled`. `app-modal`
+  is retired as a form container and now exists only as this confirm/alert substrate.
 
 ### 8.3 Banner / Toast **[NEW]**
 - Success (saved, exported, backup written), warning (approaching cap, duplicates found),

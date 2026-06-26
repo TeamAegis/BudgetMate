@@ -30,6 +30,10 @@
   flex: 1 1 auto;
   overflow-y: auto;
   padding: var(--space-6);
+  // Lift content above the soft keyboard: the Android WebView doesn't resize for the keyboard, so
+  // the scroll area is extended by --keyboard-inset (published by ViewportInsetsService; 0 when the
+  // keyboard is closed or unsupported) and a focused field can scroll clear. See android.md.
+  padding-bottom: calc(var(--space-6) + var(--keyboard-inset, 0px));
   // Flex column so a routed screen can opt to fill the height (e.g. a centred empty state).
   display: flex;
   flex-direction: column;
