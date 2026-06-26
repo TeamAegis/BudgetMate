@@ -297,14 +297,26 @@ file (csv/ofx/qfx) ──pick (dialog)──► read (fs) ──► parse ──
 - **Parsing:** `ofx-rs` handles OFX 1.x SGML + 2.x XML + QFX; `csv`+`serde` for CSV with a
   user column-mapping step.
 - **Rule engine:** ordered rules, top-down, deterministic; `match_field op value → set_field
-  value`. Same rules apply to manual entry.
-- **Dedup:** compares against existing + within-batch rows; flags, never deletes; user
-  resolves.
+  value`. Rule management and a live `preview_rules` are built and used on manual entry; applying
+  rules during file import lands with the import pipeline.
+- **Dedup:** the matcher (date window + exact amount + account) is implemented in
+  `rules/dedup.rs` and flags, never deletes. Wiring it into the import flow and manual entry, so
+  flags are actually raised and surfaced for keep/skip, is not yet done.
 - Whole batch inserts in one transaction (NFR-Rel1).
+
+> **Status (2026-06-25):** the parsing crates are selected and the rule engine is built, but the
+> import pipeline itself (file parse -> staged rows -> review -> ACID batch insert) and the dedup
+> wiring are **specified, not implemented**. The import/dedup review UI is a design spec
+> (`screens.md` §4.5). See §11 "Build status".
 
 ---
 
 ## 9. Backup, Restore & Export (FR-4.x)
+
+> **Status (2026-06-25):** this section describes the intended approach. The export crates are
+> selected, but backup, restore, and export are **specified, not implemented** (no `create_backup`,
+> `restore_backup`, or `export_transactions` command exists yet). The Settings screens for them are
+> a design spec (`screens.md` §7.4 / §7.5). See §11 "Build status".
 
 - **Backup (FR-4.1):** produce an encrypted `.vaultbak`. Simplest robust path: the encrypted
   SQLCipher DB file *is* already encrypted; copy it (or an encrypted JSON dump) to a
@@ -366,6 +378,40 @@ uses coroutines (NFR-Rel2).
 > target. **iOS is deferred** (its build is macOS/Xcode-only and the current dev machine is
 > Windows). iOS-specific notes below (Apple Vision OCR, ATS, `PrivacyInfo.xcprivacy`,
 > `gen/apple`) are retained as future work and are **not** part of the v1 build.
+
+### 11.1 Build status (as of 2026-06-25)
+A snapshot of what is implemented in code, to keep this doc honest about spec vs reality. The FR
+traceability table (`functional-requirements.md` §5) carries the same status per requirement.
+
+- **Built (implemented + wired):** manual transaction entry, splits, multi-currency (per-tx
+  user-entered fx rate + derived base amount), recurrence (lazy materialisation), savings goals,
+  deterministic categorisation rules (management + `preview_rules`), accounts, categories, OCR
+  field extraction (Android), passphrase/biometric unlock, lock-on-background, SQLCipher at rest,
+  schema migrations.
+- **Partial:** dedup (matcher written in `rules/dedup.rs`, not wired into import or manual entry);
+  performance metrics (web payload size tracked; Android install-size metric pending issue #4).
+- **Specified only (little or no runtime code):** envelope budgeting (FR-3.1; `budgets` table
+  exists, no spent-vs-remaining logic), local reporting/analytics aggregations (FR-3.3), the home
+  dashboard (`get_dashboard`), the import pipeline + review UI (FR-2.2), backup/restore/export
+  (FR-4.x), and the income/onboarding profile (`set_onboarding_profile`).
+
+### 11.2 Open product questions (from the 2026-06 financial-domain review)
+Recorded so they are not lost. These are **observations and recommendations, not committed scope**
+(building features was deferred); revisit via `/gap-analysis` when budgeting work is scheduled.
+
+- **No income / cash-flow spine.** There is an Income category kind but no place to record
+  take-home pay or pay cycle, and no "money in vs out" / "left to spend" view. A budget is
+  conventionally built on net income (`financial-knowledge.md` §1, §2, §6); without it, 50/30/20,
+  zero-based budgeting, and planned-vs-actual variance cannot be computed.
+- **Envelope engine unbuilt (FR-3.1).** The flagship budgeting feature is schema-only; there is no
+  spent-vs-remaining aggregation or over-budget state in code yet.
+- **Reports/dashboard unbuilt.** No aggregation queries exist, so the home balance and analytics
+  remain placeholders.
+- **Dedup not wired (FR-2.4).** The promise that duplicates are flagged is not yet met at runtime.
+- **Goal progress is hand-edited.** `goals.current_minor` is set manually rather than derived from
+  contributions or transactions, so it can drift from real balances.
+
+### 11.3 Maturity and watch/migrate triggers
 
 - **Tauri mobile** is production-ready (stable since Oct 2024; current 2.11.x) but the
   *developer experience* on mobile still has rough edges, not all desktop plugins are ported,

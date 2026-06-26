@@ -8,6 +8,11 @@ description: Scaffold a new end-to-end feature in Vault the correct way - Rust c
 Vault's golden path is **Rust first, presentation last**. Logic lives in Rust; Angular formats
 and presents. Follow this order every time.
 
+> **Domain reference.** For anything money-shaped (categories, budgeting, currency, formatting,
+> income/cash-flow), check `docs/financial-knowledge.md` first - §2 (taxonomy and budgeting
+> frameworks), §8 (MUR formatting), §9 (behavioral framing) - so the feature is money-correct and
+> usable by someone with little or no financial literacy. Validate the result with `/finance-check`.
+
 ## Step 1 - Rust domain + command (`src-tauri/src/`)
 1. Add/extend the domain logic in `domain/` (money as minor units / `rust_decimal`; enforce
    invariants).
@@ -47,6 +52,9 @@ Feature code calls this - never `@tauri-apps/api` directly.
 - Money never a float.
 - DB writes transactional.
 - DTO ↔ model in sync.
+- Money-correct and usable by a finance novice (jargon explained per the `.claude/rules/design.md`
+  glossary; over-budget/income framing per `docs/financial-knowledge.md`) - validate with
+  `/finance-check`.
 - Tests + clippy + lint green.
 
 ## Step 7 - Docs
