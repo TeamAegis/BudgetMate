@@ -36,10 +36,36 @@ export const routes: Routes = [
       import('./features/transactions/transactions').then((m) => m.Transactions),
   },
   {
+    path: 'expenses/new',
+    canActivate: [unlockGuard],
+    data: { title: 'Add expense', back: true, hideNav: true },
+    loadComponent: () =>
+      import('./features/transactions/transaction-form').then((m) => m.TransactionForm),
+  },
+  {
+    path: 'expenses/:id/edit',
+    canActivate: [unlockGuard],
+    data: { title: 'Edit expense', back: true, hideNav: true },
+    loadComponent: () =>
+      import('./features/transactions/transaction-form').then((m) => m.TransactionForm),
+  },
+  {
     path: 'goals',
     canActivate: [unlockGuard],
     data: { title: 'Goals' },
     loadComponent: () => import('./features/goals/goals').then((m) => m.Goals),
+  },
+  {
+    path: 'goals/new',
+    canActivate: [unlockGuard],
+    data: { title: 'Add goal', back: true, hideNav: true },
+    loadComponent: () => import('./features/goals/goal-form').then((m) => m.GoalForm),
+  },
+  {
+    path: 'goals/:id/edit',
+    canActivate: [unlockGuard],
+    data: { title: 'Edit goal', back: true, hideNav: true },
+    loadComponent: () => import('./features/goals/goal-form').then((m) => m.GoalForm),
   },
   {
     path: 'analytics',
@@ -60,10 +86,34 @@ export const routes: Routes = [
     loadComponent: () => import('./features/accounts/accounts').then((m) => m.Accounts),
   },
   {
+    path: 'settings/accounts/new',
+    canActivate: [unlockGuard],
+    data: { title: 'Add account', back: true, hideNav: true },
+    loadComponent: () => import('./features/accounts/account-form').then((m) => m.AccountForm),
+  },
+  {
+    path: 'settings/accounts/:id/edit',
+    canActivate: [unlockGuard],
+    data: { title: 'Edit account', back: true, hideNav: true },
+    loadComponent: () => import('./features/accounts/account-form').then((m) => m.AccountForm),
+  },
+  {
     path: 'settings/categories',
     canActivate: [unlockGuard],
     data: { title: 'Categories', back: true },
     loadComponent: () => import('./features/categories/categories').then((m) => m.Categories),
+  },
+  {
+    path: 'settings/categories/new',
+    canActivate: [unlockGuard],
+    data: { title: 'Add category', back: true, hideNav: true },
+    loadComponent: () => import('./features/categories/category-form').then((m) => m.CategoryForm),
+  },
+  {
+    path: 'settings/categories/:id/edit',
+    canActivate: [unlockGuard],
+    data: { title: 'Edit category', back: true, hideNav: true },
+    loadComponent: () => import('./features/categories/category-form').then((m) => m.CategoryForm),
   },
   {
     path: 'settings/recurring',
@@ -72,10 +122,34 @@ export const routes: Routes = [
     loadComponent: () => import('./features/recurring/recurring').then((m) => m.Recurring),
   },
   {
+    path: 'settings/recurring/new',
+    canActivate: [unlockGuard],
+    data: { title: 'Add recurring', back: true, hideNav: true },
+    loadComponent: () => import('./features/recurring/recurring-form').then((m) => m.RecurringForm),
+  },
+  {
+    path: 'settings/recurring/:id/edit',
+    canActivate: [unlockGuard],
+    data: { title: 'Edit recurring', back: true, hideNav: true },
+    loadComponent: () => import('./features/recurring/recurring-form').then((m) => m.RecurringForm),
+  },
+  {
     path: 'settings/rules',
     canActivate: [unlockGuard],
     data: { title: 'Rules', back: true },
     loadComponent: () => import('./features/rules/rules').then((m) => m.Rules),
+  },
+  {
+    path: 'settings/rules/new',
+    canActivate: [unlockGuard],
+    data: { title: 'Add rule', back: true, hideNav: true },
+    loadComponent: () => import('./features/rules/rule-form').then((m) => m.RuleForm),
+  },
+  {
+    path: 'settings/rules/:id/edit',
+    canActivate: [unlockGuard],
+    data: { title: 'Edit rule', back: true, hideNav: true },
+    loadComponent: () => import('./features/rules/rule-form').then((m) => m.RuleForm),
   },
   // Nested actions (not in the bottom nav).
   {

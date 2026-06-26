@@ -1,0 +1,127 @@
+<section class="form-page">
+  @if (error(); as err) {
+    <app-banner>{{ err }}</app-banner>
+  }
+
+  @if (loading()) {
+    <div class="form-loading" aria-busy="true">
+      <app-spinner [size]="28" label="Loading" />
+    </div>
+  } @else {
+    <!-- Save lives in the app header (keyboard-safe); ngSubmit keeps Enter-to-save working. -->
+    <form class="form-body" [formGroup]="form" (ngSubmit)="save()">
+      <!-- Amount-first (genre quick-entry): the amount is the hero field. -->
+      <div class="amount-row">
+        <app-form-field
+          label="Amount"
+          hint="Expense or income is set by the category."
+          [error]="amountError()"
+        >
+          <input type="text" inputmode="decimal" formControlName="amount" placeholder="0.00" class="numeric" />
+        </app-form-field>
+        <app-form-field label="Currency" class="currency-field" [error]="currencyError()">
+          <input type="text" formControlName="currency" maxlength="3" class="numeric currency" />
+        </app-form-field>
+      </div>
+
+      @if (showFx()) {
+        <app-form-field
+          label="Exchange rate"
+          [hint]="'1 ' + currentCurrency() + ' = ? ' + baseCurrency() + ' (converted for reporting)'"
+        >
+          <input type="text" inputmode="decimal" formControlName="fxRate" placeholder="1.00" class="numeric" />
+        </app-form-field>
+      }
+
+      <!-- Split editor (FR-1.2): one line = a simple entry; add lines to split the total. -->
+      <div class="splits" formArrayName="splits">
+        <div class="splits-head">
+          <span class="splits-title">{{ splits.length > 1 ? 'Splits' : 'Category' }}</span>
+          <button type="button" class="add-split" (click)="addSplit()" [disabled]="busy()">
+            <svg lucidePlus [size]="16" aria-hidden="true"></svg>
+            <span>Split</span>
+          </button>
+        </div>
+
+        @for (line of splits.controls; track $index) {
+          <div class="split-row" [formGroupName]="$index">
+            <app-form-field class="split-category" label="Category">
+              <app-select-field
+                ariaLabel="Category"
+                [options]="categoryOptions()"
+                [value]="line.get('categoryId')!.value"
+                (valueChange)="setSplitCategory($index, $event)"
+              />
+            </app-form-field>
+
+            @if (splits.length > 1) {
+              <app-form-field class="split-amount" label="Amount" [error]="splitAmountError($index)">
+                <input type="text" inputmode="decimal" formControlName="amount" placeholder="0.00" class="numeric" />
+              </app-form-field>
+              <app-icon-button ariaLabel="Remove split" (click)="removeSplit($index)" [disabled]="busy()">
+                <svg lucideX [size]="18" aria-hidden="true"></svg>
+              </app-icon-button>
+            }
+          </div>
+        }
+
+        @if (splits.length > 1) {
+          <p class="remaining" [class.balanced]="remainingMinor() === 0">
+            @if (remainingMinor() === 0) {
+              <span>Fully allocated.</span>
+            } @else {
+              <span
+                >Remaining to allocate:
+                {{ { amountMinor: remainingMinor(), currency: currentCurrency() } | money }}</span
+              >
+            }
+          </p>
+        }
+      </div>
+
+      <app-form-field label="Account">
+        <app-select-field
+          ariaLabel="Account"
+          [options]="accountOptions()"
+          [value]="form.controls.accountId.value"
+          (valueChange)="setAccount($event)"
+        />
+      </app-form-field>
+
+      <app-form-field label="Date">
+        <input type="date" formControlName="postedDate" />
+      </app-form-field>
+
+      <app-form-field label="Payee (optional)">
+        <input type="text" formControlName="payee" placeholder="e.g. Winners" (blur)="suggestCategory()" />
+      </app-form-field>
+      @if (suggestedCategory(); as cat) {
+        <p class="suggested">Category "{{ cat }}" set by a rule - change it above if needed.</p>
+      }
+
+      <app-form-field label="Note (optional)">
+        <input type="text" formControlName="note" />
+      </app-form-field>
+
+      @if (editing()) {
+        <div class="danger-zone">
+          <app-button variant="danger" (click)="confirmingDelete.set(true)" [disabled]="busy()" [block]="true">
+            <svg icon lucideTrash2 [size]="18"></svg>
+            <span>Delete transaction</span>
+          </app-button>
+        </div>
+      }
+    </form>
+  }
+
+  @if (confirmingDelete()) {
+    <app-confirm-dialog
+      title="Delete transaction?"
+      message="This permanently removes the transaction and its splits. This can't be undone."
+      confirmLabel="Delete"
+      [busy]="busy()"
+      (confirm)="deleteConfirmed()"
+      (cancelled)="confirmingDelete.set(false)"
+    />
+  }
+</section>

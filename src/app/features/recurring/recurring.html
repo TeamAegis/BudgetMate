@@ -1,73 +1,13 @@
 <section class="feature-page">
-  @if (!showForm()) {
-    <div class="page-actions">
-      <app-button variant="primary" (click)="startCreate()" [disabled]="busy() || loading()">
-        <svg icon lucidePlus [size]="18" aria-hidden="true"></svg>
-        <span>Add</span>
-      </app-button>
-    </div>
-  }
+  <div class="page-actions">
+    <app-button variant="primary" (click)="addRecurring()" [disabled]="busy() || loading()">
+      <svg icon lucidePlus [size]="18" aria-hidden="true"></svg>
+      <span>Add</span>
+    </app-button>
+  </div>
 
   @if (error(); as err) {
     <app-banner>{{ err }}</app-banner>
-  }
-
-  @if (showForm()) {
-    <app-modal
-      [title]="editing() ? 'Modify a Recurring Rule' : 'Add a Recurring Rule'"
-      [busy]="busy()"
-      (dismiss)="cancel()"
-    >
-      <form class="modal-form" [formGroup]="form" (ngSubmit)="save()">
-        <div class="modal-body">
-          <app-form-field label="Schedule">
-            <app-select-field
-              ariaLabel="Schedule"
-              [options]="scheduleOptions"
-              [value]="form.controls.schedule.value"
-              (valueChange)="setSchedule($event)"
-            />
-          </app-form-field>
-          <app-form-field label="Next run date" hint="The first (or next) occurrence to materialise.">
-            <input type="date" formControlName="nextRunDate" />
-          </app-form-field>
-          <app-form-field label="Account">
-            <app-select-field
-              ariaLabel="Account"
-              [options]="accountOptions()"
-              [value]="form.controls.accountId.value"
-              (valueChange)="setAccount($event)"
-            />
-          </app-form-field>
-          <app-form-field label="Category">
-            <app-select-field
-              ariaLabel="Category"
-              [options]="categoryOptions()"
-              [value]="form.controls.categoryId.value"
-              (valueChange)="setCategory($event)"
-            />
-          </app-form-field>
-          <app-form-field
-            label="Amount"
-            hint="Expense or income is set by the category."
-            [error]="amountError()"
-          >
-            <input type="text" inputmode="decimal" formControlName="amount" placeholder="0.00" class="numeric" />
-          </app-form-field>
-          <app-form-field label="Payee (optional)">
-            <input type="text" formControlName="payee" placeholder="e.g. Landlord" />
-          </app-form-field>
-          <app-form-field label="Note (optional)">
-            <input type="text" formControlName="note" />
-          </app-form-field>
-        </div>
-        <div class="modal-footer">
-          <span class="modal-footer-spacer"></span>
-          <app-button variant="ghost" (click)="cancel()" [disabled]="busy()">Cancel</app-button>
-          <app-button type="submit" variant="primary" [loading]="busy()" [disabled]="form.invalid">Save</app-button>
-        </div>
-      </form>
-    </app-modal>
   }
 
   @if (loading()) {
@@ -79,11 +19,11 @@
         </li>
       }
     </ul>
-  } @else if (!showForm() && rules().length === 0 && !error()) {
+  } @else if (rules().length === 0 && !error()) {
     <app-empty-state
       message="No recurring rules yet."
       cta="Add your first rule"
-      (action)="startCreate()"
+      (action)="addRecurring()"
     />
   } @else {
     <ul class="rows">
@@ -96,7 +36,7 @@
             [class.expense]="isExpense(r)"
             >{{ amountLabel(r) }}</span
           >
-          <app-icon-button actions ariaLabel="Edit" (click)="startEdit(r)" [disabled]="busy()">
+          <app-icon-button actions ariaLabel="Edit" (click)="editRecurring(r)" [disabled]="busy()">
             <svg lucidePencil [size]="18" aria-hidden="true"></svg>
           </app-icon-button>
           @if (r.active) {

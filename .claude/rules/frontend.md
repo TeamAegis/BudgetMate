@@ -65,3 +65,9 @@ When building/changing any screen or presentational component, follow the `new-s
 (`.claude/skills/new-screen/`) and `.claude/rules/design.md`: design tokens only, `@lucide/angular`
 icons, the shared money pipe, and the five required states. Screen specs live in
 `docs/design/screens.md`.
+
+**Add/edit forms are full-screen pages, not modals.** Each is a pair of lazy routes `<area>/new` and
+`<area>/:id/edit` with route data `{ title, back: true, hideNav: true }`; the back arrow is *Cancel*
+and the primary *Save* is published into the global header via `HeaderActionService`
+(`core/layout/header-action.service.ts`), never a centred modal. `ConfirmDialog` is the only overlay
+in the app. See `docs/design/screens.md` §8.0 and `docs/adr/0002-page-based-forms-no-modals.md`.

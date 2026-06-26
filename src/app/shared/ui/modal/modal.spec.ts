@@ -4,8 +4,9 @@ import { Modal } from './modal';
 
 @Component({
   imports: [Modal],
-  template: `<app-modal [title]="'Add a Thing'" [busy]="busy" (dismiss)="closed = closed + 1">
-    <form class="modal-form"><div class="modal-body"><input /></div></form>
+  template: `<app-modal [title]="'Delete a Thing?'" [busy]="busy" (dismiss)="closed = closed + 1">
+    <p>This cannot be undone.</p>
+    <div class="modal-footer"><button>Cancel</button><button>Delete</button></div>
   </app-modal>`,
 })
 class Host {

@@ -28,8 +28,13 @@ TS model → bridge wrapper), then build the view here.
   Never do money arithmetic in TS.
 - **Motion via tokens + the shared library** (`docs/design/design-system.md` §6,
   `.claude/rules/design.md → Motion`). Page transitions are automatic (app shell) - add nothing per
-  page; entering list rows use `animate.enter="list-item-enter"` with the capped stagger; modals
-  animate via `app-modal`. Token-driven durations/easing only; honour `prefers-reduced-motion`.
+  page; entering list rows use `animate.enter="list-item-enter"` with the capped stagger; the
+  ConfirmDialog animates via `app-modal`. Token-driven durations/easing only; honour
+  `prefers-reduced-motion`.
+- **Add/edit forms are full-screen pages (routes `<area>/new` + `<area>/:id/edit`,
+  data `{ back, hideNav }`), not modals** - *Save* is published into the global header via
+  `HeaderActionService`. `ConfirmDialog` is the only overlay in the app. See
+  `docs/design/screens.md` §8.0 and `docs/adr/0002-page-based-forms-no-modals.md`.
 - **Standalone component**, signals for state, typed reactive forms for input. Heavy screens
   (OCR/charts) get a lazy route.
 

@@ -28,6 +28,14 @@ Tauri 2.x Android. v1's primary target. Read alongside `.claude/rules/rust.md`,
 - **The keyboard does not resize the WebView** the way desktop browsers do - fixed bottom bars hide
   behind it. Compute a `--keyboard-inset` from the `visualViewport` API and adjust layout. Don't
   clear focus on resize (causes a focus-loss → keyboard-dismiss loop).
+- **Forms are full-screen pages, not centred modals** - this avoids the centred-modal keyboard trap
+  where the soft keyboard covered the bottom of the card (including Save). `.app-content` consumes
+  `--keyboard-inset` as `padding-bottom`, so the focused field scrolls clear of the keyboard, and
+  *Save* lives in the global header (via `HeaderActionService`) so it is never hidden by the keyboard.
+  `android:windowSoftInputMode="adjustResize"` is set on MainActivity, but the `visualViewport`
+  `--keyboard-inset` service stays the **primary** keyboard-aware mechanism (the `interactive-widget`
+  meta does not affect the Android System WebView). See
+  `docs/adr/0002-page-based-forms-no-modals.md`.
 
 ## Versioning & signing
 - `versionCode` is derived as `major*1000000 + minor*1000 + patch`; override in config if needed.

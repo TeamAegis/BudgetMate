@@ -30,10 +30,10 @@ LockScreen (biometric/passphrase)            ← app entry gate (FR-5.1) [NEW]
    ▼
 App Shell (header + bottom nav)
    ├── Home / Dashboard            (Home tab)
-   │     • Balance card  • Trend chart  • Quick actions  • Goals preview
+   │     • Balance/summary card  • Labelled quick-action tile grid (Juice-style)  • Goals preview
    ├── Expenses                    (Expenses tab)
    │     • Balance summary  • Daily/Weekly/Monthly toggle  • Trend chart
-   │     • Transaction list  • FAB → Add Transaction
+   │     • Transaction list  • FabMenu → Add expense / Scan receipt
    │     • Add/Edit Transaction (split, recurring, multi-currency)  [partly NEW]
    │     • Scan Receipt (OCR)                                       [NEW]
    │     • Import file (CSV/OFX/QFX) → rules → dedup review         [NEW]
@@ -72,17 +72,26 @@ Onboarding (first run, before the shell): intro → income setup → first goal 
 | Goals | Goals | `/goals` | "Goals" | "Goals" |
 | Analytics | Analytics | `/analytics` | "Analytics" | "Analytics" |
 
-- **Header trailing icon** opens Settings (and, from sub-screens, contextual actions).
-- **FAB** appears on Expenses (Add Transaction) and Goals (Add Goal); long-press or a small
-  menu can expose Scan Receipt / Import on Expenses.
-- **Back** affordance on pushed screens (scan, import, detail, settings), rendered in the
-  AppHeader's leading slot; it navigates back through history (origin-aware).
-- **All add/edit forms are Modals**, not pushed routes: a centred card over a dimmed + blurred
-  backdrop (the screen behind stays visible but de-emphasised). This is the canonical pattern for
-  Transaction, Rule, Recurring, Account, Category, and Goal forms. Dismiss (Escape, backdrop click,
-  or *Cancel*) returns to origin unchanged; a destructive footer action routes through a
-  ConfirmDialog. Focus is trapped while open and restored on close; background scroll is locked.
-  See `design-system.md` §7 (Modal) and `screens.md` §8.0.
+- **Header trailing icon** opens Settings (and, from sub-screens, contextual actions). On a
+  form page the header also hosts the form's primary *Save* action (published via
+  `HeaderActionService`), so Save sits above the Android soft keyboard.
+- **Expenses primary action** is a tap-to-open `FabMenu` (app-fab-menu) with labelled items
+  *Add expense* (-> `/expenses/new`) and *Scan receipt* (-> `/import`), replacing the old
+  undiscoverable long-press FAB. Goals keeps a simple single-action FAB (-> `/goals/new`).
+- **Back** affordance on pushed screens (scan, import, detail, settings, form pages), rendered in
+  the AppHeader's leading slot; it navigates back through history (origin-aware). On a form page the
+  back arrow is *Cancel*.
+- **All add/edit forms are full-screen routed pages**, not modals: each is a pair of lazy routes
+  `<area>/new` and `<area>/:id/edit` carrying route data `{ title, back: true, hideNav: true }`
+  (so the bottom nav is hidden on the task page). This is the canonical pattern for Transaction,
+  Rule, Recurring, Account, Category, and Goal forms. The page body scrolls inside `.app-content`,
+  which is extended by `var(--keyboard-inset)` so bottom fields clear the keyboard. The header back
+  arrow is *Cancel* (returns to origin unchanged); *Save* lives in the header via
+  `HeaderActionService`. On an **edit** page a destructive action (Delete for Transaction/Goal/Rule,
+  Archive for Account/Category) sits in a `.danger-zone` and routes through a ConfirmDialog;
+  Recurring has no delete (pause/resume stays on its list). `ConfirmDialog` is the only overlay in
+  the app. See `design-system.md` §7 (Form page, FabMenu, ConfirmDialog) and `screens.md` §8.0.
+  The decision is recorded in `docs/adr/0002-page-based-forms-no-modals.md`.
 
 ---
 
@@ -99,14 +108,16 @@ On open, recurring rules materialise lazily (FR-1.3) - show a subtle "updated" n
 occurrences were added.
 
 ### 4.3 Add a transaction (manual)
-`Expenses → FAB → Add Transaction → enter amount (numeric pad), date, category, account →
-optional: Split (SplitEditor, remaining must = 0) / Recurring / Currency+rate → Save (ACID).`
-Applicable rules auto-fill category, with the matched rule shown and overridable.
+`Expenses → FabMenu → Add expense → /expenses/new page → enter amount (the amount is the hero,
+amount-first field, numeric pad), date, category, account → optional: Split (SplitEditor, remaining
+must = 0) / Currency+rate progressively disclosed → header Save (ACID).`
+Applicable rules auto-fill category, with the matched rule shown and overridable. Editing a row
+opens `/expenses/:id/edit`; the edit page has a Delete action in its `.danger-zone` (-> ConfirmDialog).
 
 ### 4.4 Scan a receipt (OCR) - [NEW, FR-2.1]
-`Expenses → Scan Receipt → camera/preview → on-device OCR (progress, off-thread) →
+`Expenses → FabMenu → Scan receipt → camera/preview → on-device OCR (progress, off-thread) →
 extracted merchant/date/total shown as EDITABLE fields → user confirms/corrects → continues
-into Add Transaction prefilled.`
+into the Add expense page (/expenses/new) prefilled.`
 100% on-device (native Vision/ML Kit). Never auto-saves. If extraction confidence is low,
 fields are flagged for review, not hidden.
 
@@ -121,8 +132,9 @@ Nothing is dropped silently; duplicates are flagged for the user to keep/skip.
 approaching cap = warning colour, over = danger.`
 
 ### 4.7 Goals
-`Goals → FAB → Add Goal (name, target, optional date) → contribute / track →
+`Goals → FAB → Add goal (/goals/new page: name, target, optional date) → contribute / track →
 Ongoing list shows progress rows; completed move to Completed tab.`
+Editing a goal opens `/goals/:id/edit`, whose `.danger-zone` Delete routes through a ConfirmDialog.
 
 ### 4.8 Export & backup - [NEW, FR-4.x]
 `Settings → Export → choose CSV/XLSX → system save dialog → file written.`
@@ -147,6 +159,14 @@ Special states required by the FRs:
 - **Over-budget** envelope - danger treatment.
 - **Dedup review** - flagged rows visually distinct (warning), with keep/skip.
 - **Low-confidence OCR field** - flagged for attention, still editable.
+
+Surface notes:
+- **Home** uses the old-MCB-Juice layout: the balance/summary card on top, then a grid of
+  **labelled** quick-action tiles (Add expense -> `/expenses/new`, Scan receipt -> `/import`,
+  Add goal -> `/goals/new`). Labelled tiles only, never icon-only.
+- **Expenses** opens its primary action through a labelled `FabMenu` (Add expense / Scan receipt).
+- **Add Transaction** is **amount-first** - the amount is the hero field; Split and FX are
+  progressively disclosed.
 
 ---
 
@@ -206,10 +226,10 @@ What is **missing and must be designed** (specified in this blueprint + `design-
 
 Also flagged for cleanup in the Figma (see `screens.md` for nodes):
 - "Charts" vs "Analytics" nav label inconsistency; uneven nav spacing across screens.
-- Duplicate "Transaction" quick-action labels (placeholder) - normalise to the canonical set
-  **"Add Transaction / Add Goal / Scan Receipt"**.
-- Modal/dialog titles use the spec'd copy **"Add X" / "Edit X"** (e.g. "Add Goal", "Edit
-  Transaction") - never "Modify"/"New".
+- Duplicate "Transaction" quick-action labels (placeholder) - normalise to the canonical
+  labelled Home tiles **"Add expense / Scan receipt / Add goal"**.
+- Form-page titles (the route `data.title`) use the spec'd copy **"Add X" / "Edit X"** (e.g.
+  "Add Goal", "Edit Transaction") - never "Modify"/"New".
 - Two near-duplicate intro frames - consolidate.
 - Leftover delivery-app frames ("Order Tracking", "Set Location") - unrelated, delete.
 - Coral-on-white small text accessibility failures.

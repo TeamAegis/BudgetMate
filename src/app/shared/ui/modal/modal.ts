@@ -14,27 +14,21 @@ import {
 let nextModalId = 0;
 
 /**
- * App-wide modal: a centred dialog card over a blurred, dimmed scrim. Every form in the app is a
- * modal (design-system §7) - the consumer renders this with `@if` and projects a `<form>`:
+ * A small centred dialog card over a blurred, dimmed scrim. This is the app's ONLY remaining
+ * overlay: add/edit forms are now full-screen routed pages (see the form-page pattern and
+ * `.claude/rules/design.md`), so do NOT reach for this to host a form. Its single intended consumer
+ * is `ConfirmDialog` (a short, keyboard-free destructive confirmation - the one genre-correct use of
+ * a centred dialog). Pass `role="alertdialog"` for those.
  *
- *   <app-modal [title]="editing() ? 'Modify a Rule' : 'Add a Rule'" (dismiss)="cancel()">
- *     <form class="modal-form" [formGroup]="form" (ngSubmit)="save()">
- *       <div class="modal-body">…fields…</div>
- *       <div class="modal-footer">
- *         @if (editing()) { <app-icon-button …trash… /> }
- *         <span class="modal-footer-spacer"></span>
- *         <app-button variant="ghost" (click)="cancel()">Cancel</app-button>
- *         <app-button type="submit" variant="primary" …>Save</app-button>
- *       </div>
- *     </form>
+ *   <app-modal [title]="title()" role="alertdialog" [describedById]="messageId" (dismiss)="cancel()">
+ *     <p [id]="messageId">…</p>
+ *     <div class="modal-footer">…Cancel / Confirm…</div>
  *   </app-modal>
  *
- * Keeping the footer inside the projected `<form>` preserves `type="submit"` / Enter-to-save while
- * the modal pins it below a scrollable body. Dumb component: no data, no business logic. It owns
- * dialog behaviour only - focus trap + restore, body scroll-lock, Escape and click-outside dismiss.
- * `busy` blocks dismissal while a save is in flight. Styling uses `ViewEncapsulation.None` scoped
- * under `.app-modal` so the projected `.modal-body`/`.modal-footer` can be laid out (same approach
- * as form-field), without leaking global rules.
+ * Dumb component: no data, no business logic. It owns dialog behaviour only - focus trap + restore,
+ * body scroll-lock, Escape and click-outside dismiss. `busy` blocks dismissal while an action is in
+ * flight. Styling uses `ViewEncapsulation.None` scoped under `.app-modal` so the projected
+ * `.modal-footer` can be laid out without leaking global rules. It sizes to its content.
  */
 @Component({
   selector: 'app-modal',
@@ -49,9 +43,10 @@ let nextModalId = 0;
         <div
           #dialog
           class="modal-dialog"
-          role="dialog"
+          [attr.role]="role()"
           aria-modal="true"
           [attr.aria-labelledby]="titleId"
+          [attr.aria-describedby]="describedById()"
           (keydown)="onKeydown($event)"
           tabindex="-1"
         >
@@ -67,8 +62,12 @@ export class Modal implements AfterViewInit, OnDestroy {
   private readonly host = inject(ElementRef) as ElementRef<HTMLElement>;
 
   readonly title = input.required<string>();
-  /** While true, the modal won't dismiss on Escape / backdrop (e.g. a save is in flight). */
+  /** While true, the modal won't dismiss on Escape / backdrop (e.g. an action is in flight). */
   readonly busy = input(false);
+  /** ARIA role - use `alertdialog` for destructive confirmations (ConfirmDialog), else `dialog`. */
+  readonly role = input<'dialog' | 'alertdialog'>('dialog');
+  /** Optional id of the element describing the dialog (e.g. the confirm message), for screen readers. */
+  readonly describedById = input<string | null>(null);
   /** Named `dismiss` (not `close`) to avoid clashing with the native `close` DOM event. */
   readonly dismiss = output<void>();
 

@@ -91,7 +91,7 @@ reference only; never hardcode the px.
 | `--t-wordmark` | 2rem (32px) / 700, tracking 4.8px | "BudgetMate" logo only. |
 | `--t-screen-title` | 1.875rem (30px) / 700 | Screen headers ("Expenses", "Goals", "Transactions"). |
 | `--t-balance` | 2rem (32px) / 200 | The big balance figure ("Rs 10,000"). |
-| `--t-dialog` | 1.25rem (20px) / 600 | Modal/dialog titles (Modal, ConfirmDialog - §7). |
+| `--t-dialog` | 1.25rem (20px) / 600 | Dialog titles (ConfirmDialog - §7). |
 | `--t-title` | 1rem (16px) / 500 | Card titles ("Current Balance"). |
 | `--t-section` | 0.875rem (14px) / 500 | Section labels ("Goals", "Usable Balance Trend"). |
 | `--t-body` | 0.8125rem (13px) / 400 | Body, list titles, amounts. |
@@ -129,20 +129,21 @@ FAB).
 ### 4.4 Elevation
 - `--elev-card: 5px 5px 0px 0px rgba(255,203,203,0.29)` - the signature offset pink shadow
   (hero card).
-- `--elev-float: 0 6px 16px rgba(0,0,0,0.12)` - FAB / modal dialog (added; Figma had none).
+- `--elev-float: 0 6px 16px rgba(0,0,0,0.12)` - FAB / FabMenu / confirm dialog (added; Figma had none).
 
 ### 4.5 Overlay & stacking
-- `--c-scrim: rgba(0,0,0,0.40)` - modal backdrop dim.
-- `--backdrop-blur: 6px` - modal backdrop blur (`backdrop-filter: blur(var(--backdrop-blur))`),
-  so the screen behind a form is legibly de-emphasised without going fully opaque.
+- `--c-scrim: rgba(0,0,0,0.40)` - confirm-dialog backdrop dim.
+- `--backdrop-blur: 6px` - confirm-dialog backdrop blur (`backdrop-filter: blur(var(--backdrop-blur))`),
+  so the screen behind the dialog is legibly de-emphasised without going fully opaque.
 - **Z-index scale** (only these layers float; everything else is in flow):
-  `--z-dropdown: 20` (SelectField listbox) · `--z-modal: 1000` (modal scrim + dialog) ·
-  `--z-modal-nested: 1010` (a dialog layered over another modal - e.g. a ConfirmDialog raised over
-  an open edit form when the footer trash is tapped).
+  `--z-dropdown: 20` (SelectField listbox) · `--z-fab-menu: 900` (the Expenses FabMenu, between
+  `--z-dropdown` and `--z-modal`) · `--z-modal: 1000` (confirm-dialog scrim + dialog) ·
+  `--z-modal-nested: 1010` (a dialog layered over another - reserved for a ConfirmDialog raised over
+  an open overlay).
 - **Scrollbars are hidden app-wide** (native-app feel - it's an app, not a website): content still
-  scrolls, but no scrollbar track is drawn, on every scroll container (page, modal body, dropdown).
-  A SelectField opened **inside a modal** expands the dialog in-flow (not an overlay) so every
-  option stays reachable as the body scrolls.
+  scrolls, but no scrollbar track is drawn, on every scroll container (page, dropdown, the confirm
+  dialog body). On a **form page**, `SelectField` sits inline and its listbox overlays normally
+  (`--z-dropdown`); forms are full-screen pages now, so there is no dialog to expand in-flow.
   - **Exception - preserve a scroll affordance in long lists.** Where positional awareness matters
     (Import dedup-review list, Analytics, any list taller than one viewport) keep a visible scroll
     indicator so the user knows there's more and where they are (ui-ux §2.10). Hiding the scrollbar
@@ -216,12 +217,13 @@ reuse these, don't author ad-hoc keyframes in a component:
 
 **Per-surface mapping**
 - **Page transitions** - automatic via the app shell (`src/app/app.scss` `router-outlet + *`,
-  `fade-in`). Screens add nothing per page.
+  `fade-in`). Screens add nothing per page. **Form pages** are routed pages, so they get this
+  automatic page-transition - no per-page motion.
 - **List rows** - `animate.enter="list-item-enter"` (Angular 20 native CSS hook), with a capped
   stagger: `[style.animation-delay]="(i < 12 ? i * 40 : 0) + 'ms'"` (40ms steps, no delay past 12
   rows so long lists don't drag).
-- **Modals** - `app-modal` applies `scrim-in` (`--motion-fast`) + `modal-enter` (`--motion-standard`)
-  itself; consumers get it for free.
+- **Confirm dialog** - `app-modal` (the ConfirmDialog substrate) applies `scrim-in`
+  (`--motion-fast`) + `modal-enter` (`--motion-standard`) itself; ConfirmDialog gets it for free.
 - **Skeletons / spinners** - `.anim-skeleton-pulse` / `.anim-spin` (infinite, cancelled under reduce).
 - **Progress** - animate `width` with `transition: width var(--motion-slow) var(--easing)`
   (e.g. GoalProgressRow fills from 0 on mount).
@@ -244,9 +246,9 @@ and the tokens it consumes. Components are dumb/presentational (`shared/`) unles
 
 > **Built so far** (`src/app/shared/ui/`): AppHeader, BottomNav, EmptyState, Button (primary /
 > ghost / **danger** variants), Card, FormField, IconButton, Banner, ListRow, SelectField,
-> Skeleton, Spinner, **Modal**, **ConfirmDialog**, **GoalProgressRow**. Reuse/extend these rather than re-inlining
-> markup - see the `ui-component` skill. The remaining entries below are still to be built as
-> they're needed.
+> Skeleton, Spinner, **Modal** (ConfirmDialog substrate only), **ConfirmDialog**, **FabMenu**,
+> **GoalProgressRow**. Reuse/extend these rather than re-inlining markup - see the `ui-component`
+> skill. The remaining entries below are still to be built as they're needed.
 
 ### Present in Figma
 - **AppHeader** - leading back affordance (pushed screens) + title/wordmark + trailing icon.
@@ -260,9 +262,10 @@ and the tokens it consumes. Components are dumb/presentational (`shared/`) unles
   and one label ("Analytics")**.
 - **BalanceCard** - hero. `--c-primary-40` fill, `--radius-lg`, `--elev-card`. Shows Current
   Balance (`--t-balance`), Usable Balance, wallet illustration.
-- **QuickActionChip** - 90×60 tile, `--c-primary-05`, `--radius-sm`, icon + caption.
-  Note: Figma shows duplicate "Transaction" labels - placeholder; real actions: *Add
-  Transaction*, *Add Goal*, *Scan Receipt*.
+- **QuickActionChip** - labelled tile, `--c-primary-05`, `--radius-sm`, icon + caption (the
+  old-MCB-Juice Home grid; labelled tiles only, never icon-only).
+  Note: Figma shows duplicate "Transaction" labels - placeholder; real actions: *Add expense*
+  (-> `/expenses/new`), *Scan receipt* (-> `/import`), *Add goal* (-> `/goals/new`).
 - **GoalProgressRow** (`app-goal-progress-row`, **built**) - label, pill progress track with knob,
   `current / target` amounts (via the money pipe). Track `--c-primary-10`, fill + knob
   `--c-primary`; fill animates from 0 on mount (`--motion-slow`, reduced-motion honoured).
@@ -275,22 +278,38 @@ and the tokens it consumes. Components are dumb/presentational (`shared/`) unles
   (`+ Rs 500`). Sign coloured: income `--c-positive`, expense `--c-danger`/`--c-text`.
 - **SegmentedToggle** - Daily/Weekly/Monthly and Ongoing/Completed. Pill, active segment
   `--c-primary`.
-- **FAB** - 60px coral circle, `+` icon, `--elev-float`. For add-transaction / add-goal. The
-  **host list must reserve bottom space** so the FAB never occludes the last row: `padding-bottom`
-  ≥ `--layout-fab-size + --space-6` (≈84px). Without it the final transaction/goal hides behind the
+- **FAB** - 60px coral circle, `+` icon, `--elev-float`. Goals uses a simple single-action FAB
+  (-> `/goals/new`); Expenses uses the **FabMenu** below instead. The **host list must reserve
+  bottom space** so the FAB/FabMenu never occludes the last row: `padding-bottom` ≥
+  `--layout-fab-size + --space-6` (≈84px). Without it the final transaction/goal hides behind the
   button (ui-ux §2.10). See `screens.md` §4.1, §5.1.
-- **Modal** (`app-modal`) - the app-wide form/dialog container. Centred card (`--radius-lg`,
-  `--elev-float`, `max-width 420px`, `max-height 90vh`) over a dimmed + blurred scrim (`--c-scrim`
-  + `--backdrop-blur`, `--z-modal`). **Every form in the app is a modal** - it renders via `@if`
-  and projects a `<form class="modal-form">` with a scrollable `.modal-body` and a pinned
-  `.modal-footer`. Footer convention: optional leading **trash** `IconButton` (edit mode only) ·
-  `.modal-footer-spacer` · ghost *Cancel* · primary *Save* (`type="submit"`, kept inside the form
-  so Enter saves). Behaviour: `role="dialog"`/`aria-modal`, labelled by its title, focus trap +
-  restore, body scroll-lock, dismiss on Escape / backdrop-click (suppressed while `busy`), enter
-  animation `modal-enter` (reduced-motion honoured). Replaces the old Figma "TransactionPopup".
-- **ConfirmDialog** (`app-confirm-dialog`) - two-button destructive confirm built on Modal
-  (title, message, danger confirm + ghost cancel). Used before delete / restore-replace /
-  over-budget acknowledgement (§8.2). Emits `confirm` / `cancelled`.
+- **FabMenu** (`app-fab-menu`, `src/app/shared/ui/fab-menu/`) - the Expenses primary action: a
+  **tap**-to-open FAB that reveals **labelled** items *Add expense* (-> `/expenses/new`) and
+  *Scan receipt* (-> `/import`), replacing the old undiscoverable long-press FAB. Floats at
+  `--z-fab-menu` (between `--z-dropdown` and `--z-modal`), `--elev-float`. Each item is a labelled
+  Lucide icon + text (never icon-only); closes on item tap, Escape, or outside tap.
+- **Form page** (pattern, not a single component) - **every add/edit form is a full-screen routed
+  page**, not a modal: a pair of lazy routes `<area>/new` and `<area>/:id/edit` with route data
+  `{ title, back: true, hideNav: true }`. The page renders a normal `<form>` in `.app-content`
+  (extended by `var(--keyboard-inset)` so bottom fields clear the keyboard). The header back arrow is
+  *Cancel*; the primary *Save* is published into the global app header via `HeaderActionService`
+  (kept above the soft keyboard). On the **edit** page a destructive **Delete** (Transaction, Goal,
+  Rule) or **Archive** (Account, Category) button sits in a `.danger-zone` and opens a ConfirmDialog;
+  Recurring has no delete. `transaction-form` is the canonical example. Page entrance uses the
+  automatic route page-transition (no per-page motion). See `screens.md` §8.0 and
+  `docs/adr/0002-page-based-forms-no-modals.md`.
+- **Modal** (`app-modal`) - the small centred confirm/alert **substrate for ConfirmDialog only** -
+  **not** a form container. Content-sized card (`--radius-lg`, `--elev-float`, `max-width 420px`) over
+  a dimmed + blurred scrim (`--c-scrim` + `--backdrop-blur`, `--z-modal`); sizes to its content
+  rather than `max-height 90vh`. Takes a role input (so ConfirmDialog can set `role="alertdialog"`)
+  and a `describedById` (wiring the message via `aria-describedby`). Behaviour: `aria-modal`, labelled
+  by its title, focus trap + restore, body scroll-lock, dismiss on Escape / backdrop-click
+  (suppressed while `busy`), enter animation `scrim-in` + `modal-enter` (reduced-motion honoured).
+  **Retired as a form container** - do not use `app-modal` for forms (forms are pages, see above).
+- **ConfirmDialog** (`app-confirm-dialog`) - the **only overlay in the app**: a small, content-sized
+  centred dialog built on `app-modal`, with `role="alertdialog"` and its message wired via
+  `aria-describedby`. Two-button (title, message, danger confirm + ghost cancel). Used before delete /
+  archive / restore-replace / over-budget acknowledgement (§8.2). Emits `confirm` / `cancelled`.
 - **EmptyState** - centred illustration + message + CTA ("No goals? Create one!",
   "Tap the Button below…", "No Data").
 - **TextField (underline)** - income/type inputs: label, value, bottom rule. For amounts use

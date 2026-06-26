@@ -1,0 +1,112 @@
+// Full-screen Add/Edit Transaction page. The page scrolls inside .app-content (Save is in the
+// header), so this is just a stacked field layout - no scrollable-body / pinned-footer dance.
+
+.form-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.form-loading {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-8) 0;
+}
+
+.form-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+// Amount + currency side by side (FR-1.4). Amount flexes; currency is a compact fixed-width field.
+// Top-align: the Amount field carries a hint line that Currency doesn't, so aligning bottoms would
+// push the Currency box down - align the labels/inputs at the top instead.
+.amount-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+.amount-row app-form-field {
+  // Allow the amount field to shrink below its content width instead of overflowing.
+  min-width: 0;
+  flex: 1;
+}
+.amount-row .currency-field {
+  flex: 0 0 5.5rem;
+}
+.currency {
+  text-align: center;
+  text-transform: uppercase;
+}
+
+// Split editor (FR-1.2).
+.splits {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.splits-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.splits-title {
+  font-size: var(--t-section);
+  font-weight: var(--fw-medium);
+}
+.add-split {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: var(--tap-target-min);
+  padding: var(--space-1) var(--space-2);
+  background: none;
+  border: none;
+  color: var(--c-primary-700);
+  font: inherit;
+  font-size: var(--t-caption);
+  cursor: pointer;
+}
+.add-split:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+// Category + amount + remove, aligned on one row; the remove button sits at the field baseline.
+// min-width:0 lets both controls shrink to share the row instead of forcing horizontal scroll.
+.split-row {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+.split-row app-form-field {
+  min-width: 0;
+}
+.split-row .split-category {
+  flex: 1.4;
+}
+.split-row .split-amount {
+  flex: 1;
+}
+.remaining {
+  margin: 0;
+  font-size: var(--t-caption);
+  color: var(--c-warning);
+}
+.remaining.balanced {
+  color: var(--c-positive);
+}
+
+// Inspectable rule suggestion (FR-2.3) shown after the payee auto-fills a category.
+.suggested {
+  margin: 0;
+  font-size: var(--t-caption);
+  color: var(--c-primary-700);
+}
+
+// Destructive action for edit mode, set apart from the fields.
+.danger-zone {
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--c-border);
+}

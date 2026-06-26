@@ -2,10 +2,15 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
 import { Modal } from '../modal/modal';
 import { Button } from '../button/button';
 
+/** Unique-per-instance id so the dialog's `aria-describedby` always points at its own message. */
+let nextConfirmId = 0;
+
 /**
- * Two-button destructive-confirm dialog (design-system §8.2): used before delete, restore-replace,
- * over-budget acknowledgement. Built on app-modal so it shares the blurred-scrim/focus-trap chrome.
- * Dumb component - the parent owns the entity being acted on and reacts to `confirm`/`cancel`:
+ * Two-button destructive-confirm dialog (design-system §8.2): used before delete, archive,
+ * restore-replace. This is the single sanctioned overlay in the app (forms are full-screen pages) -
+ * a short, keyboard-free, blocking confirmation whose gravity is the point. Built on app-modal with
+ * `role="alertdialog"` and the message wired as `aria-describedby`. Dumb component - the parent owns
+ * the entity being acted on and reacts to `confirm`/`cancelled`:
  *
  *   @if (confirmingDelete()) {
  *     <app-confirm-dialog
@@ -23,9 +28,15 @@ import { Button } from '../button/button';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [Modal, Button],
   template: `
-    <app-modal [title]="title()" [busy]="busy()" (dismiss)="cancelled.emit()">
+    <app-modal
+      [title]="title()"
+      role="alertdialog"
+      [describedById]="messageId"
+      [busy]="busy()"
+      (dismiss)="cancelled.emit()"
+    >
       <div class="confirm">
-        <p class="confirm-message">{{ message() }}</p>
+        <p class="confirm-message" [id]="messageId">{{ message() }}</p>
         <div class="modal-footer">
           <span class="modal-footer-spacer"></span>
           <app-button variant="ghost" (click)="cancelled.emit()" [disabled]="busy()">Cancel</app-button>
@@ -45,6 +56,7 @@ import { Button } from '../button/button';
   `,
 })
 export class ConfirmDialog {
+  protected readonly messageId = `confirm-msg-${nextConfirmId++}`;
   readonly title = input.required<string>();
   readonly message = input.required<string>();
   readonly confirmLabel = input('Delete');

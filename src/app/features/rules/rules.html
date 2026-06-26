@@ -1,80 +1,13 @@
 <section class="feature-page">
-  @if (!showForm()) {
-    <div class="page-actions">
-      <app-button variant="primary" (click)="startCreate()" [disabled]="busy() || loading()">
-        <svg icon lucidePlus [size]="18" aria-hidden="true"></svg>
-        <span>Add rule</span>
-      </app-button>
-    </div>
-  }
+  <div class="page-actions">
+    <app-button variant="primary" (click)="addRule()" [disabled]="busy() || loading()">
+      <svg icon lucidePlus [size]="18" aria-hidden="true"></svg>
+      <span>Add rule</span>
+    </app-button>
+  </div>
 
   @if (error(); as err) {
     <app-banner>{{ err }}</app-banner>
-  }
-
-  <!-- Suppress the edit modal while the delete-confirm is open so only one scrim shows (A13). -->
-  @if (showForm() && !confirmingDelete()) {
-    <app-modal [title]="editing() ? 'Modify a Rule' : 'Add a Rule'" [busy]="busy()" (dismiss)="cancel()">
-      <form class="modal-form" [formGroup]="form" (ngSubmit)="save()">
-        <div class="modal-body">
-          <p class="form-line">If</p>
-          <app-form-field label="Field">
-            <app-select-field
-              ariaLabel="Match field"
-              [options]="fieldOptions"
-              [value]="form.controls.matchField.value"
-              (valueChange)="setMatchField($event)"
-            />
-          </app-form-field>
-          <app-form-field label="Operator">
-            <app-select-field
-              ariaLabel="Operator"
-              [options]="opOptions"
-              [value]="form.controls.matchOp.value"
-              (valueChange)="setMatchOp($event)"
-            />
-          </app-form-field>
-          <app-form-field label="Value" [error]="matchValueError()">
-            <input type="text" formControlName="matchValue" placeholder="e.g. uber" />
-          </app-form-field>
-
-          <p class="form-line">Then</p>
-          <app-form-field label="Set field">
-            <app-select-field
-              ariaLabel="Set field"
-              [options]="fieldOptions"
-              [value]="form.controls.setField.value"
-              (valueChange)="setSetField($event)"
-            />
-          </app-form-field>
-          <app-form-field label="To value" [error]="setValueError()">
-            <input type="text" formControlName="setValue" placeholder="e.g. Transport" />
-          </app-form-field>
-        </div>
-
-        <div class="modal-footer">
-          @if (editing()) {
-            <app-icon-button ariaLabel="Delete rule" (click)="confirmingDelete.set(true)" [disabled]="busy()">
-              <svg lucideTrash2 [size]="18" aria-hidden="true"></svg>
-            </app-icon-button>
-          }
-          <span class="modal-footer-spacer"></span>
-          <app-button variant="ghost" (click)="cancel()" [disabled]="busy()">Cancel</app-button>
-          <app-button type="submit" variant="primary" [loading]="busy()" [disabled]="form.invalid">Save</app-button>
-        </div>
-      </form>
-    </app-modal>
-  }
-
-  @if (confirmingDelete()) {
-    <app-confirm-dialog
-      title="Delete rule?"
-      message="This removes the rule from the engine. Existing transactions keep their categories."
-      confirmLabel="Delete"
-      [busy]="busy()"
-      (confirm)="deleteConfirmed()"
-      (cancelled)="confirmingDelete.set(false)"
-    />
   }
 
   @if (loading()) {
@@ -90,9 +23,9 @@
     <app-empty-state
       message="No rules yet."
       cta="Add your first rule"
-      (action)="startCreate()"
+      (action)="addRule()"
     />
-  } @else if (!showForm()) {
+  } @else {
     <p class="muted hint">Rules run top to bottom; a later rule can override an earlier one.</p>
     <ul class="rows">
       @for (r of rules(); track r.id; let i = $index) {
@@ -109,7 +42,7 @@
               <svg lucideChevronDown [size]="18" aria-hidden="true"></svg>
             </app-icon-button>
           </div>
-          <app-icon-button actions ariaLabel="Edit" (click)="startEdit(r)" [disabled]="busy()">
+          <app-icon-button actions ariaLabel="Edit" (click)="editRule(r)" [disabled]="busy()">
             <svg lucidePencil [size]="18" aria-hidden="true"></svg>
           </app-icon-button>
           @if (r.active) {

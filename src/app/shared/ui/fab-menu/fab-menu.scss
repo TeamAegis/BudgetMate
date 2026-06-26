@@ -1,0 +1,101 @@
+// app-fab-menu - a labelled speed dial. The trigger and items are position:fixed in the bottom-right
+// thumb zone, above the bottom nav and below modals. Tokens only.
+
+.fab-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-fab-menu);
+  background: rgba(0, 0, 0, 0.2);
+  animation: fade-in var(--motion-fast) var(--easing) both;
+}
+
+.fab {
+  position: fixed;
+  right: var(--space-6);
+  // Above the bottom nav, in the thumb zone (matches app-fab).
+  bottom: calc(var(--layout-bottomnav-h) + var(--space-6));
+  z-index: calc(var(--z-fab-menu) + 1);
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--layout-fab-size);
+  height: var(--layout-fab-size);
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--c-primary);
+  color: var(--c-bg);
+  box-shadow: var(--elev-float);
+  cursor: pointer;
+}
+.fab svg {
+  transition: transform var(--motion-fast) var(--easing);
+}
+// Rotate the plus toward an "x" when open, signalling dismiss.
+.fab.open svg {
+  transform: rotate(45deg);
+}
+.fab:focus-visible {
+  outline: 2px solid var(--c-primary-700);
+  outline-offset: 2px;
+}
+
+.fab-items {
+  position: fixed;
+  right: var(--space-6);
+  // Stack the items just above the trigger.
+  bottom: calc(
+    var(--layout-bottomnav-h) + var(--space-6) + var(--layout-fab-size) + var(--space-3)
+  );
+  z-index: calc(var(--z-fab-menu) + 1);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+// A pill: label on the left, a small coral glyph circle on the right (Material speed-dial feel).
+.fab-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--tap-target-min);
+  padding: var(--space-1) var(--space-1) var(--space-1) var(--space-4);
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--c-bg);
+  color: var(--c-text);
+  box-shadow: var(--elev-float);
+  font: inherit;
+  font-size: var(--t-title);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+  animation: fade-in-up var(--motion-fast) var(--easing) both;
+}
+.fab-item:focus-visible {
+  outline: 2px solid var(--c-primary-700);
+  outline-offset: 2px;
+}
+.fab-item-glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-pill);
+  background: var(--c-primary-10);
+  color: var(--c-primary-700);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fab-scrim,
+  .fab-item {
+    animation: none;
+  }
+  .fab svg {
+    transition: none;
+  }
+}

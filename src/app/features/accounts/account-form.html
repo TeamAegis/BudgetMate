@@ -1,0 +1,51 @@
+<section class="form-page">
+  @if (error(); as err) {
+    <app-banner>{{ err }}</app-banner>
+  }
+
+  @if (loading()) {
+    <div class="form-loading" aria-busy="true">
+      <app-spinner [size]="28" label="Loading" />
+    </div>
+  } @else {
+    <!-- Save lives in the app header (keyboard-safe); ngSubmit keeps Enter-to-save working. -->
+    <form class="form-body" [formGroup]="form" (ngSubmit)="save()">
+      <app-form-field label="Name" [error]="nameError()">
+        <input type="text" formControlName="name" placeholder="e.g. Cash, Main Bank" />
+      </app-form-field>
+
+      <app-form-field label="Type">
+        <app-select-field
+          ariaLabel="Type"
+          [options]="kindOptions"
+          [value]="form.controls.accountType.value"
+          (valueChange)="setKind($event)"
+        />
+      </app-form-field>
+
+      <app-form-field label="Currency" hint="3-letter ISO code, e.g. MUR" [error]="currencyError()">
+        <input type="text" formControlName="currency" maxlength="3" class="numeric" />
+      </app-form-field>
+
+      @if (editing()) {
+        <div class="danger-zone">
+          <app-button variant="danger" (click)="confirmingArchive.set(true)" [disabled]="busy()" [block]="true">
+            <svg icon lucideArchive [size]="18"></svg>
+            <span>Archive account</span>
+          </app-button>
+        </div>
+      }
+    </form>
+  }
+
+  @if (confirmingArchive()) {
+    <app-confirm-dialog
+      title="Archive this account?"
+      [message]="archiveMessage()"
+      confirmLabel="Archive"
+      [busy]="busy()"
+      (confirm)="archiveConfirmed()"
+      (cancelled)="confirmingArchive.set(false)"
+    />
+  }
+</section>

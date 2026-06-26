@@ -58,7 +58,7 @@
     "cardPadding": 20
   },
   "motion": { "fast": 150, "standard": 200, "slow": 300, "skeletonOffset": 200, "easing": "cubic-bezier(0.2,0,0,1)" },
-  "zIndex": { "dropdown": 20, "modal": 1000, "modalNested": 1010 },
+  "zIndex": { "dropdown": 20, "fabMenu": 900, "modal": 1000, "modalNested": 1010 },
   "backdrop": { "blur": 6 },
   "skeleton": { "base": "#ECECEC", "sheen": "#F5F5F5" },
   "currency": { "default": "MUR", "symbol": "Rs", "format": "Rs #,##0" },

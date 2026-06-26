@@ -4,7 +4,16 @@
     <meta charset="utf-8" />
     <title>BudgetMate</title>
     <base href="/" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <!--
+      viewport-fit=cover for edge-to-edge; interactive-widget=resizes-content is a speculative hint
+      (it does NOT affect the Android System WebView, so the visualViewport-based --keyboard-inset in
+      core/layout/viewport-insets.service.ts + windowSoftInputMode=adjustResize remain the primary
+      keyboard-aware mechanism - see .claude/rules/android.md).
+    -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content"
+    />
     <!--
       Privacy CSP: no remote anything. Everything (fonts, scripts, styles, images) is bundled.
       The authoritative CSP for the packaged app is set in src-tauri/tauri.conf.json; this meta

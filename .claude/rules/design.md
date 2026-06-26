@@ -50,6 +50,17 @@ the UI/UX principles, UX laws, WCAG 2.2, and anti-patterns - lives in
   (`.claude/skills/ui-component/`) for the convention.
 - Build the components named in `design-system.md` §7; keep them dumb/presentational in
   `shared/ui/` and feed data from feature components (which call `core/bridge`).
+- **Add/edit forms are full-screen routed pages, not modals.** Each is a pair of lazy routes
+  `<area>/new` and `<area>/:id/edit` with route data `{ title, back: true, hideNav: true }`. The
+  back arrow is *Cancel*; the primary *Save* is published into the global header via
+  `HeaderActionService` (so it stays above the Android soft keyboard). Build to the form-page pattern
+  (`transaction-form` is the canonical example), never a centred modal. On the **edit** page a
+  destructive Delete (Transaction, Goal, Rule) or Archive (Account, Category) sits in a
+  `.danger-zone` and opens a ConfirmDialog. **`ConfirmDialog` is the only overlay in the app**;
+  `app-modal` is its confirm/alert substrate only, retired as a form container. See
+  `docs/design/screens.md` §8.0 and `docs/adr/0002-page-based-forms-no-modals.md`.
+- **Expenses primary action is a `FabMenu`** (`app-fab-menu`, tap-to-open, labelled *Add expense* /
+  *Scan receipt*), not the old long-press FAB; Goals keeps a simple single-action FAB.
 - **Charts:** bundled **Chart.js (canvas)** only - never a remote chart script, never static
   image charts. (TrendChart, pie, line.)
 - BottomNav canonical tabs: **Home · Expenses · Goals · Analytics** (one label set - do not
@@ -80,10 +91,11 @@ blocks first paint).
 - **Reuse the library.** Keyframes + the `.list-item-enter` class live in `src/styles/_animations.scss`
   (`@use`d globally). Reuse them; don't author one-off keyframes in a component.
 - **Apply per the surface map:** page transitions are automatic (app shell, `src/app/app.scss`
-  `router-outlet + *`) - add nothing per page; entering list rows use
-  `animate.enter="list-item-enter"` with the capped stagger
-  `[style.animation-delay]="(i < 12 ? i * 40 : 0) + 'ms'"`; modals get `scrim-in`/`modal-enter` from
-  `app-modal`; progress fills animate `width` with `transition`.
+  `router-outlet + *`) - add nothing per page (form pages, being routed pages, get this automatic
+  transition too); entering list rows use `animate.enter="list-item-enter"` with the capped stagger
+  `[style.animation-delay]="(i < 12 ? i * 40 : 0) + 'ms'"`; the ConfirmDialog gets
+  `scrim-in`/`modal-enter` from `app-modal` (its substrate); progress fills animate `width` with
+  `transition`.
 - **Reduced motion is mandatory.** Motion tokens are zeroed under
   `@media (prefers-reduced-motion: reduce)`, so token-driven animation stops for free; any infinite
   or movement keyframe also needs an explicit guard (see `_animations.scss`). Verify motion still

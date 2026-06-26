@@ -1,56 +1,13 @@
 <section class="feature-page">
-  @if (!showForm()) {
-    <div class="page-actions">
-      <app-button variant="primary" (click)="startCreate()" [disabled]="busy()">
-        <svg icon lucidePlus [size]="18" aria-hidden="true"></svg>
-        <span>Add</span>
-      </app-button>
-    </div>
-  }
+  <div class="page-actions">
+    <app-button variant="primary" (click)="addAccount()">
+      <svg icon lucidePlus [size]="18" aria-hidden="true"></svg>
+      <span>Add</span>
+    </app-button>
+  </div>
 
   @if (error(); as err) {
     <app-banner>{{ err }}</app-banner>
-  }
-
-  @if (showForm()) {
-    <app-modal [title]="editing() ? 'Modify an Account' : 'Add an Account'" [busy]="busy()" (dismiss)="cancel()">
-      <form class="modal-form" [formGroup]="form" (ngSubmit)="save()">
-        <div class="modal-body">
-          <app-form-field label="Name" [error]="nameError()">
-            <input type="text" formControlName="name" placeholder="e.g. Cash, Main Bank" />
-          </app-form-field>
-          <app-form-field label="Type">
-            <app-select-field
-              ariaLabel="Type"
-              [options]="kindOptions"
-              [value]="form.controls.accountType.value"
-              (valueChange)="setKind($event)"
-            />
-          </app-form-field>
-          <app-form-field label="Currency" hint="3-letter ISO code, e.g. MUR" [error]="currencyError()">
-            <input type="text" formControlName="currency" maxlength="3" class="numeric" />
-          </app-form-field>
-        </div>
-        <div class="modal-footer">
-          <span class="modal-footer-spacer"></span>
-          <app-button variant="ghost" (click)="cancel()" [disabled]="busy()">Cancel</app-button>
-          <app-button type="submit" variant="primary" [loading]="busy()" [disabled]="form.invalid">Save</app-button>
-        </div>
-      </form>
-    </app-modal>
-  }
-
-  @if (archivingAccount(); as target) {
-    <app-confirm-dialog
-      title="Archive this account?"
-      [message]="
-        'Archive “' + target.name + '”? It will be hidden from pickers but not deleted.'
-      "
-      confirmLabel="Archive"
-      [busy]="busy()"
-      (confirm)="archiveConfirmed()"
-      (cancelled)="archivingAccount.set(null)"
-    />
   }
 
   @if (loading()) {
@@ -62,11 +19,11 @@
         </li>
       }
     </ul>
-  } @else if (!showForm() && accounts().length === 0 && !error()) {
+  } @else if (accounts().length === 0 && !error()) {
     <app-empty-state
       message="No accounts yet."
       cta="Add your first account"
-      (action)="startCreate()"
+      (action)="addAccount()"
     />
   } @else {
     <ul class="rows">
@@ -81,11 +38,8 @@
           <span amount class="amount numeric">{{
             { amountMinor: a.openingBalanceMinor, currency: a.currency } | money
           }}</span>
-          <app-icon-button actions ariaLabel="Edit" (click)="startEdit(a)" [disabled]="busy()">
+          <app-icon-button actions ariaLabel="Edit" (click)="editAccount(a)">
             <svg lucidePencil [size]="18" aria-hidden="true"></svg>
-          </app-icon-button>
-          <app-icon-button actions ariaLabel="Archive" (click)="confirmArchive(a)" [disabled]="busy()">
-            <svg lucideArchive [size]="18" aria-hidden="true"></svg>
           </app-icon-button>
         </li>
       }
