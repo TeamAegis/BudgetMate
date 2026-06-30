@@ -31,11 +31,14 @@ Tauri 2.x Android. v1's primary target. Read alongside `.claude/rules/rust.md`,
 - **Forms are full-screen pages, not centred modals** - this avoids the centred-modal keyboard trap
   where the soft keyboard covered the bottom of the card (including Save). `.app-content` consumes
   `--keyboard-inset` as `padding-bottom`, so the focused field scrolls clear of the keyboard, and
-  *Save* lives in the global header (via `HeaderActionService`) so it is never hidden by the keyboard.
-  `android:windowSoftInputMode="adjustResize"` is set on MainActivity, but the `visualViewport`
-  `--keyboard-inset` service stays the **primary** keyboard-aware mechanism (the `interactive-widget`
-  meta does not affect the Android System WebView). See
-  `docs/adr/0002-page-based-forms-no-modals.md`.
+  *Save* lives in a **fixed bottom action bar** (`FormActions`) that is itself lifted by
+  `--keyboard-inset`, so it rides above the soft keyboard instead of hiding behind it (the form page
+  reserves matching bottom padding so the last field clears the bar). The destructive action
+  (Delete/Archive) is a danger icon-button in the header. `android:windowSoftInputMode="adjustResize"`
+  is set on MainActivity, but the `visualViewport` `--keyboard-inset` service stays the **primary**
+  keyboard-aware mechanism (the `interactive-widget` meta does not affect the Android System WebView).
+  See `docs/adr/0002-page-based-forms-no-modals.md` (forms are pages) and ADR 0003 (form action
+  placement: bottom Save bar + header Delete).
 
 ## Versioning & signing
 - `versionCode` is derived as `major*1000000 + minor*1000 + patch`; override in config if needed.

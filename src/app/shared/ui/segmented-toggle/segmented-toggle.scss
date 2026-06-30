@@ -27,7 +27,8 @@
   transition: background var(--motion-fast) var(--easing), color var(--motion-fast) var(--easing);
 }
 .segment.active {
-  background: var(--c-primary);
+  // Accessible coral: white label on --c-primary-700 clears AA (the lighter --c-primary fails it).
+  background: var(--c-primary-700);
   color: var(--c-bg);
 }
 .segment:focus-visible {

@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { LucideArrowLeft, LucideSettings } from '@lucide/angular';
+import { LucideArrowLeft, LucideSettings, LucideTrash2, LucideArchive } from '@lucide/angular';
 import type { HeaderAction } from '../../../core/layout/header-action.service';
 
 /**
@@ -13,7 +13,7 @@ import type { HeaderAction } from '../../../core/layout/header-action.service';
 @Component({
   selector: 'app-header',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, LucideArrowLeft, LucideSettings],
+  imports: [RouterLink, LucideArrowLeft, LucideSettings, LucideTrash2, LucideArchive],
   template: `
     <header class="app-header">
       @if (hasBack()) {
@@ -23,15 +23,31 @@ import type { HeaderAction } from '../../../core/layout/header-action.service';
       }
       <span class="brand" [class.titled]="!isBrand()">{{ title() }}</span>
       @if (action(); as act) {
-        <button
-          type="button"
-          class="header-action"
-          (click)="act.run()"
-          [disabled]="act.loading || act.disabled || null"
-          [attr.aria-busy]="act.loading || null"
-        >
-          {{ act.label }}
-        </button>
+        @if (act.icon) {
+          <button
+            type="button"
+            class="header-action-icon"
+            (click)="act.run()"
+            [attr.aria-label]="act.label"
+            [attr.title]="act.label"
+            [disabled]="act.loading || act.disabled || null"
+          >
+            @switch (act.icon) {
+              @case ('trash') { <svg lucideTrash2 [size]="24"></svg> }
+              @case ('archive') { <svg lucideArchive [size]="24"></svg> }
+            }
+          </button>
+        } @else {
+          <button
+            type="button"
+            class="header-action"
+            (click)="act.run()"
+            [disabled]="act.loading || act.disabled || null"
+            [attr.aria-busy]="act.loading || null"
+          >
+            {{ act.label }}
+          </button>
+        }
       } @else if (!hasBack()) {
         <a class="settings-link" routerLink="/settings" aria-label="Settings" title="Settings">
           <svg lucideSettings [size]="24"></svg>

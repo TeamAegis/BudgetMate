@@ -43,16 +43,9 @@
       <app-form-field label="To value" [error]="setValueError()">
         <input type="text" formControlName="setValue" placeholder="e.g. Transport" />
       </app-form-field>
-
-      @if (editing()) {
-        <div class="danger-zone">
-          <app-button variant="danger" (click)="confirmingDelete.set(true)" [disabled]="busy()" [block]="true">
-            <svg icon lucideTrash2 [size]="18"></svg>
-            <span>Delete rule</span>
-          </app-button>
-        </div>
-      }
     </form>
+
+    <app-form-actions [loading]="busy()" (save)="save()" />
   }
 
   @if (confirmingDelete()) {

@@ -20,8 +20,10 @@ the UI/UX principles, UX laws, WCAG 2.2, and anti-patterns - lives in
 
 ## Accessibility (enforced)
 - Coral `#FF7755` on white fails AA for small text. Use `--c-primary-700` for small coral
-  text/icons on white; reserve `--c-primary` for large/bold text, fills, and icons with a
-  separate label. Verify contrast for any new pairing (AA: 4.5:1 body, 3:1 large).
+  text/icons on white throughout; reserve `--c-primary` for large/bold text, fills, and icons with a
+  separate label. Verify contrast for any new pairing (AA: 4.5:1 body, 3:1 large). White-on-coral
+  fills (e.g. the SegmentedToggle active segment) also use `--c-primary-700` - white text on the
+  lighter `--c-primary` failed AA.
 - Never signal meaning by colour alone (income/expense, over-budget, dedup) - pair with
   sign/icon/label.
 - Tap targets ≥ 44×44pt. Inputs have visible labels. Honour `prefers-reduced-motion` and OS
@@ -52,13 +54,19 @@ the UI/UX principles, UX laws, WCAG 2.2, and anti-patterns - lives in
   `shared/ui/` and feed data from feature components (which call `core/bridge`).
 - **Add/edit forms are full-screen routed pages, not modals.** Each is a pair of lazy routes
   `<area>/new` and `<area>/:id/edit` with route data `{ title, back: true, hideNav: true }`. The
-  back arrow is *Cancel*; the primary *Save* is published into the global header via
-  `HeaderActionService` (so it stays above the Android soft keyboard). Build to the form-page pattern
-  (`transaction-form` is the canonical example), never a centred modal. On the **edit** page a
-  destructive Delete (Transaction, Goal, Rule) or Archive (Account, Category) sits in a
-  `.danger-zone` and opens a ConfirmDialog. **`ConfirmDialog` is the only overlay in the app**;
-  `app-modal` is its confirm/alert substrate only, retired as a form container. See
-  `docs/design/screens.md` §8.0 and `docs/adr/0002-page-based-forms-no-modals.md`.
+  back arrow is *Cancel*; the primary *Save* lives in a **fixed bottom action bar** (`FormActions`,
+  `app-form-actions`) that lifts with `--keyboard-inset` so the Android soft keyboard never hides it
+  (this supersedes the old Save-in-the-header placement). The page reserves bottom padding so the
+  last field clears the bar. The **destructive** action - Delete (Transaction, Goal, Rule) or Archive
+  (Account, Category) - is a **danger icon-button at the top-right of the header** on the edit page,
+  published via `HeaderActionService` (which carries an optional `icon: 'trash' | 'archive'`) and
+  opens a ConfirmDialog. Build to the form-page pattern (`transaction-form` is the canonical example),
+  never a centred modal. **`ConfirmDialog` is the only overlay in the app**; `app-modal` is its
+  confirm/alert substrate only, retired as a form container. See `docs/design/screens.md` §8.0 and
+  ADR 0003 (form action placement, superseding `docs/adr/0002-page-based-forms-no-modals.md` on
+  Save/Delete placement).
+- **Buttons are slightly rounded** via `--radius-button` (14px) - not a full pill; the shared
+  `Button` uses this token (the FormActions Save and the ActionTile/SettingsRow chrome all sit on it).
 - **Expenses primary action is a `FabMenu`** (`app-fab-menu`, tap-to-open, labelled *Add expense* /
   *Scan receipt*), not the old long-press FAB; Goals keeps a simple single-action FAB.
 - **Charts:** bundled **Chart.js (canvas)** only - never a remote chart script, never static

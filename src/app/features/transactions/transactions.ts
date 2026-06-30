@@ -112,6 +112,16 @@ export class Transactions implements OnInit {
     return `${cats} · ${this.accountName(t.accountId)}`;
   }
 
+  /** Row display name: payee if present, else the category label. */
+  protected rowName(t: Transaction): string {
+    return t.payee || this.categoryLabel(t);
+  }
+
+  /** First letter of the row name, for the leading avatar monogram. */
+  protected monogram(name: string): string {
+    return (name.trim()[0] ?? '?').toUpperCase();
+  }
+
   protected addTransaction(): void {
     void this.router.navigate(['/expenses/new']);
   }

@@ -50,7 +50,8 @@ in the current Figma - design them to this spec.
 
 ### 2.1 Lock Screen
 - **FR:** FR-5.1, FR-5.2.
-- **Components:** brand mark, biometric prompt, passphrase fallback field.
+- **Components:** brand mark, screen title (token-sized via `--t-screen-title`), biometric prompt,
+  passphrase fallback field.
 - **Data:** none shown.
 - **Commands:** `unlock_vault(passphrase)` / biometric via `tauri-plugin-biometric` →
   releases DB key into memory.
@@ -67,21 +68,31 @@ in the current Figma - design them to this spec.
 ### 3.1 Dashboard (populated)
 - **Figma:** `124:224` (Mobile Home). Tokens validated from this node.
 - **FR:** FR-3.x preview, entry points to FR-1.x/2.x.
-- **Components:** AppHeader (brand + settings icon `124:297`), BalanceCard (`124:302`),
-  a grid of **labelled** quick-action tiles (old-MCB-Juice layout: balance/summary on top, then the
-  tile grid) - *Add expense* (-> `/expenses/new`), *Scan receipt* (-> `/import`), *Add goal*
-  (-> `/goals/new`); labelled tiles only, never icon-only - TrendChart (`130:7` - rebuild in
-  Chart.js), GoalProgressRow ×N (`130:36`), BottomNav (`124:355`).
-- **Data:** current balance, usable balance, balance-trend series, top goals.
-- **Commands:** `get_dashboard()` → `{ balance, usable, trend[], goals[] }`.
-- **Status (2026-06):** spec - `get_dashboard` is not implemented; the home screen currently shows
-  a hardcoded placeholder (Rs 0). Depends on the reporting aggregations (FR-3.3).
+- **Components:** AppHeader (brand + settings icon `124:297`); **BalanceCard** (`app-balance-card`,
+  `124:302`) as the balance/summary **hero** - coral-40 fill + offset pink shadow, showing an honest
+  count-based caption (e.g. activity/goal counts) until the deferred `get_dashboard` total exists,
+  then the money figure; a grid of **labelled** quick-action tiles (**ActionTile**, old-MCB-Juice
+  layout: hero on top, then the tile grid) - *Add expense* (-> `/expenses/new`), *Scan receipt*
+  (-> `/import`), *Add goal* (-> `/goals/new`); labelled tiles only, never icon-only; a live
+  **Recent activity** list and a **goals preview** (display-only, from existing `listTransactions` /
+  `listGoals`); BottomNav (`124:355`). Recent-activity rows reuse TransactionListItem with the
+  leading **monogram avatar** (income uses the positive tint paired with the signed amount, never
+  colour alone). TrendChart (`130:7`, rebuild in Chart.js) returns with `get_dashboard`.
+- **Data:** recent transactions and goals preview today (display-only); current/usable balance and
+  balance-trend series deferred to `get_dashboard`.
+- **Commands:** `listTransactions` / `listGoals` (display-only) today; `get_dashboard()` →
+  `{ balance, usable, trend[], goals[] }` deferred.
+- **Status (2026-06):** the hero shows an honest count-based caption (no fabricated Rs 0 total);
+  `get_dashboard` is not implemented yet, so the balance/trend totals are deferred to the reporting
+  aggregations (FR-3.3). Recent activity and goals preview are live from the existing list commands.
 - **States:** loading (progressive), empty (`133:641` - "No goals? Create one!"), populated.
 
 ### 3.2 Dashboard (empty)
 - **Figma:** `133:641`.
-- **Components:** EmptyState patterns, *Get Started* card.
-- **Commands:** `get_dashboard()` returns zeros/empty.
+- **Components:** BalanceCard hero with its empty caption, ActionTile grid, EmptyState patterns for
+  the empty Recent activity / goals preview.
+- **Commands:** `listTransactions` / `listGoals` return empty; `get_dashboard()` (deferred) would
+  return zeros/empty.
 
 ---
 
@@ -108,8 +119,9 @@ in the current Figma - design them to this spec.
   progressively disclosed.
 - **Components:** CurrencyField (amount + currency + rate, the hero field), date picker, category
   picker (SelectField, inline on the page), account picker (SelectField), note; inline split editor
-  ("+ Split"). Back arrow = *Cancel*; *Save* published into the global header via
-  `HeaderActionService`. On the edit page a Delete button sits in a `.danger-zone` (→ ConfirmDialog).
+  ("+ Split"). Back arrow = *Cancel*; *Save* in the fixed bottom `FormActions` bar
+  (keyboard-safe). On the edit page **Delete** is the header danger icon (`trash`, via
+  `HeaderActionService`) → ConfirmDialog.
 - **Data:** draft transaction; categories; accounts; applicable rule preview.
 - **Commands:** `save_transaction(dto)` (ACID), `preview_rules(draft)`.
 - **States:** validation (amount>0, split sum=0 remaining), rule-applied indicator, save error.
@@ -170,8 +182,9 @@ in the current Figma - design them to this spec.
 - **Presentation:** a **full-screen page** (§8.0) - routes `goals/new` and `goals/:id/edit`,
   lazy-loaded, route data `{ title, back: true, hideNav: true }`.
 - **Components:** FormField name, target + currency (amount row), "Saved so far", optional target
-  date. Back arrow = *Cancel*; *Save* published into the global header via `HeaderActionService`.
-  On the edit page a Delete button sits in a `.danger-zone` (→ ConfirmDialog).
+  date. Back arrow = *Cancel*; *Save* in the fixed bottom `FormActions` bar (keyboard-safe).
+  On the edit page **Delete** is the header danger icon (`trash`, via `HeaderActionService`) →
+  ConfirmDialog.
 - **Commands:** `create_goal` / `update_goal` (major-unit `target`/`current` parsed to minor units
   in Rust), `delete_goal`.
 - **States:** validation (name required, target > 0), save error, busy.
@@ -191,11 +204,14 @@ in the current Figma - design them to this spec.
 - **Components:** AppHeader ("Analytics"), pie chart (spend by category), line chart (spend
   over time), period/category filters, BottomNav. **Charts via bundled Chart.js.**
 - **Data:** aggregations by category and over time.
-- **Commands:** `get_spend_by_category(period)`, `get_spend_over_time(period)`.
-- **Status (2026-06):** spec - neither aggregation command exists yet; the Analytics screen is an
-  empty-state placeholder and Chart.js is not yet wired (FR-3.3).
-- **States:** loading, empty (`133:806` "No Data" + illustration), populated, error (aggregation
-  failed - plain-language + retry), busy (recomputing on filter/period change, UI stays responsive).
+- **Commands:** `get_spend_by_category(period)`, `get_spend_over_time(period)` (deferred; the charts
+  arrive with the aggregation commands).
+- **Today:** Analytics is a **polished EmptyState** with plain-language copy and an **"Add an
+  expense"** CTA (-> `/expenses/new`); the charts above are the populated target once the aggregation
+  commands and Chart.js land.
+- **States:** loading, empty (`133:806` "No Data" + illustration + "Add an expense" CTA), populated,
+  error (aggregation failed - plain-language + retry), busy (recomputing on filter/period change, UI
+  stays responsive).
 
 ---
 
@@ -203,8 +219,11 @@ in the current Figma - design them to this spec.
 
 ### 7.1 Settings list
 - **FR:** FR-4.x, FR-5.2, FR-3.1, FR-2.3, FR-1.x (accounts/categories foundation).
-- **Components:** SettingsList rows → **Accounts**, **Categories**, Base currency, Lock timeout,
-  Budgets/Envelopes, Rules, Export, Backup/Restore, About/Privacy note.
+- **Components:** **SettingsRow** (`app-settings-row`: leading Lucide icon + label + optional hint +
+  trailing chevron/control) in **grouped** sections:
+  - **Your money** -> Accounts, Categories, Budgets/Envelopes, Rules, Base currency.
+  - **General** -> Export, Backup/Restore, About/Privacy note.
+  - **Security** -> Lock timeout (and the biometric/lock controls, FR-5.x).
 - **Commands:** `get_settings()`, `update_settings(dto)`.
 
 ### 7.1a Accounts **[NEW - FR-1.x foundation]**
@@ -213,9 +232,9 @@ in the current Figma - design them to this spec.
   accounts (name · type · currency · opening balance via the money pipe, Rs). The create/edit form is
   a **full-screen page** (§8.0) - routes `settings/accounts/new` and `settings/accounts/:id/edit`,
   route data `{ title, back: true, hideNav: true }` - with fields (name, type ∈
-  cash|bank|card|wallet|other, ISO-4217 currency); the edit page has an **Archive** button in its
-  `.danger-zone` (→ ConfirmDialog). Lucide icons (`wallet`, `pencil`, `archive`). Reached from
-  Settings.
+  cash|bank|card|wallet|other, ISO-4217 currency); the edit page exposes **Archive** as the header
+  danger icon (`archive`, via `HeaderActionService`) → ConfirmDialog. Lucide icons (`wallet`,
+  `pencil`, `archive`). Reached from Settings.
 - **Commands:** `list_accounts(includeArchived)`, `create_account`, `update_account`,
   `archive_account`.
 - **States:** loading · empty (seeded "Cash" account on first run, so rarely empty) · populated ·
@@ -229,8 +248,9 @@ in the current Figma - design them to this spec.
   (name · kind · parent). The create/edit form is a **full-screen page** (§8.0) - routes
   `settings/categories/new` and `settings/categories/:id/edit`, route data
   `{ title, back: true, hideNav: true }` - with fields (name, kind ∈ expense|income|transfer,
-  optional parent); the edit page has an **Archive** button in its `.danger-zone` (→ ConfirmDialog).
-  Tree via `parent_id`; the backend rejects cycles/self-parent. Lucide `tags`/`pencil`/`archive`.
+  optional parent); the edit page exposes **Archive** as the header danger icon (`archive`, via
+  `HeaderActionService`) → ConfirmDialog. Tree via `parent_id`; the backend rejects
+  cycles/self-parent. Lucide `tags`/`pencil`/`archive`.
 - **Commands:** `list_categories(includeArchived)`, `create_category`, `update_category`,
   `archive_category`.
 - **States:** loading · empty (default set seeded on first run) · populated · error · busy.
@@ -238,19 +258,21 @@ in the current Figma - design them to this spec.
 ### 7.2 Budgets / Envelopes
 - **FR:** FR-3.1.
 - **Components:** EnvelopeCard ×N (category cap, spent/remaining bar, warning/over states).
-- **Commands:** `list_envelopes()`, `save_envelope(dto)`.
-- **Status (2026-06):** spec - the `budgets` table exists but there is no envelope command or
-  spent-vs-remaining logic in code yet (FR-3.1). This is the flagship budgeting feature and is not
-  built.
-- **States:** loading, empty (no caps set + CTA), populated - under / approaching (warning) / over
-  (danger), error (load/save failed - plain-language + retry), busy (saving a cap).
+- **Commands:** `list_envelopes()`, `save_envelope(dto)` (deferred; the EnvelopeCard grid is the
+  populated target once they land).
+- **Today:** Budgets is a **polished EmptyState** with plain-language copy (a "monthly limit for a
+  category" framing, not the raw "envelope" term); the EnvelopeCard states below are the populated
+  target once the envelope command and spent-vs-remaining logic land.
+- **States:** loading, empty (polished, no caps set + CTA), populated - under / approaching (warning)
+  / over (danger), error (load/save failed - plain-language + retry), busy (saving a cap).
 
 ### 7.3 Rules (if-then)
 - **FR:** FR-2.3.
 - **Components:** RuleBuilderRow ×N (ordered), add/reorder/delete. The add/edit form is a
   **full-screen page** (§8.0) - routes `settings/rules/new` and `settings/rules/:id/edit`, route data
-  `{ title, back: true, hideNav: true }`; the edit page has a Delete button in its `.danger-zone`
-  (→ ConfirmDialog). Recurring (`/settings/recurring`) follows the same page pattern
+  `{ title, back: true, hideNav: true }`; the edit page exposes **Delete** as the header danger icon
+  (`trash`, via `HeaderActionService`) → ConfirmDialog. Recurring (`/settings/recurring`) follows the
+  same page pattern
   (`settings/recurring/new`, `settings/recurring/:id/edit`) but has **no delete** - pause/resume
   stays on its list.
 - **Commands:** `list_rules()`, `save_rules(ordered)`.
@@ -286,18 +308,23 @@ in the current Figma - design them to this spec.
   (`settings/accounts/...`), **Category** (`settings/categories/...`), and **Goal**
   (`goals/...`, FR-3.2). The list navigates to the page and hands the entity over via router state;
   the back arrow = *Cancel* returns to origin unchanged. `transaction-form` is the canonical example.
-- **Header action convention:** the back arrow is *Cancel*; the primary *Save* is published into the
-  global app header via `HeaderActionService` (so Save stays above the Android soft keyboard, not
-  behind it). The page body scrolls inside `.app-content`, which is extended by
-  `var(--keyboard-inset)` so the focused bottom field clears the keyboard.
-- **Destructive actions** live in a `.danger-zone` on the **edit** page only: **Delete**
-  (Transaction, Goal, Rule) or **Archive** (Account, Category), each opening a `ConfirmDialog`
-  (§8.2). Add pages omit it. Recurring has no delete (managed by pause/resume on its list).
+- **Action placement:** the back arrow is *Cancel*; the primary *Save* lives in a **fixed bottom
+  action bar** (`FormActions`, `app-form-actions`) that lifts with `var(--keyboard-inset)` so the
+  Android soft keyboard never hides it. The page body scrolls inside `.app-content`, which is
+  extended by `var(--keyboard-inset)` and reserves bottom padding so the focused bottom field clears
+  both the keyboard and the Save bar. This supersedes the earlier Save-in-the-header placement
+  (see ADR 0003, form action placement, superseding `0002` on this point).
+- **Destructive actions** are a **danger icon-button at the top-right of the header** on the
+  **edit** page only - published via `HeaderActionService` (which carries an optional
+  `icon: 'trash' | 'archive'`): **Delete** (Transaction, Goal, Rule, `trash`) or **Archive**
+  (Account, Category, `archive`), each opening a `ConfirmDialog` (§8.2). Add pages omit it.
+  Recurring has no delete (managed by pause/resume on its list).
 - **Dropdowns** on a form page use `SelectField` (themed listbox - native `<select>` can't be styled
   in the WebView); it sits inline on the page and overlays normally (no in-flow dialog expansion -
   forms are pages now). The body scrolls with the scrollbar hidden (native-app feel).
-- Rationale and decision: `docs/adr/0002-page-based-forms-no-modals.md`; evidence:
-  `docs/design/research/mobile-ux-and-old-juice.md`.
+- Rationale and decision: `docs/adr/0002-page-based-forms-no-modals.md` (forms are pages), then
+  ADR 0003 (form action placement: bottom Save bar + header Delete, superseding `0002`'s
+  Save-in-the-header); evidence: `docs/design/research/mobile-ux-and-old-juice.md`.
 
 ### 8.1 Transaction popup
 - **Figma:** `133:517` (POP-UP - Transaction). Superseded by the §8.0 form-page pattern above; the

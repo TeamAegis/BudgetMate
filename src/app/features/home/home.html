@@ -1,0 +1,73 @@
+<section class="feature-page">
+  @if (error(); as err) {
+    <app-banner>{{ err }}</app-banner>
+  }
+
+  <app-balance-card label="This month" [caption]="loading() ? null : heroCaption()" />
+
+  <p class="section-title">Quick actions</p>
+  <div class="tiles">
+    <a app-action-tile routerLink="/expenses/new" label="Add expense">
+      <svg icon lucidePlus [size]="24" aria-hidden="true"></svg>
+    </a>
+    <a app-action-tile routerLink="/import" label="Scan receipt">
+      <svg icon lucideScanLine [size]="24" aria-hidden="true"></svg>
+    </a>
+    <a app-action-tile routerLink="/goals/new" label="Add goal">
+      <svg icon lucideTarget [size]="24" aria-hidden="true"></svg>
+    </a>
+  </div>
+
+  <div class="section-row">
+    <p class="section-title">Recent activity</p>
+    <a routerLink="/expenses" class="see-all">See all</a>
+  </div>
+  @if (loading()) {
+    <ul class="rows" aria-busy="true">
+      @for (i of skeletonRows; track i) {
+        <li class="skeleton-row">
+          <app-skeleton variant="text" width="55%" />
+          <app-skeleton variant="text" width="22%" />
+        </li>
+      }
+    </ul>
+  } @else if (recent().length === 0) {
+    <p class="empty-line">No transactions yet. Add your first with the actions above.</p>
+  } @else {
+    <ul class="rows">
+      @for (t of recent(); track t.id) {
+        <li app-list-row [name]="rowName(t)" [meta]="rowMeta(t)">
+          <span lead class="avatar" [class.income]="t.amountMinor > 0">{{ monogram(rowName(t)) }}</span>
+          <span
+            amount
+            class="amount numeric"
+            [class.income]="t.amountMinor > 0"
+            [class.expense]="t.amountMinor < 0"
+            >{{ { amountMinor: t.amountMinor, currency: t.currency } | money }}</span
+          >
+        </li>
+      }
+    </ul>
+  }
+
+  @if (!loading() && topGoals().length > 0) {
+    <div class="section-row">
+      <p class="section-title">Goals</p>
+      <a routerLink="/goals" class="see-all">All goals</a>
+    </div>
+    <ul class="rows">
+      @for (g of topGoals(); track g.id) {
+        <li>
+          <app-goal-progress-row
+            [name]="g.name"
+            [currentMinor]="g.currentMinor"
+            [targetMinor]="g.targetMinor"
+            [currency]="g.currency"
+            [completed]="g.completed"
+            (edit)="editGoal(g)"
+          />
+        </li>
+      }
+    </ul>
+  }
+</section>

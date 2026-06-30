@@ -54,8 +54,32 @@
     cursor: pointer;
   }
 
-  // Trailing primary action (Save) on full-screen form pages. A text button, accessible coral, in
-  // the header so the soft keyboard can never hide it (unlike a bottom action bar). Tap-target safe.
+  // Trailing destructive action (Delete / Archive) on a full-screen EDIT page - a danger icon-button
+  // top-right. The primary Save is a bottom action bar (FormActions), not here.
+  .header-action-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--tap-target-min);
+    min-height: var(--tap-target-min);
+    padding: 0;
+    background: none;
+    border: none;
+    border-radius: var(--radius-sm);
+    color: var(--c-danger);
+    cursor: pointer;
+
+    &:focus-visible {
+      outline: 2px solid var(--c-primary-700);
+      outline-offset: 1px;
+    }
+    &:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+  }
+
+  // Optional trailing text action (kept for non-destructive cases). Accessible coral, tap-target safe.
   .header-action {
     display: inline-flex;
     align-items: center;

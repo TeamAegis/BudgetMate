@@ -1,4 +1,4 @@
-import { Component, DestroyRef, OnInit, computed, effect, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import {
@@ -15,6 +15,7 @@ import { HeaderActionService } from '../../core/layout/header-action.service';
 import { Banner } from '../../shared/ui/banner/banner';
 import { Spinner } from '../../shared/ui/spinner/spinner';
 import { FormField } from '../../shared/ui/form-field/form-field';
+import { FormActions } from '../../shared/ui/form-actions/form-actions';
 import { SelectField, type SelectOption } from '../../shared/ui/select-field/select-field';
 
 const SCHEDULES: Schedule[] = ['daily', 'weekly', 'monthly'];
@@ -30,7 +31,7 @@ const DECIMAL = /^\d+(\.\d+)?$/;
  */
 @Component({
   selector: 'app-recurring-form',
-  imports: [ReactiveFormsModule, Banner, Spinner, FormField, SelectField],
+  imports: [ReactiveFormsModule, Banner, Spinner, FormField, FormActions, SelectField],
   templateUrl: './recurring-form.html',
   styleUrl: './recurring-form.scss',
 })
@@ -78,11 +79,10 @@ export class RecurringForm implements OnInit {
   });
 
   constructor() {
-    // Publish Save into the global header; the back arrow is Cancel (App owns it). Re-published on
-    // busy() change so the header button shows the in-flight state. Cleared on teardown.
-    effect(() => {
-      this.headerAction.set({ label: 'Save', loading: this.busy(), run: () => void this.save() });
-    });
+    // Recurring has no destructive action (pause/resume stays on the list), so the header carries no
+    // action here; Save is the bottom action bar (FormActions) and the back arrow is Cancel. Clear
+    // any stale action so nothing leaks in, and clear again on teardown.
+    this.headerAction.clear();
     this.destroyRef.onDestroy(() => this.headerAction.clear());
   }
 

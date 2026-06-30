@@ -1,6 +1,6 @@
 # 0002 - Page-based forms (retire the centred-modal form pattern)
 
-- Status: Accepted
+- Status: Accepted (the Save/Delete action PLACEMENT in decision #2 is superseded by ADR 0003)
 - Date: 2026-06-25
 - Deciders: project maintainer
 

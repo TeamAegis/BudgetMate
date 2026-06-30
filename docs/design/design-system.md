@@ -46,6 +46,9 @@ captions use coral on white at 12-13px, which is **not accessible**.
 - **Rule:** use `--c-primary` for large/bold text (≥24px or ≥19px bold), fills, and icons
   paired with a text label. For small coral text/labels on white, use `--c-primary-700`
   (`#D84F2C` ≈ 4.6:1). Verify any new pairing.
+- **White-on-coral fills** (e.g. the SegmentedToggle active segment) use `--c-primary-700` for the
+  fill, not the lighter `--c-primary` - white text on `--c-primary` fails AA, on `--c-primary-700`
+  it clears it. Coral text/icons on white likewise use `--c-primary-700` throughout.
 
 #### Semantic colours - contrast (fill, not foreground text)
 The §2.2 semantics are tuned to harmonise with coral, so most **fail AA as small text on white**.
@@ -122,7 +125,8 @@ line-heights. Avoid weights below Light for body text on small screens (legibili
 - Reserve OS safe-area insets (notch / home indicator) via env() padding.
 
 ### 4.3 Radius
-`--radius-sm: 5px` (chips, chart bars, small buttons) · `--radius-md: 10px` (section cards) ·
+`--radius-sm: 5px` (chips, chart bars) · `--radius-button: 14px` (action buttons - slightly
+rounded, **not** a full pill; the shared `Button` uses this) · `--radius-md: 10px` (section cards) ·
 `--radius-lg: 20px` (hero balance card) · `--radius-pill: 999px` (progress track, toggles,
 FAB).
 
@@ -245,9 +249,11 @@ Each component lists its origin (Figma node or "new" if required by FRs but abse
 and the tokens it consumes. Components are dumb/presentational (`shared/`) unless noted.
 
 > **Built so far** (`src/app/shared/ui/`): AppHeader, BottomNav, EmptyState, Button (primary /
-> ghost / **danger** variants), Card, FormField, IconButton, Banner, ListRow, SelectField,
-> Skeleton, Spinner, **Modal** (ConfirmDialog substrate only), **ConfirmDialog**, **FabMenu**,
-> **GoalProgressRow**. Reuse/extend these rather than re-inlining markup - see the `ui-component`
+> ghost / **danger** variants, slightly rounded via `--radius-button`), Card, FormField, IconButton,
+> Banner, ListRow (with optional `[lead]` slot), SelectField, Skeleton, Spinner,
+> **Modal** (ConfirmDialog substrate only), **ConfirmDialog**, **FabMenu**, **GoalProgressRow**,
+> **FormActions** (bottom Save bar), **BalanceCard**, **ActionTile**, **SettingsRow**.
+> Reuse/extend these rather than re-inlining markup - see the `ui-component`
 > skill. The remaining entries below are still to be built as they're needed.
 
 ### Present in Figma
@@ -260,12 +266,14 @@ and the tokens it consumes. Components are dumb/presentational (`shared/`) unles
   Note: Figma inconsistently labels the 4th tab "Charts" on some screens and "Analytics" on
   others, and tab x-positions drift between screens - **normalise to evenly-spaced flexbox
   and one label ("Analytics")**.
-- **BalanceCard** - hero. `--c-primary-40` fill, `--radius-lg`, `--elev-card`. Shows Current
-  Balance (`--t-balance`), Usable Balance, wallet illustration.
-- **QuickActionChip** - labelled tile, `--c-primary-05`, `--radius-sm`, icon + caption (the
-  old-MCB-Juice Home grid; labelled tiles only, never icon-only).
-  Note: Figma shows duplicate "Transaction" labels - placeholder; real actions: *Add expense*
-  (-> `/expenses/new`), *Scan receipt* (-> `/import`), *Add goal* (-> `/goals/new`).
+- **BalanceCard** (`app-balance-card`, **built**) - the Home hero. `--c-primary-40` fill,
+  `--radius-lg`, `--elev-card` (the signature offset pink shadow). Renders an optional money figure
+  (`--t-balance`, via the money pipe) when one is supplied; otherwise an honest caption (the
+  count-based summary used until the deferred `get_dashboard` total exists). Display-only.
+- **ActionTile** (`app-action-tile`, **built**) - labelled Home quick-action tile, `--c-primary-05`,
+  `--radius-button`, Lucide icon + caption (the old-MCB-Juice Home grid; labelled tiles only, never
+  icon-only). Real actions: *Add expense* (-> `/expenses/new`), *Scan receipt* (-> `/import`),
+  *Add goal* (-> `/goals/new`).
 - **GoalProgressRow** (`app-goal-progress-row`, **built**) - label, pill progress track with knob,
   `current / target` amounts (via the money pipe). Track `--c-primary-10`, fill + knob
   `--c-primary`; fill animates from 0 on mount (`--motion-slow`, reduced-motion honoured).
@@ -274,10 +282,12 @@ and the tokens it consumes. Components are dumb/presentational (`shared/`) unles
   (progress derived from the saved amount); the whole row is a button that emits `edit`.
 - **TrendChart** - bar series + line overlay, "Usable Balance Trend". Bars `--c-primary`,
   `--radius-sm` top. **Implement with bundled Chart.js (canvas)**, not static images.
-- **TransactionListItem** - leading icon tile, title, date, trailing signed amount
-  (`+ Rs 500`). Sign coloured: income `--c-positive`, expense `--c-danger`/`--c-text`.
+- **TransactionListItem** - leading **monogram avatar** (via `ListRow`'s `[lead]` slot), title, date,
+  trailing signed amount (`+ Rs 500`). Sign coloured: income `--c-positive`, expense
+  `--c-danger`/`--c-text`. Income rows use the positive tint on the avatar **paired with the signed
+  amount** - never colour alone.
 - **SegmentedToggle** - Daily/Weekly/Monthly and Ongoing/Completed. Pill, active segment
-  `--c-primary`.
+  `--c-primary-700` (white-on-coral clears AA; the lighter `--c-primary` failed it - see §2.3).
 - **FAB** - 60px coral circle, `+` icon, `--elev-float`. Goals uses a simple single-action FAB
   (-> `/goals/new`); Expenses uses the **FabMenu** below instead. The **host list must reserve
   bottom space** so the FAB/FabMenu never occludes the last row: `padding-bottom` ≥
@@ -291,13 +301,22 @@ and the tokens it consumes. Components are dumb/presentational (`shared/`) unles
 - **Form page** (pattern, not a single component) - **every add/edit form is a full-screen routed
   page**, not a modal: a pair of lazy routes `<area>/new` and `<area>/:id/edit` with route data
   `{ title, back: true, hideNav: true }`. The page renders a normal `<form>` in `.app-content`
-  (extended by `var(--keyboard-inset)` so bottom fields clear the keyboard). The header back arrow is
-  *Cancel*; the primary *Save* is published into the global app header via `HeaderActionService`
-  (kept above the soft keyboard). On the **edit** page a destructive **Delete** (Transaction, Goal,
-  Rule) or **Archive** (Account, Category) button sits in a `.danger-zone` and opens a ConfirmDialog;
-  Recurring has no delete. `transaction-form` is the canonical example. Page entrance uses the
-  automatic route page-transition (no per-page motion). See `screens.md` §8.0 and
-  `docs/adr/0002-page-based-forms-no-modals.md`.
+  (extended by `var(--keyboard-inset)` so bottom fields clear the keyboard, and reserving bottom
+  padding so the last field clears the Save bar). The header back arrow is *Cancel*; the primary
+  *Save* lives in a **fixed bottom action bar** (`FormActions`, below) that lifts with
+  `--keyboard-inset` so the Android soft keyboard never hides it. On the **edit** page the
+  destructive action is a **danger icon-button at the top-right of the header** (via
+  `HeaderActionService`, which carries an optional `icon: 'trash' | 'archive'`) - **Delete**
+  (Transaction, Goal, Rule) or **Archive** (Account, Category) - opening a ConfirmDialog; Recurring
+  has no delete. `transaction-form` is the canonical example. Page entrance uses the automatic route
+  page-transition (no per-page motion). This bottom-Save / header-Delete placement supersedes the
+  earlier Save-in-the-header pattern - see `screens.md` §8.0 and ADR 0003 (form action placement),
+  which supersedes `docs/adr/0002-page-based-forms-no-modals.md` on this point.
+- **FormActions** (`app-form-actions`, **built**) - the fixed **bottom action bar** that hosts a
+  form page's primary *Save* (and any secondary action). Pinned to the bottom of the form page and
+  lifted by `var(--keyboard-inset)` so it stays above the Android soft keyboard; the page reserves
+  matching bottom padding so the last field clears it. Replaces the retired Save-in-the-header
+  approach (ADR 0003). Buttons use the shared `Button` (slightly rounded via `--radius-button`).
 - **Modal** (`app-modal`) - the small centred confirm/alert **substrate for ConfirmDialog only** -
   **not** a form container. Content-sized card (`--radius-lg`, `--elev-float`, `max-width 420px`) over
   a dimmed + blurred scrim (`--c-scrim` + `--backdrop-blur`, `--z-modal`); sizes to its content
@@ -314,6 +333,13 @@ and the tokens it consumes. Components are dumb/presentational (`shared/`) unles
   "Tap the Button below…", "No Data").
 - **TextField (underline)** - income/type inputs: label, value, bottom rule. For amounts use
   a numeric keypad.
+- **ListRow** (`app-list-row`, **built**) - generic list row (title, optional subtitle/meta, trailing
+  slot). Gained an optional **`[lead]` slot** for a leading avatar/monogram (used by
+  TransactionListItem for the per-row monogram avatar).
+- **SettingsRow** (`app-settings-row`, **built**) - a Settings list row: leading Lucide icon + label
+  + optional hint + a trailing chevron or inline control. Used to build the grouped Settings screen
+  (Your money / General / Security - see `screens.md` §7.1). Display/presentational; the feature
+  feeds it data and handles the tap.
 
 ### New - required by FRs, absent in Figma (specified here, to design)
 - **LockScreen** - biometric prompt + passphrase fallback (FR-5.1). App entry gate.

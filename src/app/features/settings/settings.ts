@@ -12,6 +12,7 @@ import {
 import { LockService } from '../../core/lock/lock.service';
 import { getSettings, setBaseCurrency, isTauri } from '../../core/bridge';
 import { SelectField, type SelectOption } from '../../shared/ui/select-field/select-field';
+import { SettingsRow } from '../../shared/ui/settings-row/settings-row';
 
 @Component({
   selector: 'app-settings',
@@ -25,74 +26,69 @@ import { SelectField, type SelectOption } from '../../shared/ui/select-field/sel
     LucideCoins,
     LucideFunnel,
     SelectField,
+    SettingsRow,
   ],
   template: `
     <section class="feature-page">
-      <ul class="settings-list">
+      <h2 class="group-title">Your money</h2>
+      <ul class="rows">
         <li>
-          <a routerLink="/settings/accounts">
-            <svg lucideWallet [size]="24" aria-hidden="true"></svg>
-            <span class="label">Accounts</span>
-            <span class="hint">Manage where money lives</span>
-            <svg lucideChevronRight [size]="18" class="chevron" aria-hidden="true"></svg>
+          <a app-settings-row routerLink="/settings/accounts" label="Accounts" hint="Cash, bank, card or wallet">
+            <svg icon lucideWallet [size]="24" aria-hidden="true"></svg>
+            <svg trailing lucideChevronRight [size]="18" aria-hidden="true"></svg>
           </a>
         </li>
         <li>
-          <a routerLink="/settings/categories">
-            <svg lucideTags [size]="24" aria-hidden="true"></svg>
-            <span class="label">Categories</span>
-            <span class="hint">Organise spending &amp; income</span>
-            <svg lucideChevronRight [size]="18" class="chevron" aria-hidden="true"></svg>
+          <a app-settings-row routerLink="/settings/categories" label="Categories" hint="Group your spending and income">
+            <svg icon lucideTags [size]="24" aria-hidden="true"></svg>
+            <svg trailing lucideChevronRight [size]="18" aria-hidden="true"></svg>
           </a>
         </li>
         <li>
-          <a routerLink="/settings/recurring">
-            <svg lucideRepeat [size]="24" aria-hidden="true"></svg>
-            <span class="label">Recurring</span>
-            <span class="hint">Scheduled, auto-materialised transactions</span>
-            <svg lucideChevronRight [size]="18" class="chevron" aria-hidden="true"></svg>
+          <a app-settings-row routerLink="/settings/recurring" label="Recurring" hint="Bills and income that repeat">
+            <svg icon lucideRepeat [size]="24" aria-hidden="true"></svg>
+            <svg trailing lucideChevronRight [size]="18" aria-hidden="true"></svg>
           </a>
         </li>
         <li>
-          <a routerLink="/settings/rules">
-            <svg lucideFunnel [size]="24" aria-hidden="true"></svg>
-            <span class="label">Rules</span>
-            <span class="hint">Auto-categorise by if-then rules</span>
-            <svg lucideChevronRight [size]="18" class="chevron" aria-hidden="true"></svg>
+          <a app-settings-row routerLink="/settings/rules" label="Rules" hint="Auto-categorise by merchant">
+            <svg icon lucideFunnel [size]="24" aria-hidden="true"></svg>
+            <svg trailing lucideChevronRight [size]="18" aria-hidden="true"></svg>
           </a>
         </li>
       </ul>
 
       <h2 class="group-title">General</h2>
-      <div class="setting-row">
-        <svg lucideCoins [size]="24" aria-hidden="true"></svg>
-        <span class="label" id="base-currency-label">Base currency</span>
-        <app-select-field
-          [options]="currencyOptions"
-          [value]="baseCurrency()"
-          (valueChange)="onBaseCurrencyChange($event)"
-          ariaLabelledby="base-currency-label"
-        />
-      </div>
-      <p class="setting-hint">Foreign-currency transactions convert to this for reporting.</p>
+      <ul class="rows">
+        <li>
+          <div app-settings-row label="Base currency" hint="Foreign-currency transactions convert to this for reporting">
+            <svg icon lucideCoins [size]="24" aria-hidden="true"></svg>
+            <app-select-field
+              trailing
+              ariaLabel="Base currency"
+              [options]="currencyOptions"
+              [value]="baseCurrency()"
+              (valueChange)="onBaseCurrencyChange($event)"
+            />
+          </div>
+        </li>
+      </ul>
 
       <h2 class="group-title">Security</h2>
-      <div class="setting-row">
-        <svg lucideLock [size]="24" aria-hidden="true"></svg>
-        <span class="label" id="lock-timeout-label">Lock timeout</span>
-        <app-select-field
-          [options]="timeoutOptions"
-          [value]="lock.idleTimeoutSecs()"
-          (valueChange)="onTimeoutChange($event)"
-          ariaLabelledby="lock-timeout-label"
-        />
-      </div>
-      <p class="setting-hint">Auto-locks the app after this idle time. Backgrounding always locks.</p>
-
-      <p class="muted">
-        Budgets/envelopes, rules, export, and encrypted backup/restore
-        (FR-3.1, FR-4.x, FR-5.x) arrive in later tickets.
-      </p>
+      <ul class="rows">
+        <li>
+          <div app-settings-row label="Auto-lock" hint="Locks after this idle time; backgrounding always locks">
+            <svg icon lucideLock [size]="24" aria-hidden="true"></svg>
+            <app-select-field
+              trailing
+              ariaLabel="Lock timeout"
+              [options]="timeoutOptions"
+              [value]="lock.idleTimeoutSecs()"
+              (valueChange)="onTimeoutChange($event)"
+            />
+          </div>
+        </li>
+      </ul>
     </section>
   `,
   styles: `
@@ -101,74 +97,19 @@ import { SelectField, type SelectOption } from '../../shared/ui/select-field/sel
       flex-direction: column;
       gap: var(--space-5);
     }
-    .muted {
+    .group-title {
+      margin: 0 0 calc(-1 * var(--space-2));
       color: var(--c-text-muted);
+      font-size: var(--t-section);
+      font-weight: var(--fw-medium);
     }
-    .settings-list {
+    .rows {
       list-style: none;
       margin: 0;
       padding: 0;
       display: flex;
       flex-direction: column;
       gap: var(--space-2);
-    }
-    .settings-list a {
-      display: grid;
-      grid-template-columns: auto 1fr auto;
-      grid-template-areas: 'icon label chevron' 'icon hint chevron';
-      align-items: center;
-      column-gap: var(--space-3);
-      padding: var(--space-4);
-      min-height: var(--tap-target-min);
-      background: var(--c-surface);
-      border: 1px solid var(--c-border);
-      border-radius: var(--radius-md);
-      text-decoration: none;
-      color: var(--c-text);
-    }
-    .settings-list svg:first-child {
-      grid-area: icon;
-      color: var(--c-primary-700);
-    }
-    .settings-list .label {
-      grid-area: label;
-      font-weight: var(--fw-medium);
-    }
-    .settings-list .hint {
-      grid-area: hint;
-      font-size: var(--t-caption);
-      color: var(--c-text-muted);
-    }
-    .settings-list .chevron {
-      grid-area: chevron;
-      color: var(--c-text-muted);
-    }
-    .group-title {
-      margin-bottom: calc(-1 * var(--space-3));
-      color: var(--c-text-muted);
-      font-size: var(--t-section);
-    }
-    .setting-row {
-      display: flex;
-      align-items: center;
-      gap: var(--space-3);
-      padding: var(--space-4);
-      min-height: var(--tap-target-min);
-      background: var(--c-surface);
-      border: 1px solid var(--c-border);
-      border-radius: var(--radius-md);
-    }
-    .setting-row svg {
-      color: var(--c-primary-700);
-    }
-    .setting-row .label {
-      flex: 1;
-      font-weight: var(--fw-medium);
-    }
-    .setting-hint {
-      margin-top: calc(-1 * var(--space-3));
-      font-size: var(--t-caption);
-      color: var(--c-text-muted);
     }
   `,
 })

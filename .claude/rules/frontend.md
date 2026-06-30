@@ -68,6 +68,10 @@ icons, the shared money pipe, and the five required states. Screen specs live in
 
 **Add/edit forms are full-screen pages, not modals.** Each is a pair of lazy routes `<area>/new` and
 `<area>/:id/edit` with route data `{ title, back: true, hideNav: true }`; the back arrow is *Cancel*
-and the primary *Save* is published into the global header via `HeaderActionService`
-(`core/layout/header-action.service.ts`), never a centred modal. `ConfirmDialog` is the only overlay
-in the app. See `docs/design/screens.md` §8.0 and `docs/adr/0002-page-based-forms-no-modals.md`.
+and the primary *Save* lives in a **fixed bottom action bar** (`FormActions`, `app-form-actions`)
+that lifts with `--keyboard-inset` so the Android soft keyboard never hides it. The **destructive**
+action (Delete/Archive) is a danger icon-button at the top-right of the header, published via
+`HeaderActionService` (`core/layout/header-action.service.ts`) with an optional
+`icon: 'trash' | 'archive'` - not Save-in-the-header. Never a centred modal. `ConfirmDialog` is the
+only overlay in the app. See `docs/design/screens.md` §8.0 and ADR 0003 (form action placement,
+superseding `docs/adr/0002-page-based-forms-no-modals.md` on Save/Delete placement).
