@@ -133,7 +133,12 @@ export class Import {
       totalMinor: editedMinor ?? this.totalMinor(),
       currency: this.baseCurrency(),
     };
-    void this.router.navigate(['/expenses/new'], { state: { transactionPrefill: prefill } });
+    // Straight to the entry form (kind defaults to expense, category not yet chosen: `0`); the form
+    // applies the prefill and suggests a category from the payee. The two-step picker is skipped
+    // here because OCR already carries the figures the user is confirming.
+    void this.router.navigate(['/expenses/new', 'expense', 0], {
+      state: { transactionPrefill: prefill },
+    });
   }
 
   /** Discard the scan and start over. */
@@ -144,7 +149,7 @@ export class Import {
     this.form.reset({ merchant: '', date: '', total: '' });
   }
 
-  /** Skip OCR entirely and enter a transaction by hand (the empty Add expense page). */
+  /** Skip OCR entirely and enter a transaction by hand, starting at the kind chooser (step 1a). */
   protected manualEntry(): void {
     void this.router.navigate(['/expenses/new']);
   }

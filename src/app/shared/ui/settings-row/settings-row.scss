@@ -23,6 +23,10 @@
   flex: none;
   color: var(--c-primary-700);
 }
+// Money-in affordance: the projected icon inherits this colour (paired with label + icon shape).
+.srow-icon.income {
+  color: var(--c-positive);
+}
 .srow-text {
   display: flex;
   flex-direction: column;

@@ -2,7 +2,7 @@ import { Component, DestroyRef, OnInit, computed, effect, inject, signal } from 
 import { ActivatedRoute, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { LucidePlus, LucideX } from '@lucide/angular';
+import { LucidePlus, LucideX, LucideTag, LucideChevronRight } from '@lucide/angular';
 import {
   createTransaction,
   updateTransaction,
@@ -15,7 +15,13 @@ import {
   toUserMessage,
   isTauri,
 } from '../../core/bridge';
-import type { Transaction, Account, Category, TransactionPrefill } from '../../core/models';
+import type {
+  Transaction,
+  Account,
+  Category,
+  CategoryKind,
+  TransactionPrefill,
+} from '../../core/models';
 import { HeaderActionService } from '../../core/layout/header-action.service';
 import { MoneyPipe } from '../../shared/pipes/money.pipe';
 import { IconButton } from '../../shared/ui/icon-button/icon-button';
@@ -27,6 +33,22 @@ import { ConfirmDialog } from '../../shared/ui/confirm-dialog/confirm-dialog';
 import { SelectField, type SelectOption } from '../../shared/ui/select-field/select-field';
 
 const DECIMAL = /^\d+(\.\d+)?$/;
+
+/**
+ * A snapshot of the in-progress form, carried in nav state when the user taps the category row to
+ * change it (form -> picker -> form). Restoring it makes changing the category lossless. Matches
+ * `form.getRawValue()`.
+ */
+interface FormSnapshot {
+  accountId: number | null;
+  postedDate: string;
+  amount: string;
+  currency: string;
+  fxRate: string;
+  payee: string;
+  note: string;
+  splits: { categoryId: number | null; amount: string }[];
+}
 
 /**
  * Full-screen Add/Edit Transaction page (FR-1.1, splits FR-1.2, multi-currency FR-1.4). Replaces the
@@ -44,6 +66,8 @@ const DECIMAL = /^\d+(\.\d+)?$/;
     MoneyPipe,
     LucidePlus,
     LucideX,
+    LucideTag,
+    LucideChevronRight,
     IconButton,
     Banner,
     Spinner,
@@ -68,6 +92,25 @@ export class TransactionForm implements OnInit {
     (this.nav?.extras.state?.['transaction'] as Transaction | undefined) ?? null;
   private readonly pendingPrefill =
     (this.nav?.extras.state?.['transactionPrefill'] as TransactionPrefill | undefined) ?? null;
+  /** In-progress entry handed back when the user changes the category (lossless round-trip). */
+  private readonly resume =
+    (this.nav?.extras.state?.['resume'] as FormSnapshot | undefined) ?? null;
+
+  /** Kind branch from the create route (`expenses/new/:kind/...`); drives the title + amount hint. */
+  private readonly presetKind: CategoryKind =
+    this.route.snapshot.paramMap.get('kind') === 'income' ? 'income' : 'expense';
+  /** Category chosen in step 1b (`:categoryId`); `0`/absent means not yet chosen (e.g. scan). */
+  private readonly presetCategoryId = ((): number | null => {
+    const raw = this.route.snapshot.paramMap.get('categoryId');
+    const n = raw == null ? NaN : Number(raw);
+    return Number.isInteger(n) && n > 0 ? n : null;
+  })();
+  /**
+   * The transaction kind for this whole form session (stable): the route preset on create, or the
+   * loaded transaction's category kind on edit. A transaction is a single kind, so category options
+   * and the amount hint key off this rather than re-deriving per render.
+   */
+  protected readonly formKind = signal<CategoryKind>(this.presetKind);
 
   /** Edit id from the route (`expenses/:id/edit`); null on the add route. */
   protected readonly editingId = signal<number | null>(
@@ -90,8 +133,12 @@ export class TransactionForm implements OnInit {
   protected readonly accountOptions = computed<SelectOption[]>(() =>
     this.accounts().map((a) => ({ value: a.id, label: `${a.name} · ${a.currency}` })),
   );
+  // Split editor + edit dropdown: only this transaction's kind, with no redundant "· kind" suffix
+  // (the kind is already fixed for the whole entry).
   protected readonly categoryOptions = computed<SelectOption[]>(() =>
-    this.categories().map((c) => ({ value: c.id, label: `${c.name} · ${c.kind}` })),
+    this.categories()
+      .filter((c) => c.kind === this.formKind())
+      .map((c) => ({ value: c.id, label: c.name })),
   );
 
   protected readonly form = this.fb.group({
@@ -179,8 +226,17 @@ export class TransactionForm implements OnInit {
           this.patchFromTransaction(tx);
         }
       } else {
-        this.patchForCreate(this.pendingPrefill);
-        if (this.pendingPrefill?.payee) void this.suggestCategory();
+        // Restore an in-progress entry when changing the category; otherwise start fresh (or from
+        // an OCR prefill). The two-step add picks the category first, so it is preset here.
+        if (this.resume) this.patchFromResume(this.resume);
+        else this.patchForCreate(this.pendingPrefill);
+
+        if (this.presetCategoryId != null) {
+          this.splits.at(0).get('categoryId')!.setValue(this.presetCategoryId);
+        } else if (this.pendingPrefill?.payee) {
+          // Scan path with no chosen category: suggest one from the payee (still user-confirmed).
+          void this.suggestCategory();
+        }
       }
     } catch (e) {
       this.error.set(toUserMessage(e));
@@ -270,6 +326,23 @@ export class TransactionForm implements OnInit {
         amount: this.majorAmount(s.amountMinor, t.currency),
       })),
     });
+    // Fix the session kind from the loaded transaction's category (a transaction is one kind).
+    const firstCat = this.categories().find((c) => c.id === t.splits[0]?.categoryId);
+    if (firstCat) this.formKind.set(firstCat.kind);
+  }
+
+  /** Restore a snapshot handed back from the category picker (lossless "change category"). */
+  private patchFromResume(s: FormSnapshot): void {
+    this.resetForm({
+      accountId: s.accountId,
+      currency: s.currency,
+      fxRate: s.fxRate,
+      postedDate: s.postedDate,
+      amount: s.amount,
+      payee: s.payee,
+      note: s.note,
+      splits: s.splits,
+    });
   }
 
   private resetForm(opts: {
@@ -280,7 +353,7 @@ export class TransactionForm implements OnInit {
     amount?: string;
     payee?: string;
     note?: string;
-    splits?: { categoryId: number; amount: string }[];
+    splits?: { categoryId: number | null; amount: string }[];
   }): void {
     const splitData: { categoryId: number | null; amount: string }[] = opts.splits?.length
       ? opts.splits
@@ -308,6 +381,43 @@ export class TransactionForm implements OnInit {
   }
   protected setSplitCategory(i: number, v: number | string): void {
     this.splits.at(i).get('categoryId')!.setValue(Number(v));
+  }
+
+  // -- Two-step category context (create, single-split) ------------------------------
+
+  /** The category currently chosen for a simple (single-split) entry, resolved for display. */
+  protected selectedCategory(): Category | null {
+    const id = this.splits.at(0).get('categoryId')!.value as number | null;
+    if (id == null) return null;
+    return this.categories().find((c) => c.id === id) ?? null;
+  }
+
+  /** Expense vs income for this entry (stable for the session). */
+  protected kind(): CategoryKind {
+    return this.formKind();
+  }
+
+  /** Amount field hint, phrased for the kind (the type is already chosen, never set here). */
+  protected amountHint(): string {
+    return this.kind() === 'income' ? 'How much you received.' : 'How much you spent.';
+  }
+
+  /** Inline error when a simple entry has no category yet (shown only once touched). */
+  protected categoryRowError(): string | null {
+    const c = this.splits.at(0).get('categoryId')!;
+    return c.invalid && c.touched ? 'Choose a category.' : null;
+  }
+
+  /**
+   * Reopen the picker to change the category, carrying the in-progress entry so nothing is lost.
+   * `replaceUrl` swaps the form out of history (the picker re-adds it on pick), so repeatedly
+   * changing the category never stacks up entries the Back button has to unwind.
+   */
+  protected changeCategory(): void {
+    void this.router.navigate(['/expenses/new', this.kind()], {
+      state: { resume: this.form.getRawValue() },
+      replaceUrl: true,
+    });
   }
 
   protected async save(): Promise<void> {

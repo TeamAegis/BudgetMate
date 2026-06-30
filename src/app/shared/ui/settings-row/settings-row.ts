@@ -20,7 +20,9 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
   selector: '[app-settings-row]',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <span class="srow-icon"><ng-content select="[icon]"></ng-content></span>
+    <span class="srow-icon" [class.income]="tone() === 'income'"
+      ><ng-content select="[icon]"></ng-content
+    ></span>
     <span class="srow-text">
       <span class="srow-label">{{ label() }}</span>
       @if (hint(); as h) {
@@ -34,4 +36,10 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 export class SettingsRow {
   readonly label = input.required<string>();
   readonly hint = input<string | null>(null);
+  /**
+   * Leading-icon tint. `default` is the coral system colour; `income` tints it positive-green for
+   * the money-in affordance (e.g. the Add chooser's Income row). Colour is always paired with the
+   * label + icon shape, never the only signal (`.claude/rules/design.md`).
+   */
+  readonly tone = input<'default' | 'income'>('default');
 }

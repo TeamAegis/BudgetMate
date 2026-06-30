@@ -65,6 +65,13 @@ the UI/UX principles, UX laws, WCAG 2.2, and anti-patterns - lives in
   confirm/alert substrate only, retired as a form container. See `docs/design/screens.md` §8.0 and
   ADR 0003 (form action placement, superseding `docs/adr/0002-page-based-forms-no-modals.md` on
   Save/Delete placement).
+- **Adding a transaction is a two-step flow before the form** (ADR 0004): a kind chooser
+  (`expenses/new`, Expense/Income) then a per-kind category picker (`expenses/new/:kind`), both
+  plain navigation lists (SettingsRow, **no** Save bar), then the entry form
+  (`expenses/new/:kind/:categoryId`) which **shows** the chosen category as a tappable context row -
+  no type toggle, no category dropdown for a simple entry. Changing the category is lossless (the
+  in-progress entry rides along in nav state). This applies only to *adding* a transaction; *edit*
+  and every other add/edit form stay single pages. See `docs/design/screens.md` §4.2/§8.0.
 - **Buttons are slightly rounded** via `--radius-button` (14px) - not a full pill; the shared
   `Button` uses this token (the FormActions Save and the ActionTile/SettingsRow chrome all sit on it).
 - **Expenses primary action is a `FabMenu`** (`app-fab-menu`, tap-to-open, labelled *Add expense* /

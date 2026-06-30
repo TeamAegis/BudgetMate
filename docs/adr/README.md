@@ -19,3 +19,6 @@ Consequences, and Alternatives considered.
   ConfirmDialog is the only remaining overlay. (Action placement superseded by 0003.)
 - [0003](0003-form-action-placement.md): Form action placement. Primary Save is a keyboard-safe
   bottom bar; the destructive Delete/Archive is a danger icon top-right in the header.
+- [0004](0004-two-step-add-transaction.md): Two-step add. Adding a transaction picks kind then
+  category (navigation lists) before the form, which shows the category instead of a dropdown.
+  Presentation only; lossless category change; edit + scan unchanged.
