@@ -57,5 +57,7 @@
         <input type="text" formControlName="note" />
       </app-form-field>
     </form>
+
+    <app-form-actions [loading]="busy()" (save)="save()" />
   }
 </section>

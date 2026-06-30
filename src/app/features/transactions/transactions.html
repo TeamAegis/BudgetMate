@@ -38,9 +38,10 @@
               app-list-row
               animate.enter="list-item-enter"
               [style.animation-delay]="(t.flatIndex < 12 ? t.flatIndex * 40 : 0) + 'ms'"
-              [name]="t.tx.payee || categoryLabel(t.tx)"
+              [name]="rowName(t.tx)"
               [meta]="metaLine(t.tx)"
             >
+              <span lead class="avatar" [class.income]="t.tx.amountMinor > 0">{{ monogram(rowName(t.tx)) }}</span>
               <span amount class="amount-cell">
                 <span
                   class="amount numeric"

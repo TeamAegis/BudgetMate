@@ -31,16 +31,9 @@
           (valueChange)="setParent($event)"
         />
       </app-form-field>
-
-      @if (editing()) {
-        <div class="danger-zone">
-          <app-button variant="danger" (click)="confirmingArchive.set(true)" [disabled]="busy()" [block]="true">
-            <svg icon lucideArchive [size]="18"></svg>
-            <span>Archive category</span>
-          </app-button>
-        </div>
-      }
     </form>
+
+    <app-form-actions [loading]="busy()" (save)="save()" />
   }
 
   @if (confirmingArchive()) {

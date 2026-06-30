@@ -47,7 +47,7 @@
     "lineHeight": { "body": 1.5, "tight": 1.2 }
   },
   "spacing": { "1": 4, "2": 8, "3": 12, "4": 16, "5": 20, "6": 24, "8": 32 },
-  "radius": { "sm": 5, "md": 10, "lg": 20, "pill": 999 },
+  "radius": { "sm": 5, "md": 10, "lg": 20, "pill": 999, "button": 14 },
   "layout": {
     "artboard": { "w": 412, "h": 917 },
     "headerH": 80,

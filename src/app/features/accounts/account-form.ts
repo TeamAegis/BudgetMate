@@ -1,7 +1,6 @@
 import { Component, DestroyRef, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { LucideArchive } from '@lucide/angular';
 import {
   listAccounts,
   createAccount,
@@ -12,10 +11,10 @@ import {
 } from '../../core/bridge';
 import type { Account, AccountKind } from '../../core/models';
 import { HeaderActionService } from '../../core/layout/header-action.service';
-import { Button } from '../../shared/ui/button/button';
 import { Banner } from '../../shared/ui/banner/banner';
 import { Spinner } from '../../shared/ui/spinner/spinner';
 import { FormField } from '../../shared/ui/form-field/form-field';
+import { FormActions } from '../../shared/ui/form-actions/form-actions';
 import { ConfirmDialog } from '../../shared/ui/confirm-dialog/confirm-dialog';
 import { SelectField, type SelectOption } from '../../shared/ui/select-field/select-field';
 
@@ -32,11 +31,10 @@ const KINDS: AccountKind[] = ['cash', 'bank', 'card', 'wallet', 'other'];
   selector: 'app-account-form',
   imports: [
     ReactiveFormsModule,
-    LucideArchive,
-    Button,
     Banner,
     Spinner,
     FormField,
+    FormActions,
     ConfirmDialog,
     SelectField,
   ],
@@ -81,10 +79,15 @@ export class AccountForm implements OnInit {
   });
 
   constructor() {
-    // Publish Save into the global header; the back arrow is Cancel (App owns it). Re-published on
-    // busy() change so the header button shows the in-flight state. Cleared on teardown.
+    // Edit pages expose Archive as a danger icon top-right in the header; Save is the bottom action
+    // bar (FormActions) and the back arrow is Cancel. Add pages carry no header action. Cleared on
+    // teardown so it never leaks onto the next screen.
     effect(() => {
-      this.headerAction.set({ label: 'Save', loading: this.busy(), run: () => void this.save() });
+      this.headerAction.set(
+        this.editing()
+          ? { label: 'Archive account', icon: 'archive', run: () => this.confirmingArchive.set(true) }
+          : null,
+      );
     });
     this.destroyRef.onDestroy(() => this.headerAction.clear());
   }

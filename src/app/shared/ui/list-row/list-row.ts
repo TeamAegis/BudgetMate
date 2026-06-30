@@ -6,11 +6,13 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
  * MoneyPipe and any Lucide/IconButton imports:
  *
  *   <li app-list-row [name]="a.name" [meta]="a.accountType + ' · ' + a.currency">
+ *     <span lead class="avatar">W</span>            <!-- optional leading glyph/monogram -->
  *     <span amount class="amount numeric">{{ { amountMinor: a.openingBalanceMinor, currency: a.currency } | money }}</span>
  *     <app-icon-button actions ariaLabel="Edit" (click)="edit(a)"><svg lucidePencil [size]="18"></svg></app-icon-button>
  *   </li>
  *
- * Attribute selector on a real `<li>` so it stays valid inside `<ul class="rows">`.
+ * Attribute selector on a real `<li>` so it stays valid inside `<ul class="rows">`. The optional
+ * `[lead]` slot holds a leading avatar/monogram (the feature owns its styling).
  */
 @Component({
   // Attribute selector on a real <li> so the row stays a valid child of <ul class="rows">.

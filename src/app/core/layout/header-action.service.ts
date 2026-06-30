@@ -1,18 +1,21 @@
 import { Injectable, signal } from '@angular/core';
 
 /**
- * A primary action shown on the right of the global app header (e.g. the **Save** of a full-screen
- * form page). Put in the header - not a bottom bar - so the Android soft keyboard can never hide it
- * (the WebView doesn't resize for the keyboard; see `core/layout/viewport-insets.service.ts`).
+ * The trailing action on the right of the global app header. On a full-screen form page this is the
+ * destructive action (Delete / Archive) shown as a danger icon-button on the EDIT page; the primary
+ * Save is a bottom action bar (see FormActions), and the back arrow is Cancel. Without an `icon` it
+ * renders as a text button.
  */
 export interface HeaderAction {
-  /** Button label, e.g. "Save". */
+  /** Accessible name (and text label when no icon), e.g. "Delete transaction". */
   readonly label: string;
-  /** Invoked on tap. The page owns validation - a no-op-on-invalid `run` is fine. */
+  /** Invoked on tap. */
   readonly run: () => void;
+  /** When set, render as a danger icon-button with this glyph (else a text button). */
+  readonly icon?: 'trash' | 'archive';
   /** In-flight: disables the button and marks it busy. */
   readonly loading?: boolean;
-  /** Statically disabled (rare - prefer letting `run` reveal validation errors). */
+  /** Statically disabled. */
   readonly disabled?: boolean;
 }
 
@@ -22,7 +25,9 @@ export interface HeaderAction {
  *
  *   private readonly headerAction = inject(HeaderActionService);
  *   constructor() {
- *     effect(() => this.headerAction.set({ label: 'Save', loading: this.busy(), run: () => this.save() }));
+ *     effect(() => this.headerAction.set(
+ *       this.editing() ? { label: 'Delete goal', icon: 'trash', run: () => this.confirmingDelete.set(true) } : null,
+ *     ));
  *     inject(DestroyRef).onDestroy(() => this.headerAction.clear());
  *   }
  *
@@ -33,7 +38,7 @@ export interface HeaderAction {
 export class HeaderActionService {
   readonly action = signal<HeaderAction | null>(null);
 
-  set(action: HeaderAction): void {
+  set(action: HeaderAction | null): void {
     this.action.set(action);
   }
 

@@ -6,6 +6,25 @@
   padding-bottom: calc(var(--layout-fab-size) + var(--space-6));
 }
 
+// Leading monogram avatar on a transaction row. Income uses the positive tint (always paired with
+// the signed amount + colour, never colour alone).
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  flex: none;
+  border-radius: var(--radius-pill);
+  background: var(--c-primary-05);
+  color: var(--c-primary-700);
+  font-weight: var(--fw-medium);
+}
+.avatar.income {
+  background: var(--c-positive-soft);
+  color: var(--c-positive);
+}
+
 // Stacked original + base amount in a list row.
 .amount-cell {
   display: flex;

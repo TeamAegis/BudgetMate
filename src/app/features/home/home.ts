@@ -1,125 +1,106 @@
-import { Component } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
 import { LucidePlus, LucideTarget, LucideScanLine } from '@lucide/angular';
+import { listTransactions, listGoals, toUserMessage, isTauri } from '../../core/bridge';
+import type { Transaction, Goal } from '../../core/models';
+import { MoneyPipe } from '../../shared/pipes/money.pipe';
+import { ActionTile } from '../../shared/ui/action-tile/action-tile';
+import { BalanceCard } from '../../shared/ui/balance-card/balance-card';
+import { ListRow } from '../../shared/ui/list-row/list-row';
+import { GoalProgressRow } from '../../shared/ui/goal-progress-row/goal-progress-row';
+import { Skeleton } from '../../shared/ui/skeleton/skeleton';
+import { Banner } from '../../shared/ui/banner/banner';
 
 /**
- * Home / Dashboard. Old-Juice layout: the balance summary on top, then a grid of LABELLED
- * quick-action tiles (never icon-only - a low-literacy requirement). Each tile is a link to a
- * full-screen page (no modals). The balance figures are a placeholder until the Rust
- * `get_dashboard()` command lands (architecture.md s11). Bottom nav handles browsing; these tiles
- * are for the highest-frequency actions.
+ * Home / Dashboard (old-Juice layout): a hero summary, labelled quick-action tiles, then a live
+ * Recent activity list and a goals preview - both from existing bridge data (display only; amounts
+ * come from Rust as minor units, formatted by the money pipe - never TS money math). The hero's live
+ * spend total needs the deferred `get_dashboard()` command, so for now it shows an honest
+ * count-based caption (counting and date filtering are not money math).
  */
 @Component({
   selector: 'app-home',
-  imports: [RouterLink, LucidePlus, LucideTarget, LucideScanLine],
-  template: `
-    <section class="feature-page">
-      <!-- BalanceCard (hero) - screens.md s3. Placeholder until get_dashboard() lands. -->
-      <div class="balance-card">
-        <span class="label">Current Balance</span>
-        <span class="amount numeric">Rs 0</span>
-        <span class="label">Usable balance · Rs 0</span>
-      </div>
-
-      <h2 class="section-title">Quick actions</h2>
-      <div class="tiles">
-        <a class="tile" routerLink="/expenses/new" animate.enter="list-item-enter">
-          <span class="tile-glyph"><svg lucidePlus [size]="24" aria-hidden="true"></svg></span>
-          <span class="tile-label">Add expense</span>
-        </a>
-        <a class="tile" routerLink="/import" animate.enter="list-item-enter">
-          <span class="tile-glyph"><svg lucideScanLine [size]="24" aria-hidden="true"></svg></span>
-          <span class="tile-label">Scan receipt</span>
-        </a>
-        <a class="tile" routerLink="/goals/new" animate.enter="list-item-enter">
-          <span class="tile-glyph"><svg lucideTarget [size]="24" aria-hidden="true"></svg></span>
-          <span class="tile-label">Add goal</span>
-        </a>
-      </div>
-
-      <p class="muted">
-        Dashboard: balance, usable-balance trend (Chart.js) and a goals preview (FR-3.x) wire to the
-        Rust <code>get_dashboard()</code> command in a later change.
-      </p>
-    </section>
-  `,
-  styles: `
-    .feature-page {
-      display: flex;
-      flex-direction: column;
-      gap: var(--space-5);
-    }
-    .muted {
-      color: var(--c-text-muted);
-    }
-    .balance-card {
-      display: flex;
-      flex-direction: column;
-      gap: var(--space-2);
-      padding: var(--space-5);
-      background: var(--c-primary-40);
-      border-radius: var(--radius-lg);
-      box-shadow: var(--elev-card);
-    }
-    .balance-card .label {
-      font-size: var(--t-section);
-      color: var(--c-text);
-    }
-    .balance-card .amount {
-      font-size: var(--t-balance);
-      font-weight: var(--fw-extralight);
-      color: var(--c-text);
-    }
-    .section-title {
-      margin: 0;
-      font-size: var(--t-section);
-      font-weight: var(--fw-medium);
-      color: var(--c-text-muted);
-    }
-    // Labelled action tiles (old-Juice grid): icon glyph on top, plain-language label below.
-    .tiles {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: var(--space-3);
-    }
-    .tile {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: var(--space-2);
-      padding: var(--space-4) var(--space-2);
-      min-height: calc(var(--tap-target-min) + var(--space-6));
-      background: var(--c-primary-05);
-      border-radius: var(--radius-md);
-      color: var(--c-primary-700);
-      text-align: center;
-      text-decoration: none;
-    }
-    .tile:focus-visible {
-      outline: 2px solid var(--c-primary-700);
-      outline-offset: 2px;
-    }
-    .tile-glyph {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 44px;
-      height: 44px;
-      border-radius: var(--radius-pill);
-      background: var(--c-primary-10);
-    }
-    .tile-label {
-      font-size: var(--t-caption);
-      font-weight: var(--fw-medium);
-    }
-    // Token-driven entrance stagger (zeros under prefers-reduced-motion, unlike a hardcoded ms).
-    .tiles .tile:nth-child(2) {
-      animation-delay: var(--motion-fast);
-    }
-    .tiles .tile:nth-child(3) {
-      animation-delay: var(--motion-standard);
-    }
-  `,
+  imports: [
+    RouterLink,
+    LucidePlus,
+    LucideTarget,
+    LucideScanLine,
+    MoneyPipe,
+    ActionTile,
+    BalanceCard,
+    ListRow,
+    GoalProgressRow,
+    Skeleton,
+    Banner,
+  ],
+  templateUrl: './home.html',
+  styleUrl: './home.scss',
 })
-export class Home {}
+export class Home implements OnInit {
+  private readonly router = inject(Router);
+  protected readonly skeletonRows = [0, 1, 2];
+
+  protected readonly transactions = signal<Transaction[]>([]);
+  protected readonly goals = signal<Goal[]>([]);
+  protected readonly loading = signal(true);
+  protected readonly error = signal<string | null>(null);
+
+  /** Newest few transactions (list is newest-first from Rust). */
+  protected readonly recent = computed(() => this.transactions().slice(0, 4));
+  /** Up to two ongoing goals for the preview. */
+  protected readonly topGoals = computed(() => this.goals().filter((g) => !g.completed).slice(0, 2));
+
+  /** Count of this-month transactions (date filtering + length only - not money math). */
+  private readonly monthCount = computed(() => {
+    const ym = new Date().toISOString().slice(0, 7);
+    return this.transactions().filter((t) => t.postedDate.startsWith(ym)).length;
+  });
+  /** Honest hero caption until the Rust dashboard total exists - a count, not a fabricated figure. */
+  protected readonly heroCaption = computed(() => {
+    const n = this.monthCount();
+    if (n === 0) return 'No transactions yet this month - add your first below.';
+    return `${n} transaction${n === 1 ? '' : 's'} this month`;
+  });
+
+  async ngOnInit(): Promise<void> {
+    if (!isTauri()) {
+      this.loading.set(false);
+      this.error.set('Run the app (npm run tauri dev) to see your activity.');
+      return;
+    }
+    this.loading.set(true);
+    this.error.set(null);
+    try {
+      const [txs, goals] = await Promise.all([listTransactions(), listGoals()]);
+      this.transactions.set(txs);
+      this.goals.set(goals);
+    } catch (e) {
+      this.error.set(toUserMessage(e));
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
+  /** First letter of the row's display name, for the avatar monogram. */
+  protected monogram(name: string): string {
+    return (name.trim()[0] ?? '?').toUpperCase();
+  }
+
+  protected categoryLabel(t: Transaction): string {
+    if (t.splits.length <= 1) return t.splits[0]?.categoryName ?? '-';
+    return `${t.splits.length} splits`;
+  }
+
+  protected rowName(t: Transaction): string {
+    return t.payee || this.categoryLabel(t);
+  }
+
+  protected rowMeta(t: Transaction): string {
+    return `${this.categoryLabel(t)} · ${t.postedDate}`;
+  }
+
+  /** Open a goal's edit page from the preview (mirrors the Goals list hand-off). */
+  protected editGoal(g: Goal): void {
+    void this.router.navigate(['/goals', g.id, 'edit'], { state: { goal: g } });
+  }
+}

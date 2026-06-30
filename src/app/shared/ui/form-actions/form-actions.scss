@@ -1,0 +1,18 @@
+// Fixed bottom action bar. Lifts with --keyboard-inset so the Save button stays above the Android
+// soft keyboard (the WebView does not resize for it). The form page reserves matching bottom padding.
+:host {
+  display: contents;
+}
+
+.form-actions {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: var(--keyboard-inset, 0px);
+  z-index: var(--z-dropdown);
+  padding: var(--space-3) var(--space-6);
+  // Clear the home indicator when the keyboard is closed (inset is 0 then).
+  padding-bottom: calc(var(--space-3) + var(--safe-area-bottom));
+  background: var(--c-bg);
+  border-top: 1px solid var(--c-border);
+}

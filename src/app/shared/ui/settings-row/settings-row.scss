@@ -1,0 +1,44 @@
+// Settings row: icon + label/hint + trailing (chevron or control). Host is an <a> or <div>.
+:host {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--tap-target-min);
+  padding: var(--space-4);
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
+  color: var(--c-text);
+  text-decoration: none;
+}
+:host(:focus-visible) {
+  outline: 2px solid var(--c-primary-700);
+  outline-offset: 1px;
+}
+
+.srow-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  color: var(--c-primary-700);
+}
+.srow-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+.srow-label {
+  font-weight: var(--fw-medium);
+}
+.srow-hint {
+  font-size: var(--t-caption);
+  color: var(--c-text-muted);
+}
+.srow-trailing {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  color: var(--c-text-muted);
+}

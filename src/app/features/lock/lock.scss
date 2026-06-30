@@ -20,6 +20,14 @@
   color: var(--c-primary-700);
 }
 
+h1 {
+  margin: 0;
+  font-size: var(--t-screen-title);
+  font-weight: var(--fw-bold);
+  line-height: var(--lh-tight);
+  color: var(--c-text);
+}
+
 .muted {
   margin: 0;
   color: var(--c-text-muted);

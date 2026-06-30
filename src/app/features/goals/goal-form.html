@@ -35,16 +35,9 @@
       <app-form-field label="Target date (optional)">
         <input type="date" formControlName="targetDate" />
       </app-form-field>
-
-      @if (editing()) {
-        <div class="danger-zone">
-          <app-button variant="danger" (click)="confirmingDelete.set(true)" [disabled]="busy()" [block]="true">
-            <svg icon lucideTrash2 [size]="18"></svg>
-            <span>Delete goal</span>
-          </app-button>
-        </div>
-      }
     </form>
+
+    <app-form-actions [loading]="busy()" (save)="save()" />
   }
 
   @if (confirmingDelete()) {
