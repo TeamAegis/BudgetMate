@@ -36,9 +36,36 @@ export const routes: Routes = [
       import('./features/transactions/transactions').then((m) => m.Transactions),
   },
   {
+    // Step 1a: choose what to record (expense / income). The category, picked next, carries the
+    // type, so the form needs no type toggle. See ADR 0004 (two-step add) and screens.md 8.0.
     path: 'expenses/new',
     canActivate: [unlockGuard],
-    data: { title: 'Add expense', back: true, hideNav: true },
+    data: { title: 'Add', back: true, hideNav: true },
+    loadComponent: () =>
+      import('./features/transactions/transaction-kind').then((m) => m.TransactionKind),
+  },
+  {
+    // Step 1b: pick a category within the chosen kind. Title reflects the branch.
+    path: 'expenses/new/:kind',
+    canActivate: [unlockGuard],
+    data: {
+      title: (p: { kind?: string }) => (p.kind === 'income' ? 'Income' : 'Expense'),
+      back: true,
+      hideNav: true,
+    },
+    loadComponent: () =>
+      import('./features/transactions/category-picker').then((m) => m.CategoryPicker),
+  },
+  {
+    // Step 2: the entry form, category preset from the URL (categoryId `0` = not yet chosen, e.g.
+    // the scan path). The picked category is shown, not re-picked - tapping it reopens the picker.
+    path: 'expenses/new/:kind/:categoryId',
+    canActivate: [unlockGuard],
+    data: {
+      title: (p: { kind?: string }) => (p.kind === 'income' ? 'New income' : 'New expense'),
+      back: true,
+      hideNav: true,
+    },
     loadComponent: () =>
       import('./features/transactions/transaction-form').then((m) => m.TransactionForm),
   },

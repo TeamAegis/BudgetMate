@@ -75,3 +75,10 @@ action (Delete/Archive) is a danger icon-button at the top-right of the header, 
 `icon: 'trash' | 'archive'` - not Save-in-the-header. Never a centred modal. `ConfirmDialog` is the
 only overlay in the app. See `docs/design/screens.md` §8.0 and ADR 0003 (form action placement,
 superseding `docs/adr/0002-page-based-forms-no-modals.md` on Save/Delete placement).
+
+**Adding a transaction is a two-step flow before the form** (ADR 0004): a kind chooser
+(`expenses/new`) then a per-kind category picker (`expenses/new/:kind`), both navigation lists with
+no Save bar, then the entry form (`expenses/new/:kind/:categoryId`) which shows the chosen category
+(a tappable context row) instead of a dropdown - the category carries the type, so Rust still
+derives the sign and no new command is needed. Changing the category reopens the picker carrying the
+in-progress entry in nav state (lossless). Transaction *edit* and all other forms stay single pages.

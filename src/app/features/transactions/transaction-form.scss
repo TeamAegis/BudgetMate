@@ -74,21 +74,25 @@
   opacity: 0.5;
   cursor: default;
 }
-// Category + amount + remove, aligned on one row; the remove button sits at the field baseline.
-// min-width:0 lets both controls shrink to share the row instead of forcing horizontal scroll.
-.split-row {
+// Each split (>=2) is a card: full-width category on top, amount + remove on a footer row. The
+// category gets the whole width so long names are not truncated in a cramped half-row.
+.split-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
+  background: var(--c-surface);
+}
+.split-card-foot {
   display: flex;
   align-items: flex-end;
   gap: var(--space-2);
 }
-.split-row app-form-field {
-  min-width: 0;
-}
-.split-row .split-category {
-  flex: 1.4;
-}
-.split-row .split-amount {
+.split-card-foot .split-amount {
   flex: 1;
+  min-width: 0;
 }
 .remaining {
   margin: 0;
@@ -104,4 +108,86 @@
   margin: 0;
   font-size: var(--t-caption);
   color: var(--c-primary-700);
+}
+
+// Two-step add: the chosen category shown as a tappable context row (replaces the dropdown for a
+// simple entry). Meaning is carried by label + tag text + icon, never colour alone.
+.category-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.cat-context {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: var(--tap-target-min);
+  padding: var(--space-4);
+  background: var(--c-primary-05);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
+  color: var(--c-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.cat-context:focus-visible {
+  outline: 2px solid var(--c-primary-700);
+  outline-offset: 1px;
+}
+.cat-ic {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  background: var(--c-primary-10);
+  color: var(--c-primary-700);
+}
+.cat-ic.income {
+  background: var(--c-positive-soft);
+  color: var(--c-positive);
+}
+.cat-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  flex: 1;
+  min-width: 0;
+}
+.cat-label {
+  font-size: var(--t-caption);
+  color: var(--c-text-muted);
+}
+.cat-name {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: var(--fw-medium);
+}
+.cat-name.cat-empty {
+  color: var(--c-text-muted);
+}
+.type-tag {
+  font-size: var(--t-caption);
+  font-weight: var(--fw-medium);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--c-primary-10);
+  color: var(--c-primary-700);
+}
+.type-tag.income {
+  background: var(--c-positive-soft);
+  color: var(--c-positive);
+}
+.cat-chev {
+  flex: none;
+  color: var(--c-text-muted);
+}
+.field-error {
+  margin: 0;
+  font-size: var(--t-caption);
+  color: var(--c-danger);
 }

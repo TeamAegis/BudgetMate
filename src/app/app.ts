@@ -1,6 +1,6 @@
 import { Component, OnInit, effect, inject, signal } from '@angular/core';
 import { Location } from '@angular/common';
-import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
+import { NavigationEnd, Params, Router, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { getAppInfo, dbHealth, isTauri } from './core/bridge';
 import { LockService } from './core/lock/lock.service';
@@ -67,7 +67,10 @@ export class App implements OnInit {
     while (route.firstChild) {
       route = route.firstChild;
     }
-    const title = route.data['title'] as string | undefined;
+    // `title` is normally a static string; on the param-driven add routes it is a function of the
+    // route params (e.g. `:kind` -> "New expense" / "New income") resolved at navigation time.
+    const titleData = route.data['title'] as string | ((params: Params) => string) | undefined;
+    const title = typeof titleData === 'function' ? titleData(route.params) : titleData;
     this.pageTitle.set(title ?? 'BudgetMate');
     this.isBrand.set(!title);
     this.hasBack.set(!!route.data['back']);

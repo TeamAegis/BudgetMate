@@ -113,18 +113,33 @@ in the current Figma - design them to this spec.
 
 ### 4.2 Add / Edit Transaction **[partly NEW]**
 - **FR:** FR-1.1 (+ FR-1.2/1.3/1.4 via sub-editors).
-- **Presentation:** a **full-screen page** (§8.0) - routes `expenses/new` and `expenses/:id/edit`,
-  lazy-loaded, route data `{ title, back: true, hideNav: true }`. The canonical form-page example
-  (`transaction-form`). **Amount-first:** the amount is the hero field; Split and FX are
-  progressively disclosed.
-- **Components:** CurrencyField (amount + currency + rate, the hero field), date picker, category
-  picker (SelectField, inline on the page), account picker (SelectField), note; inline split editor
-  ("+ Split"). Back arrow = *Cancel*; *Save* in the fixed bottom `FormActions` bar
-  (keyboard-safe). On the edit page **Delete** is the header danger icon (`trash`, via
-  `HeaderActionService`) → ConfirmDialog.
-- **Data:** draft transaction; categories; accounts; applicable rule preview.
-- **Commands:** `save_transaction(dto)` (ACID), `preview_rules(draft)`.
-- **States:** validation (amount>0, split sum=0 remaining), rule-applied indicator, save error.
+- **Adding is a two-step flow** (ADR 0004), one decision at a time before the form:
+  1. **Kind chooser** (`expenses/new`, `transaction-kind`): a plain navigation list (Settings
+     style, no Save bar) - *Expense* (money out) or *Income* (money in).
+  2. **Category picker** (`expenses/new/:kind`, `category-picker`): a navigation list of that
+     kind's categories. Title is the branch (*Expense* / *Income*). Choosing one pushes the form.
+  3. **Entry form** (`expenses/new/:kind/:categoryId`, `transaction-form`): the chosen category is
+     **shown** (a tappable context row with its type tag), **not** re-picked, so there is no type
+     toggle and no category dropdown for a simple entry. The category carries the type; Rust derives
+     the sign. Tapping the category row reopens the picker, carrying the in-progress entry in nav
+     state so the change is lossless.
+- **Editing** opens the form directly (`expenses/:id/edit`); the category is already known, so the
+  inline category picker (SelectField) is used (the two-step picker is for adding).
+- **Presentation:** full-screen pages (§8.0), lazy-loaded, route data
+  `{ title, back: true, hideNav: true }`; the form title and amount hint are phrased per kind
+  ("New expense"/"How much you spent" vs "New income"/"How much you received"). **Amount-first:**
+  the amount is the hero field; Split and FX are progressively disclosed.
+- **Components:** SettingsRow (chooser + picker rows; income uses the `tone="income"` tint), the
+  category context row, CurrencyField (amount + currency + rate, the hero field), date picker,
+  account picker (SelectField), note; inline split editor ("+ Split across categories", which seeds
+  the first line from the chosen category). Back arrow = *Cancel*; *Save* in the fixed bottom
+  `FormActions` bar (keyboard-safe). On the edit page **Delete** is the header danger icon (`trash`,
+  via `HeaderActionService`) → ConfirmDialog.
+- **Data:** draft transaction; categories (filtered by kind in the picker); accounts; rule preview.
+- **Commands:** `save_transaction(dto)` (ACID), `preview_rules(draft)`. (No new Rust: the flow is
+  presentation only - `list_categories` + `create_transaction` already carry everything.)
+- **States:** validation (amount>0, category chosen, split sum=0 remaining), rule-applied
+  indicator, save error; the picker has loading / empty (no categories yet → add one) states.
 
 ### 4.3 Split Editor **[NEW]**
 - **FR:** FR-1.2.
@@ -141,8 +156,10 @@ in the current Figma - design them to this spec.
 - **Commands:** `extract_receipt(imagePath)` - one thin Rust command that calls
   `plugin:ocr|recognize_text` then runs the deterministic `rules::receipt::extract`, returning
   `{ engineAvailable, fields: { merchant, date, totalMinor } }`. Image picked via the file-open
-  dialog (bridge `pickReceiptImage`). On "Use these details" the screen prefills the Add expense
-  page (`/expenses/new` router state) - it does **not** save.
+  dialog (bridge `pickReceiptImage`). On "Use these details" the screen prefills the entry form
+  directly (`/expenses/new/expense/0` router state, kind defaulting to expense and category not yet
+  chosen) and suggests a category from the payee - it does **not** save. (Manual entry from the scan
+  screen instead starts at the kind chooser `/expenses/new`.)
 - **States:** picking, processing (off-thread - `extract_receipt` is async, native engine on
   Dispatchers.IO), review (editable), low-confidence (all fields empty → flagged + manual-entry
   CTA), engine-unavailable (plugin `NotImplemented` on desktop/iOS), failed (retry/manual entry).
@@ -319,6 +336,12 @@ in the current Figma - design them to this spec.
   `icon: 'trash' | 'archive'`): **Delete** (Transaction, Goal, Rule, `trash`) or **Archive**
   (Account, Category, `archive`), each opening a `ConfirmDialog` (§8.2). Add pages omit it.
   Recurring has no delete (managed by pause/resume on its list).
+- **Adding a transaction is a two-step pre-form flow** (ADR 0004): a kind chooser
+  (`expenses/new`) then a per-kind category picker (`expenses/new/:kind`), both plain navigation
+  lists with **no Save bar**, before the entry form (`expenses/new/:kind/:categoryId`). The form
+  shows the chosen category (a tappable context row), so a simple entry has no type toggle and no
+  category dropdown. This is specific to **adding** a transaction; every other add/edit form (and
+  transaction *edit*) is a single page as above. See §4.2.
 - **Dropdowns** on a form page use `SelectField` (themed listbox - native `<select>` can't be styled
   in the WebView); it sits inline on the page and overlays normally (no in-flow dialog expansion -
   forms are pages now). The body scrolls with the scrollbar hidden (native-app feel).
