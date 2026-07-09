@@ -317,37 +317,49 @@ in the current Figma - design them to this spec.
 ## 8. Forms, overlays & shared
 
 ### 8.0 Forms are pages (canonical pattern)
-- **Every add/edit form in the app is a full-screen routed page**, **not** a modal. Each former
-  modal is a pair of lazy routes `<area>/new` and `<area>/:id/edit` carrying route data
-  `{ title, back: true, hideNav: true }` (so the bottom nav is hidden on the task page). This covers
-  Add/Edit **Transaction** (incl. Split editor; `expenses/new`, `expenses/:id/edit`), **Rule**
-  (`settings/rules/...`), **Recurring rule** (`settings/recurring/...`), **Account**
-  (`settings/accounts/...`), **Category** (`settings/categories/...`), and **Goal**
-  (`goals/...`, FR-3.2). The list navigates to the page and hands the entity over via router state;
-  the back arrow = *Cancel* returns to origin unchanged. `transaction-form` is the canonical example.
-- **Action placement:** the back arrow is *Cancel*; the primary *Save* lives in a **fixed bottom
-  action bar** (`FormActions`, `app-form-actions`) that lifts with `var(--keyboard-inset)` so the
-  Android soft keyboard never hides it. The page body scrolls inside `.app-content`, which is
-  extended by `var(--keyboard-inset)` and reserves bottom padding so the focused bottom field clears
-  both the keyboard and the Save bar. This supersedes the earlier Save-in-the-header placement
-  (see ADR 0003, form action placement, superseding `0002` on this point).
-- **Destructive actions** are a **danger icon-button at the top-right of the header** on the
-  **edit** page only - published via `HeaderActionService` (which carries an optional
-  `icon: 'trash' | 'archive'`): **Delete** (Transaction, Goal, Rule, `trash`) or **Archive**
-  (Account, Category, `archive`), each opening a `ConfirmDialog` (§8.2). Add pages omit it.
-  Recurring has no delete (managed by pause/resume on its list).
-- **Adding a transaction is a two-step pre-form flow** (ADR 0004): a kind chooser
-  (`expenses/new`) then a per-kind category picker (`expenses/new/:kind`), both plain navigation
-  lists with **no Save bar**, before the entry form (`expenses/new/:kind/:categoryId`). The form
-  shows the chosen category (a tappable context row), so a simple entry has no type toggle and no
-  category dropdown. This is specific to **adding** a transaction; every other add/edit form (and
-  transaction *edit*) is a single page as above. See §4.2.
-- **Dropdowns** on a form page use `SelectField` (themed listbox - native `<select>` can't be styled
-  in the WebView); it sits inline on the page and overlays normally (no in-flow dialog expansion -
-  forms are pages now). The body scrolls with the scrollbar hidden (native-app feel).
-- Rationale and decision: `docs/adr/0002-page-based-forms-no-modals.md` (forms are pages), then
-  ADR 0003 (form action placement: bottom Save bar + header Delete, superseding `0002`'s
-  Save-in-the-header); evidence: `docs/design/research/mobile-ux-and-old-juice.md`.
+
+#### The pattern: routed pages, not modals
+Every add/edit form in the app is a full-screen routed page, **not** a modal. Each former modal is a
+pair of lazy routes `<area>/new` and `<area>/:id/edit` carrying route data
+`{ title, back: true, hideNav: true }` (so the bottom nav is hidden on the task page). This covers
+Add/Edit **Transaction** (incl. Split editor; `expenses/new`, `expenses/:id/edit`), **Rule**
+(`settings/rules/...`), **Recurring rule** (`settings/recurring/...`), **Account**
+(`settings/accounts/...`), **Category** (`settings/categories/...`), and **Goal** (`goals/...`,
+FR-3.2). The list navigates to the page and hands the entity over via router state; the back arrow =
+*Cancel* returns to origin unchanged. `transaction-form` is the canonical example.
+
+#### Action placement (primary Save)
+The back arrow is *Cancel*; the primary *Save* lives in a **fixed bottom action bar** (`FormActions`,
+`app-form-actions`) that lifts with `var(--keyboard-inset)` so the Android soft keyboard never hides
+it. The page body scrolls inside `.app-content`, which is extended by `var(--keyboard-inset)` and
+reserves bottom padding so the focused bottom field clears both the keyboard and the Save bar. This
+supersedes the earlier Save-in-the-header placement (see ADR 0003, form action placement, superseding
+`0002` on this point).
+
+#### Destructive actions (Delete / Archive)
+A **danger icon-button at the top-right of the header** on the **edit** page only, published via
+`HeaderActionService` (which carries an optional `icon: 'trash' | 'archive'`): **Delete**
+(Transaction, Goal, Rule, `trash`) or **Archive** (Account, Category, `archive`), each opening a
+`ConfirmDialog` (§8.2). Add pages omit it. Recurring has no delete (managed by pause/resume on its
+list).
+
+#### Two-step add-transaction flow
+**Adding a transaction is a two-step pre-form flow** (ADR 0004): a kind chooser (`expenses/new`) then
+a per-kind category picker (`expenses/new/:kind`), both plain navigation lists with **no Save bar**,
+before the entry form (`expenses/new/:kind/:categoryId`). The form shows the chosen category (a
+tappable context row), so a simple entry has no type toggle and no category dropdown. This is specific
+to **adding** a transaction; every other add/edit form (and transaction *edit*) is a single page as
+above. See §4.2.
+
+#### Dropdowns on a form page
+Dropdowns use `SelectField` (themed listbox - native `<select>` can't be styled in the WebView); it
+sits inline on the page and overlays normally (no in-flow dialog expansion - forms are pages now). The
+body scrolls with the scrollbar hidden (native-app feel).
+
+#### Rationale and ADRs
+`docs/adr/0002-page-based-forms-no-modals.md` (forms are pages), then ADR 0003 (form action
+placement: bottom Save bar + header Delete, superseding `0002`'s Save-in-the-header); evidence:
+`docs/design/research/mobile-ux-and-old-juice.md`.
 
 ### 8.1 Transaction popup
 - **Figma:** `133:517` (POP-UP - Transaction). Superseded by the §8.0 form-page pattern above; the

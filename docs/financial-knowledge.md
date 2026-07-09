@@ -128,6 +128,10 @@ Base the budget on a conservative baseline (lowest typical month or trailing ave
 - **Sinking fund:** Money set aside gradually for a known future expense (car, holiday, insurance renewal), preventing budget shocks.
 - **Emergency fund:** 3-6 months of essential expenses (more - 9-12 months - for single-income households, volatile industries, or the self-employed). Keep in a liquid, safe, accessible account (e.g., high-yield savings), separate from daily spending. Bare minimum: 3 months.
 
+### Imprest (float) system
+- **Imprest / float:** A fixed sum (the "float") is set aside for a purpose, drawn down by spending, and periodically **restored to the float by adding back only what was drawn** (never refilled on top of the leftover). The classic example is a petty-cash float. Because a top-up *sets the balance back to the target* rather than adding a fresh target, the reserve does not compound, unspent money carries over, and skipped periods do not stack.
+- **Why it matters here:** this is the model behind the app's savings-backed **allowance** feature (FR-3.4). The precise app behavior (three balances, savings gate, self-healing overspend, calendar-aligned lazy refresh) is specified in `allowances.md` and `adr/0005-allowance-envelope-imprest-model.md`; contrast with a **sinking fund** (accumulates up toward a one-off cost) and a **savings goal** (FR-3.2, also accumulates up).
+
 ### Common budgeting mistakes & behavioral pitfalls
 Underestimating irregular expenses; not tracking actuals; setting unrealistic limits; ignoring small recurring "leaks"; no buffer; not adjusting as life changes; treating the budget as set-and-forget. The best budgeting method is the one you'll actually stick with.
 
@@ -307,7 +311,8 @@ The **28/36 rule:** spend ≤28% of gross income on housing and ≤36% on total 
 
 **Administered by the Mauritius Revenue Authority (MRA)** on a self-assessment basis. **Fiscal/income year runs 1 July to 30 June.**
 
-**Personal income tax bands (effective 1 July 2025, per Finance Act 2025 [Act No. 18 of 2025, gazetted 9 August 2025] - reduced from 11 bands to 3):**
+#### Personal income tax bands (PAYE)
+Effective 1 July 2025, per Finance Act 2025 (Act No. 18 of 2025, gazetted 9 August 2025); reduced from 11 bands to 3.
 
 | Annual chargeable income (Rs) | Rate |
 |---|---|
@@ -319,9 +324,10 @@ The **28/36 rule:** spend ≤28% of gross income on housing and ≤36% on total 
 - **Young persons aged 18-25** earning up to Rs 1m annually are exempted from income tax.
 - Per the Budget 2025-2026, these changes "are expected to remove 44,000 individuals from the tax net and reduce tax liability for 75,000 more."
 
-**Fair Share Contribution (FSC):** Introduced by Finance Act 2025, effective for the income year commencing 1 July 2025 and the two subsequent years. Per PwC Worldwide Tax Summaries, an individual whose net income (including domestic dividends and resident société/succession dividend shares) exceeds **MUR 12 million** pays FSC at **15% of leviable income above MUR 12 million**, collected under PAYE. (This replaced the former Solidarity Levy, abolished from year of assessment 2023/24.)
+#### Fair Share Contribution (FSC)
+Introduced by Finance Act 2025, effective for the income year commencing 1 July 2025 and the two subsequent years. Per PwC Worldwide Tax Summaries, an individual whose net income (including domestic dividends and resident société/succession dividend shares) exceeds **MUR 12 million** pays FSC at **15% of leviable income above MUR 12 million**, collected under PAYE. (This replaced the former Solidarity Levy, abolished from year of assessment 2023/24.)
 
-**Key personal reliefs/deductions (income year ending 30 June 2026):**
+#### Personal reliefs and deductions (income year ending 30 June 2026)
 - 0% rate on first Rs 500,000 (functions as a personal exemption).
 - Medical/health insurance premium relief: Rs 25,000 (self), Rs 25,000 (1st dependent), Rs 20,000 (2nd-4th each).
 - Approved personal pension scheme contributions: up to Rs 50,000.
@@ -332,7 +338,8 @@ The **28/36 rule:** spend ≤28% of gross income on housing and ≤36% on total 
 - Deductions for solar energy units, rainwater harvesting, EV fast chargers.
 - Reliefs/deductions are claimed via the Employee Declaration Form (EDF) filed with the employer/MRA.
 
-**Social contributions (replacing the former National Pensions Fund/NPF since Sept 2020):**
+#### Social contributions (CSG, NSF, levies)
+Replacing the former National Pensions Fund (NPF) since Sept 2020.
 
 | Contribution | Employee | Employer |
 |---|---|---|
@@ -345,16 +352,19 @@ The **28/36 rule:** spend ≤28% of gross income on housing and ≤36% on total 
 - CSG has no salary ceiling (except self-employed, who pay a fixed Rs 150/month). NSF has a published insurable-salary ceiling (around Rs 28,570/month for 2025/26).
 - CSG is a pay-as-you-go system funding pensions and allowances (CSG Income Allowance, Child Allowance, School Allowance).
 
-**VAT in Mauritius:** Standard rate **15%** (introduced 1998; no reduced rate). Compulsory registration threshold lowered from Rs 6 million to **Rs 3 million** annual turnover (from 1 October 2025). Late filing/payment attracts a 5% surcharge plus penalties, up to 100% of tax due.
+#### VAT
+Standard rate **15%** (introduced 1998; no reduced rate). Compulsory registration threshold lowered from Rs 6 million to **Rs 3 million** annual turnover (from 1 October 2025). Late filing/payment attracts a 5% surcharge plus penalties, up to 100% of tax due.
 - **Zero-rated supplies (Fifth Schedule, input VAT recoverable):** exported goods; basic foodstuffs such as rice, wheat flour and bran, bread, edible oils, margarine/butter, milk/cream, cheese, sugar; unprocessed primary agricultural/horticultural produce (vegetables, fruits, coffee, cocoa, nuts); live food animals, poultry, meat and eggs.
 - **Exempt supplies (First Schedule, no input recovery):** medical/hospital/dental and veterinary services; educational and training services from approved institutions; sale/transfer of residential buildings (residential rent); public passenger transport; certain financial/banking services to non-residents.
 - From **1 January 2026**, VAT applies to specified foreign-supplied digital/electronic services.
 
-**Other Mauritius features:** No capital gains tax, no inheritance tax, no wealth tax, no property tax (only land transfer/registration duties). Corporate income tax generally 15%.
+#### Other taxes (no CGT, inheritance, wealth, or property tax)
+No capital gains tax, no inheritance tax, no wealth tax, no property tax (only land transfer/registration duties). Corporate income tax generally 15%.
 
-(MU) **Inflation context:** Headline inflation for calendar year 2025 was **3.7%** (Statistics Mauritius, "Consumer Price Index - Year 2025," published 16 January 2026), up marginally from 3.6% in 2024. (BoM's forward projection for 2026 was revised upward to ~5.5% in May 2026 citing fuel/geopolitical risks - a forecast, not a realized figure.)
+#### Inflation context (MU)
+Headline inflation for calendar year 2025 was **3.7%** (Statistics Mauritius, "Consumer Price Index - Year 2025," published 16 January 2026), up marginally from 3.6% in 2024. (BoM's forward projection for 2026 was revised upward to ~5.5% in May 2026 citing fuel/geopolitical risks - a forecast, not a realized figure.)
 
-**Pensions/retirement (Mauritius):**
+#### Pensions, retirement and minimum wage
 - **Basic Retirement Pension (BRP)** - universal, non-contributory, tax-funded. Amount payable from January 2025: Rs 15,000/month (ages 60-89), Rs 22,710 (90-99), Rs 27,710 (100+). Finance Act 2025 is gradually raising the eligibility age from 60 to 65 over a phased period (controversial, subject to legal challenge); an Rs 10,000/month income support bridges those aged 60+ not yet eligible.
 - **NSF** - defined-contribution lump sum at retirement.
 - **PRGF** - portable gratuity for private-sector employees.

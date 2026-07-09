@@ -131,11 +131,15 @@ accounts(id, name, type, currency, opening_balance_minor, archived)
 categories(id, name, parent_id, kind)                  -- kind: expense|income|transfer
 transactions(id, account_id, posted_date, amount_minor, currency,
              fx_rate, base_amount_minor, payee, note,
-             source, source_ref, created_at)            -- source: manual|ocr|import
+             source, source_ref, allowance_id, created_at) -- source: manual|ocr|import;
+                                                    -- allowance_id: optional allowance tag (FR-3.4, nullable)
 tx_splits(id, transaction_id, category_id, amount_minor) -- sum == parent amount (FR-1.2)
 recurring_rules(id, template_json, schedule, next_run_date, last_materialised_date, active)
 budgets(id, category_id, period, cap_minor)             -- envelope caps (FR-3.1)
 goals(id, name, target_minor, current_minor, currency, target_date) -- savings goals (FR-3.2); `currency` added in migration 0003
+allowances(id, name, currency, target_minor, balance_minor, kind, period,
+           week_start, next_refresh_date, active, created_at) -- imprest envelopes (FR-3.4);
+                                                    -- kind: recurring|one_time; period: weekly|monthly
 import_rules(id, ordinal, match_field, match_op, match_value, set_field, set_value, active)
 imports(id, filename, format, imported_at, row_count)   -- audit of file imports
 schema_migrations(version, applied_at)
@@ -147,6 +151,12 @@ schema_migrations(version, applied_at)
 - Recurrence materialisation is idempotent: re-running on the same date does not
   double-insert (keyed on `recurring_rules.id` + occurrence date).
 - Dedup never deletes; it only sets a `pending_review` flag surfaced to the UI (FR-2.4).
+- Allowances (FR-3.4) hold the imprest invariants: `Available = Total - Reserved` where
+  `Reserved = sum of max(0, balance_minor)` over active allowances; `Total` (savings) changes only on
+  real cash events, never on allocation/refresh/edit/pause/delete (pure re-earmarking); an increase
+  to Reserved is gated all-or-nothing by Available; a refresh **sets** the balance to target
+  (carryover, no stacking, self-healing). Materialised lazily on app open (no scheduler), like
+  recurrence. Full rules and worked examples: `docs/allowances.md`; decision: ADR 0005.
 
 ### 4.3 DTOs
 Rust structs (`serde`) are serialised to JSON across IPC. TS interfaces in
@@ -393,7 +403,8 @@ traceability table (`functional-requirements.md` §5) carries the same status pe
 - **Specified only (little or no runtime code):** envelope budgeting (FR-3.1; `budgets` table
   exists, no spent-vs-remaining logic), local reporting/analytics aggregations (FR-3.3), the home
   dashboard (`get_dashboard`), the import pipeline + review UI (FR-2.2), backup/restore/export
-  (FR-4.x), and the income/onboarding profile (`set_onboarding_profile`).
+  (FR-4.x), the income/onboarding profile (`set_onboarding_profile`), and savings-backed allowances
+  (FR-3.4; domain spec `docs/allowances.md` + ADR 0005, no schema or runtime code yet).
 
 ### 11.2 Open product questions (from the 2026-06 financial-domain review)
 Recorded so they are not lost. These are **observations and recommendations, not committed scope**
@@ -405,6 +416,10 @@ Recorded so they are not lost. These are **observations and recommendations, not
   zero-based budgeting, and planned-vs-actual variance cannot be computed.
 - **Envelope engine unbuilt (FR-3.1).** The flagship budgeting feature is schema-only; there is no
   spent-vs-remaining aggregation or over-budget state in code yet.
+- **Allowances specified, not built (FR-3.4).** The imprest allowance model is fully specified
+  (`docs/allowances.md`, ADR 0005) but has no schema or runtime code. It depends on a savings
+  `Total` / `Available` balance, so it intersects the income / cash-flow-spine gap above; pin down
+  the source of `Total` when scheduling it.
 - **Reports/dashboard unbuilt.** No aggregation queries exist, so the home balance and analytics
   remain placeholders.
 - **Dedup not wired (FR-2.4).** The promise that duplicates are flagged is not yet met at runtime.
@@ -440,3 +455,11 @@ Recorded so they are not lost. These are **observations and recommendations, not
 - **Minor units** - integer smallest currency unit (e.g. cents) used for all money storage.
 - **Materialise (recurrence)** - turn a recurring rule into concrete ledger rows, done lazily
   on app open (no background scheduler).
+- **Allowance (envelope)** - a savings-backed spending float that reserves money and tops up to a
+  target on a cadence (FR-3.4, `docs/allowances.md`). Distinct from a savings goal and a category cap.
+- **Reserved / Available** - Reserved is savings earmarked by active allowances
+  (`sum of max(0, balance)`); Available is free savings (`Total - Reserved`). Shown to users in plain
+  language ("set aside" / "free to spend").
+- **Imprest (top-up)** - the petty-cash float pattern the allowance uses: a refresh **sets** the
+  balance back to target (adds only what was drawn), so it never compounds and missed periods do not
+  stack.

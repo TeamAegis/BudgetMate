@@ -22,3 +22,7 @@ Consequences, and Alternatives considered.
 - [0004](0004-two-step-add-transaction.md): Two-step add. Adding a transaction picks kind then
   category (navigation lists) before the form, which shows the category instead of a dropdown.
   Presentation only; lossless category change; edit + scan unchanged.
+- [0005](0005-allowance-envelope-imprest-model.md): Allowance (envelope) model. Savings-backed
+  allowances use the imprest set-to-target top-up (carryover, no stacking), three balances
+  (`Available = Total - Reserved`), an all-or-nothing savings gate on increases, and calendar-aligned
+  lazy refresh. Distinct from goals (FR-3.2) and category caps (FR-3.1). Full spec: `docs/allowances.md`.
