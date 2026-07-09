@@ -202,24 +202,26 @@ Success `circle-check` · Duplicate/review `copy`.
 Subtle and fast (supports the <800ms-feel goal; nothing that delays first paint). This is the
 canonical motion spec; `.claude/rules/design.md → Motion` enforces it for new work.
 
-**Principles**
+### 6.1 Principles
 - Subtle and quick - motion confirms a change, it never gates interaction.
 - No skeleton-blocking animation on cold start - show content progressively.
-- Always honour `prefers-reduced-motion` (see below).
+- Always honour `prefers-reduced-motion` (see §6.5).
 
-**Tokens** (`src/styles/_tokens.scss`; mirrored in `design-tokens.json`) - never hardcode a
-duration or easing:
+### 6.2 Motion tokens
+Pull durations/easing from `src/styles/_tokens.scss` (mirrored in `design-tokens.json`); never
+hardcode a duration or easing:
 - `--motion-fast: 150ms` - taps, toggles, chip/press, scrim fade.
 - `--motion-standard: 200ms` - page/list entrance, modal dialog.
 - `--motion-slow: 300ms` - progress-bar fill, skeleton pulse cycle.
 - `--easing: cubic-bezier(0.2, 0, 0, 1)` - the single ease-out curve for everything.
 
-**Keyframe + class library** (`src/styles/_animations.scss`, `@use`d globally) - the one source;
-reuse these, don't author ad-hoc keyframes in a component:
+### 6.3 Keyframe and class library
+The one source is `src/styles/_animations.scss` (`@use`d globally); reuse these, don't author
+ad-hoc keyframes in a component:
 - `fade-in`, `fade-in-up`, `scrim-in`, `modal-enter`, `skeleton-pulse`, `spin`.
 - `.list-item-enter` (the only enter-class) for items entering a list.
 
-**Per-surface mapping**
+### 6.4 Per-surface mapping
 - **Page transitions** - automatic via the app shell (`src/app/app.scss` `router-outlet + *`,
   `fade-in`). Screens add nothing per page. **Form pages** are routed pages, so they get this
   automatic page-transition - no per-page motion.
@@ -232,10 +234,11 @@ reuse these, don't author ad-hoc keyframes in a component:
 - **Progress** - animate `width` with `transition: width var(--motion-slow) var(--easing)`
   (e.g. GoalProgressRow fills from 0 on mount).
 
-**Reduced-motion contract** - the motion tokens are zeroed under
-`@media (prefers-reduced-motion: reduce)` in `_tokens.scss`, so token-driven motion stops with no
-extra work; `_animations.scss` additionally cancels the infinite/movement keyframes. Any new
-animation must be token-driven (so it inherits this) or add its own reduce guard.
+### 6.5 Reduced-motion contract
+The motion tokens are zeroed under `@media (prefers-reduced-motion: reduce)` in `_tokens.scss`, so
+token-driven motion stops with no extra work; `_animations.scss` additionally cancels the
+infinite/movement keyframes. Any new animation must be token-driven (so it inherits this) or add its
+own reduce guard.
 
 > Note: most Android **emulators** report `prefers-reduced-motion: reduce` because
 > `animator_duration_scale` defaults to 0 - so motion looks instant there. Set it to 1
@@ -257,6 +260,8 @@ and the tokens it consumes. Components are dumb/presentational (`shared/`) unles
 > skill. The remaining entries below are still to be built as they're needed.
 
 ### Present in Figma
+
+#### Chrome and navigation
 - **AppHeader** - leading back affordance (pushed screens) + title/wordmark + trailing icon.
   Variants: brand (home, `--t-wordmark`) / titled (sub-screens, `--t-screen-title`). It is the
   **only** place a screen name appears - no in-body screen titles. Driven by the active route's
@@ -266,6 +271,7 @@ and the tokens it consumes. Components are dumb/presentational (`shared/`) unles
   Note: Figma inconsistently labels the 4th tab "Charts" on some screens and "Analytics" on
   others, and tab x-positions drift between screens - **normalise to evenly-spaced flexbox
   and one label ("Analytics")**.
+#### Home and data surfaces
 - **BalanceCard** (`app-balance-card`, **built**) - the Home hero. `--c-primary-40` fill,
   `--radius-lg`, `--elev-card` (the signature offset pink shadow). Renders an optional money figure
   (`--t-balance`, via the money pipe) when one is supplied; otherwise an honest caption (the
@@ -286,6 +292,7 @@ and the tokens it consumes. Components are dumb/presentational (`shared/`) unles
   trailing signed amount (`+ Rs 500`). Sign coloured: income `--c-positive`, expense
   `--c-danger`/`--c-text`. Income rows use the positive tint on the avatar **paired with the signed
   amount** - never colour alone.
+#### Actions and toggles
 - **SegmentedToggle** - Daily/Weekly/Monthly and Ongoing/Completed. Pill, active segment
   `--c-primary-700` (white-on-coral clears AA; the lighter `--c-primary` failed it - see §2.3).
 - **FAB** - 60px coral circle, `+` icon, `--elev-float`. Goals uses a simple single-action FAB
@@ -298,6 +305,7 @@ and the tokens it consumes. Components are dumb/presentational (`shared/`) unles
   *Scan receipt* (-> `/import`), replacing the old undiscoverable long-press FAB. Floats at
   `--z-fab-menu` (between `--z-dropdown` and `--z-modal`), `--elev-float`. Each item is a labelled
   Lucide icon + text (never icon-only); closes on item tap, Escape, or outside tap.
+#### Forms and overlays
 - **Form page** (pattern, not a single component) - **every add/edit form is a full-screen routed
   page**, not a modal: a pair of lazy routes `<area>/new` and `<area>/:id/edit` with route data
   `{ title, back: true, hideNav: true }`. The page renders a normal `<form>` in `.app-content`
@@ -329,6 +337,7 @@ and the tokens it consumes. Components are dumb/presentational (`shared/`) unles
   centred dialog built on `app-modal`, with `role="alertdialog"` and its message wired via
   `aria-describedby`. Two-button (title, message, danger confirm + ghost cancel). Used before delete /
   archive / restore-replace / over-budget acknowledgement (§8.2). Emits `confirm` / `cancelled`.
+#### Lists, inputs and empty states
 - **EmptyState** - centred illustration + message + CTA ("No goals? Create one!",
   "Tap the Button below…", "No Data").
 - **TextField (underline)** - income/type inputs: label, value, bottom rule. For amounts use

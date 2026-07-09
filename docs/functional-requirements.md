@@ -81,6 +81,16 @@ reference it.
 - **FR-3.3 Local Reporting.** Generate pie and line charts from standard aggregations
   (spend by category, spend over time). Rendering uses a **locally bundled** chart library
   (Chart.js) - no remote scripts or fonts.
+- **FR-3.4 Savings-Backed Allowances (Envelopes).** Reserve a portion of savings for a kind of
+  spending (e.g. a weekly personal or transport allowance). Unlike the FR-3.1 category cap (which
+  reserves nothing), an allowance earmarks real savings so the app can show **free vs spoken-for**
+  money (`Available = Total - Reserved`). Allowances follow the **imprest** model: a fixed target is
+  drawn down by tagged spending and periodically **topped up to the target** (recurring weekly/
+  monthly, or one-time). Overspend is allowed and draws from Available; the top-up self-heals it when
+  savings allow. Refresh is **calendar-aligned and materialised lazily on app open** (no background
+  scheduler, NFR-Perf3). The full domain-logic specification (invariants, worked examples, edge
+  cases) is `docs/allowances.md`; the modelling decision is ADR 0005. Distinct from savings goals
+  (FR-3.2), which accumulate up rather than draw down.
 
 ### 2.4 Offline Tools
 
@@ -196,6 +206,7 @@ v1 scope as requirements regardless of status; Status only reflects current prog
 | FR-3.1 Envelope budgeting | §3 Frontend, §4 aggregations | Specified (schema only; no spent-vs-remaining logic yet) |
 | FR-3.2 Savings goals | §3 Frontend, §4 | Built |
 | FR-3.3 Local reporting (charts) | §3 Frontend (charts), §4 aggregations | Specified (no aggregation queries yet) |
+| FR-3.4 Savings-backed allowances (envelopes) | §4 Domain & Data Model, `docs/allowances.md`, ADR 0005 | Specified (domain spec + ADR; no schema or runtime code yet) |
 | FR-4.1/4.2/4.3 Backup, export, restore | §9 Backup/Export | Specified |
 | FR-5.1/5.2 / NFR-P2/P3 (unlock, lock, encryption, biometric) | §5 Storage & Crypto, §7 Security | Built (Android; iOS deferred) |
 | NFR-P1 Zero-internet | §7 Offline Enforcement | Built |
