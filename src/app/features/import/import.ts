@@ -18,6 +18,16 @@ const DECIMAL = /^\d+(\.\d+)?$/;
 type Phase = 'idle' | 'processing' | 'review' | 'unavailable' | 'error';
 
 /**
+ * The receipt extractor returns `totalMinor` in a fixed 2-decimal scale (printedValue * 100).
+ * Re-express it in the base currency's minor-unit scale so the hand-off prefill (which declares
+ * the base currency) and the money-chip preview are correct for 0- and 3-decimal currencies too.
+ * The user always confirms the value on the next step, and Rust re-parses authoritatively on Save.
+ */
+export function receiptTotalToBaseMinor(extractorMinor: number, baseDigits: number): number {
+  return Math.round((extractorMinor * Math.pow(10, baseDigits)) / 100);
+}
+
+/**
  * Scan Receipt (FR-2.1 / screens.md §4.4). Smart component: pick a local image → on-device OCR
  * (native ML Kit on Android) → DETERMINISTIC Rust extraction of merchant/date/total → show the
  * suggestions in an editable form → "Use these details" hands them to the manual-entry transaction
@@ -52,7 +62,7 @@ export class Import {
   protected readonly phase = signal<Phase>('idle');
   protected readonly error = signal<string | null>(null);
   protected readonly baseCurrency = signal('MUR');
-  /** Total (minor units) from the extractor, kept aside so the hand-off uses exact integer money. */
+  /** Total in BASE-currency minor units (rescaled from the extractor's fixed 2-dp output). */
   private readonly totalMinor = signal<number | null>(null);
   /** True when extraction ran but found nothing usable - surfaced as a low-confidence hint. */
   protected readonly lowConfidence = computed(
@@ -108,12 +118,14 @@ export class Import {
         return;
       }
       const f = result.fields;
-      this.totalMinor.set(f.totalMinor);
+      const digits = this.fractionDigits(settings.baseCurrency);
+      const baseMinor = f.totalMinor != null ? receiptTotalToBaseMinor(f.totalMinor, digits) : null;
+      this.totalMinor.set(baseMinor);
       this.form.reset({
         merchant: f.merchant ?? '',
         date: f.date ?? '',
         // Show the total as an editable major-unit string; Rust re-parses + signs it on save.
-        total: f.totalMinor != null ? this.majorAmount(f.totalMinor) : '',
+        total: baseMinor != null ? this.majorAmount(baseMinor) : '',
       });
       this.phase.set('review');
     } catch (e) {
@@ -154,18 +166,28 @@ export class Import {
     void this.router.navigate(['/expenses/new']);
   }
 
-  /** Exact major-unit string for the 2-dp extractor total (display/edit only - no money math). */
-  private majorAmount(minor: number): string {
-    return (Math.abs(minor) / 100).toFixed(2);
+  /** Minor-unit digits for a currency - same Intl-derived scale the money pipe and transaction form use. */
+  private fractionDigits(currency: string): number {
+    return (
+      new Intl.NumberFormat(undefined, { style: 'currency', currency }).resolvedOptions()
+        .maximumFractionDigits ?? 2
+    );
   }
 
-  /** Parse the edited major-unit total back to minor units (2-dp); null if invalid/blank. */
+  /** Exact major-unit string for a base-currency minor-unit total (display/edit only - no money math). */
+  private majorAmount(minor: number): string {
+    const digits = this.fractionDigits(this.baseCurrency());
+    return (Math.abs(minor) / Math.pow(10, digits)).toFixed(digits);
+  }
+
+  /** Parse the edited major-unit total back to base-currency minor units; null if invalid/blank. */
   private toMinor(s: string): number | null {
     const t = s.trim();
     if (!DECIMAL.test(t)) return null;
+    const digits = this.fractionDigits(this.baseCurrency());
     const [intPart, fracRaw = ''] = t.split('.');
-    if (fracRaw.length > 2) return null;
-    const frac = (fracRaw + '00').slice(0, 2);
-    return Number(intPart) * 100 + Number(frac);
+    if (fracRaw.length > digits) return null;
+    const frac = (fracRaw + '0'.repeat(digits)).slice(0, digits);
+    return Number(intPart) * Math.pow(10, digits) + Number(frac || '0');
   }
 }

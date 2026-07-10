@@ -2,8 +2,11 @@
 //! `{ merchant, date, total }` using regex + heuristics - NO ML inference makes the decision.
 //! The result is always shown to the user for confirmation before anything is saved.
 //!
-//! Amounts are returned as integer minor units assuming a 2-decimal currency (the user confirms
-//! and the account currency is applied on save).
+//! Amounts are returned as integer minor units in a FIXED 2-decimal print scale (the regex requires
+//! exactly two fraction digits, so `total_minor == printedReceiptValue * 100` regardless of the
+//! account currency). The frontend rescales this to the base currency's own minor-unit scale (0
+//! decimals for currencies like JPY, 3 for BHD, and so on) before handing it to the transaction
+//! form; the user confirms the value and the account currency is applied on save.
 
 use chrono::NaiveDate;
 use serde::Serialize;
@@ -18,7 +21,9 @@ pub struct ExtractedReceipt {
     pub merchant: Option<String>,
     /// ISO-8601 `yyyy-mm-dd`.
     pub date: Option<String>,
-    /// Total in minor units (2-decimal assumption).
+    /// Total in minor units, in a FIXED 2-decimal print scale (printedValue * 100) - NOT
+    /// necessarily the account currency's own minor-unit scale. The frontend rescales this to
+    /// the base currency's minor units before use (see the module doc above).
     pub total_minor: Option<i64>,
 }
 
