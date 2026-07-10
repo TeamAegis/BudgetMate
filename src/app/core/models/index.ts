@@ -266,15 +266,19 @@ export interface RulePreviewInput {
 
 /**
  * Deterministically extracted receipt fields (mirrors Rust `rules::receipt::ExtractedReceipt`).
- * Suggestions only - the user confirms/edits before anything is saved. `totalMinor` is integer
- * minor units (2-decimal assumption); the account currency is applied on save. Any field can be
- * `null` when nothing recognisable was found (low-confidence/manual state).
+ * Suggestions only - the user confirms/edits before anything is saved. `totalMinor` is in a FIXED
+ * 2-decimal print scale (printedValue * 100) - NOT necessarily the account/base-currency
+ * minor-unit scale (0dp for JPY, 3dp for BHD, etc). The frontend rescales it to base-currency
+ * minor units (see `receiptTotalToBaseMinor` in `features/import/import.ts`) before handing it off
+ * as a `TransactionPrefill`. Any field can be `null` when nothing recognisable was found
+ * (low-confidence/manual state).
  */
 export interface ExtractedReceipt {
   merchant: string | null;
   /** ISO-8601 `yyyy-mm-dd`. */
   date: string | null;
-  /** Total in integer minor units (2-decimal assumption); never a float. */
+  /** Total in a FIXED 2-decimal print scale (printedValue * 100); never a float. Not yet rescaled
+   *  to any account/base currency's own minor-unit scale - see the interface doc above. */
   totalMinor: number | null;
 }
 
@@ -297,7 +301,9 @@ export interface TransactionPrefill {
   payee: string | null;
   postedDate: string | null;
   totalMinor: number | null;
-  /** Currency the `totalMinor` is expressed in (the OCR 2-dp assumption maps to the base currency). */
+  /** Currency the `totalMinor` is expressed in - the consumer form MUST honor this when decoding
+   *  `totalMinor` and choosing the account default (see `patchForCreate` in `transaction-form.ts`),
+   *  rather than reinterpreting the value against the default account's currency. */
   currency: Iso4217;
 }
 

@@ -299,11 +299,17 @@ export class TransactionForm implements OnInit {
   }
 
   private patchForCreate(prefill: TransactionPrefill | null): void {
-    const account = this.accounts()[0] ?? null;
-    const currency = account?.currency ?? this.baseCurrency();
+    const accounts = this.accounts();
+    // `prefill.currency` is the currency `totalMinor` is expressed in (see TransactionPrefill in
+    // core/models) - it must win over the default account's currency, or a prefill from a
+    // different-currency account silently mis-scales by a power of ten (0dp vs 2dp vs 3dp).
+    const preferred = prefill?.currency
+      ? (accounts.find((a) => a.currency === prefill.currency) ?? accounts[0] ?? null)
+      : (accounts[0] ?? null);
+    const currency = prefill?.currency ?? preferred?.currency ?? this.baseCurrency();
     // OCR suggestions (FR-2.1) only PREFILL the editable form - the user confirms before Save.
     this.resetForm({
-      accountId: account?.id ?? null,
+      accountId: preferred?.id ?? null,
       currency,
       postedDate: prefill?.postedDate ?? undefined,
       amount:
