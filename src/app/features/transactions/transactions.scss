@@ -69,7 +69,23 @@
   border-radius: var(--radius-md);
 }
 
-// Right-aligned amount; the sign already conveys direction - colour is a secondary cue.
+// Right-aligned amount. Direction is conveyed by icon + a visually-hidden label (see
+// transactions.html) plus the numeric sign; colour is reinforcement only, never the sole cue.
+.amount-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.direction-icon {
+  flex: none;
+  color: var(--c-text);
+}
+.direction-icon.income {
+  color: var(--c-positive);
+}
+.direction-icon.expense {
+  color: var(--c-danger);
+}
 .amount {
   color: var(--c-text);
 }

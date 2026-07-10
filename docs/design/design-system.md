@@ -194,7 +194,8 @@ in `src/app/app.config.ts`. For data-driven/dynamic icons, use Lucide's dynamic 
 ### Common mappings (extend as needed)
 Home `house` · Expenses `wallet` · Goals `target` · Analytics `pie-chart` · Settings `settings` ·
 Add `plus` · Scan receipt `scan-line` · Import `file-down` · Over-budget/alert `triangle-alert` ·
-Success `circle-check` · Duplicate/review `copy`.
+Success `circle-check` · Duplicate/review `copy` · Transaction direction (income) `arrow-up` ·
+Transaction direction (expense) `arrow-down`.
 
 ---
 
