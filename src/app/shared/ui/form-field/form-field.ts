@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, ViewEncapsulation, input } from '@angular/core';
+import { LucideTriangleAlert } from '@lucide/angular';
 
 /**
  * Labelled form field. The reactive-forms control is **projected** so `formControlName` stays on
@@ -19,9 +20,19 @@ import { ChangeDetectionStrategy, Component, ViewEncapsulation, input } from '@a
  *   <app-form-field label="Name" [error]="nameError()">
  *     <input formControlName="name" />
  *   </app-form-field>
+ *
+ * Pass `flag` (a plain-language message) for an ADVISORY attention line - e.g. "an automated
+ * extractor found nothing for this field, please check/enter it" - as distinct from a validation
+ * `error`. It renders beneath the field too, but with a warning (not danger) tone and no
+ * `role="alert"`, and it is never a value judgement on what the user typed:
+ *
+ *   <app-form-field label="Merchant" [flag]="merchantNotDetected() ? 'Not detected - please enter' : null">
+ *     <input formControlName="merchant" />
+ *   </app-form-field>
  */
 @Component({
   selector: 'app-form-field',
+  imports: [LucideTriangleAlert],
   changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.None,
   host: { class: 'form-field', '[class.has-error]': '!!error()' },
@@ -38,6 +49,12 @@ import { ChangeDetectionStrategy, Component, ViewEncapsulation, input } from '@a
       @if (error(); as e) {
         <small class="error-msg" role="alert">{{ e }}</small>
       }
+      @if (flag(); as f) {
+        <small class="flag-msg">
+          <svg lucideTriangleAlert [size]="14" aria-hidden="true"></svg>
+          <span>{{ f }}</span>
+        </small>
+      }
     </label>
   `,
   styleUrl: './form-field.scss',
@@ -46,4 +63,5 @@ export class FormField {
   readonly label = input.required<string>();
   readonly hint = input<string | null>(null);
   readonly error = input<string | null>(null);
+  readonly flag = input<string | null>(null);
 }

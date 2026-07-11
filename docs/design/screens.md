@@ -161,9 +161,12 @@ in the current Figma - design them to this spec.
   chosen) and suggests a category from the payee - it does **not** save. (Manual entry from the scan
   screen instead starts at the kind chooser `/expenses/new`.)
 - **States:** picking, processing (off-thread - `extract_receipt` is async, native engine on
-  Dispatchers.IO), review (editable), low-confidence (all fields empty → flagged + manual-entry
-  CTA), engine-unavailable (plugin `NotImplemented` on desktop/iOS), failed (retry/manual entry).
-  **Never auto-saves** - the user confirms on the Add expense page.
+  Dispatchers.IO), review (editable), low-confidence (all fields empty → severe banner +
+  manual-entry CTA), per-field not-detected (any subset of merchant/date/total empty → that
+  field shows an advisory "Not detected - please enter" flag beneath it, per the per-field
+  low-confidence state in ux-blueprint.md §5; the flag clears reactively as soon as the user
+  types a value), engine-unavailable (plugin `NotImplemented` on desktop/iOS), failed
+  (retry/manual entry). **Never auto-saves** - the user confirms on the Add expense page.
 
 ### 4.5 Import Wizard **[NEW]**
 - **FR:** FR-2.2/2.3/2.4.
