@@ -26,6 +26,7 @@
   --c-positive: #2e9e6b;
   --c-positive-soft: rgba(46, 158, 107, 0.10);  // success banner / on-track tint fill
   --c-warning: #e8a13a;
+  --c-warning-700: #8a5300;        // accessible amber for small text/icons on white (AA) - mirrors --c-primary-700
   --c-warning-soft: rgba(232, 161, 58, 0.12);  // low-confidence/approaching tint fill (OCR, budgets)
   --c-danger: #d8453b;
   --c-danger-soft: rgba(216, 69, 59, 0.10);    // error banner / over-budget tint fill

@@ -1,4 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { LucideScanLine, LucideTriangleAlert } from '@lucide/angular';
@@ -64,14 +65,13 @@ export class Import {
   protected readonly baseCurrency = signal('MUR');
   /** Total in BASE-currency minor units (rescaled from the extractor's fixed 2-dp output). */
   private readonly totalMinor = signal<number | null>(null);
-  /** True when extraction ran but found nothing usable - surfaced as a low-confidence hint. */
-  protected readonly lowConfidence = computed(
-    () =>
-      this.phase() === 'review' &&
-      !this.form.controls.merchant.value &&
-      !this.form.controls.date.value &&
-      this.totalMinor() === null,
-  );
+  /**
+   * Snapshot, taken right after extraction, of which fields the extractor returned nothing for.
+   * Per-field "not detected" flags (below) derive from this plus the live control value, so a flag
+   * clears reactively once the user types something into that field - it never re-flags a field the
+   * extractor actually found just because the user later clears it (ux-blueprint.md §5).
+   */
+  private readonly extractedBlank = signal({ merchant: false, date: false, total: false });
 
   /** Editable suggested fields. The user can correct OCR before handing off; Rust re-parses on save. */
   protected readonly form = this.fb.nonNullable.group({
@@ -79,6 +79,36 @@ export class Import {
     date: this.fb.nonNullable.control(''),
     total: this.fb.nonNullable.control('', Validators.pattern(DECIMAL)),
   });
+
+  // Reactive mirrors of the control values (form.reset(...) emits valueChanges, so the initial
+  // extracted values flow through) - used only to drive the per-field flags below.
+  private readonly merchantValue = toSignal(this.form.controls.merchant.valueChanges, {
+    initialValue: '',
+  });
+  private readonly dateValue = toSignal(this.form.controls.date.valueChanges, { initialValue: '' });
+  private readonly totalValue = toSignal(this.form.controls.total.valueChanges, {
+    initialValue: '',
+  });
+
+  /** Per-field "not detected" attention flags (ux-blueprint.md §5) - advisory, clears on typing. */
+  protected readonly merchantNotDetected = computed(
+    () => this.phase() === 'review' && this.extractedBlank().merchant && !this.merchantValue().trim(),
+  );
+  protected readonly dateNotDetected = computed(
+    () => this.phase() === 'review' && this.extractedBlank().date && !this.dateValue().trim(),
+  );
+  protected readonly totalNotDetected = computed(
+    () => this.phase() === 'review' && this.extractedBlank().total && !this.totalValue().trim(),
+  );
+
+  /** True when extraction ran but found nothing usable at all - the severe all-empty banner. */
+  protected readonly lowConfidence = computed(
+    () =>
+      this.phase() === 'review' &&
+      this.extractedBlank().merchant &&
+      this.extractedBlank().date &&
+      this.extractedBlank().total,
+  );
 
   /** Money preview for the read-only "extracted total" chip (display only - no TS money math). */
   protected readonly totalPreview = computed(() => {
@@ -121,6 +151,11 @@ export class Import {
       const digits = this.fractionDigits(settings.baseCurrency);
       const baseMinor = f.totalMinor != null ? receiptTotalToBaseMinor(f.totalMinor, digits) : null;
       this.totalMinor.set(baseMinor);
+      this.extractedBlank.set({
+        merchant: !f.merchant,
+        date: !f.date,
+        total: baseMinor === null,
+      });
       this.form.reset({
         merchant: f.merchant ?? '',
         date: f.date ?? '',
@@ -158,6 +193,7 @@ export class Import {
     this.phase.set('idle');
     this.error.set(null);
     this.totalMinor.set(null);
+    this.extractedBlank.set({ merchant: false, date: false, total: false });
     this.form.reset({ merchant: '', date: '', total: '' });
   }
 

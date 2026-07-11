@@ -18,6 +18,7 @@
     "positive": "#2E9E6B",
     "positiveSoft": "rgba(46,158,107,0.10)",
     "warning": "#E8A13A",
+    "warning700": "#8A5300",
     "warningSoft": "rgba(232,161,58,0.12)",
     "danger": "#D8453B",
     "dangerSoft": "rgba(216,69,59,0.10)",

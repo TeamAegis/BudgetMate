@@ -74,15 +74,26 @@
       }
 
       <form class="scan-form" [formGroup]="form" (ngSubmit)="use()">
-        <app-form-field label="Merchant">
+        <app-form-field
+          label="Merchant"
+          [flag]="merchantNotDetected() ? 'Not detected - please enter' : null"
+        >
           <input type="text" formControlName="merchant" placeholder="e.g. Winners" />
         </app-form-field>
 
-        <app-form-field label="Date" hint="yyyy-mm-dd">
+        <app-form-field
+          label="Date"
+          hint="yyyy-mm-dd"
+          [flag]="dateNotDetected() ? 'Not detected - please enter' : null"
+        >
           <input type="date" formControlName="date" />
         </app-form-field>
 
-        <app-form-field label="Total" hint="Amount is in your base currency; confirm on the next step.">
+        <app-form-field
+          label="Total"
+          hint="Amount is in your base currency; confirm on the next step."
+          [flag]="totalNotDetected() ? 'Not detected - please enter' : null"
+        >
           <input type="text" inputmode="decimal" formControlName="total" placeholder="0.00" class="numeric" />
         </app-form-field>
 

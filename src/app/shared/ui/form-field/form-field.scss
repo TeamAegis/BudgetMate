@@ -49,3 +49,13 @@
   font-weight: var(--fw-regular);
   color: var(--c-danger);
 }
+// Advisory attention flag (set via the `flag` input) - e.g. "not detected, please enter". Warning
+// tone, not an error: no border change on the control, text carries the meaning (icon is
+// decorative/aria-hidden so it is never colour-only).
+.form-field .flag-msg {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-weight: var(--fw-regular);
+  color: var(--c-warning-700);
+}
