@@ -127,8 +127,14 @@
       <app-form-field label="Payee (optional)">
         <input type="text" formControlName="payee" placeholder="e.g. Winners" (blur)="suggestCategory()" />
       </app-form-field>
-      @if (suggestedCategory(); as cat) {
-        <p class="suggested">Category "{{ cat }}" set by a rule - change it above if needed.</p>
+      @if (suggestion(); as s) {
+        <p class="suggested" role="status">
+          @if (s.reason) {
+            Category "{{ s.category }}" set because {{ s.reason }} - change it above if needed.
+          } @else {
+            Category "{{ s.category }}" set by a rule - change it above if needed.
+          }
+        </p>
       }
 
       <app-form-field label="Note (optional)">

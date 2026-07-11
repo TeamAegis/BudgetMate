@@ -81,12 +81,16 @@ fn matches(rule: &Rule, fields: &RuleFields) -> bool {
     }
 }
 
-/// A rule that fired, recorded so the result is inspectable (which rule set which field, NFR-Rel3).
+/// A rule that fired, recorded so the result is inspectable (which rule set which field, and why
+/// it matched, NFR-Rel3 - "no black boxes").
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Applied {
     pub ordinal: i64,
     pub set_field: String,
     pub set_value: String,
+    pub match_field: String,
+    pub match_op: MatchOp,
+    pub match_value: String,
 }
 
 /// Apply ordered rules top-down, recording each one that fires. Later rules can override earlier.
@@ -101,6 +105,9 @@ pub fn apply_rules_traced(rules: &[Rule], mut fields: RuleFields) -> (RuleFields
                 ordinal: rule.ordinal,
                 set_field: rule.set_field.clone(),
                 set_value: rule.set_value.clone(),
+                match_field: rule.match_field.clone(),
+                match_op: rule.match_op,
+                match_value: rule.match_value.clone(),
             });
         }
     }
@@ -167,6 +174,9 @@ mod tests {
         assert_eq!(applied[0].ordinal, 1);
         assert_eq!(applied[0].set_field, "category");
         assert_eq!(applied[0].set_value, "Cafe");
+        assert_eq!(applied[0].match_field, "merchant");
+        assert_eq!(applied[0].match_op, MatchOp::Contains);
+        assert_eq!(applied[0].match_value, "coffee");
     }
 
     #[test]

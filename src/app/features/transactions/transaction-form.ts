@@ -127,8 +127,11 @@ export class TransactionForm implements OnInit {
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly confirmingDelete = signal(false);
-  /** Category name a rule suggested from the payee (an inspectable, overridable hint). */
-  protected readonly suggestedCategory = signal<string | null>(null);
+  /**
+   * Category a rule suggested from the payee, plus the deterministic reason it fired (an
+   * inspectable, overridable hint - no black-box categorisation, ux-blueprint.md §3).
+   */
+  protected readonly suggestion = signal<{ category: string; reason: string } | null>(null);
 
   protected readonly accountOptions = computed<SelectOption[]>(() =>
     this.accounts().map((a) => ({ value: a.id, label: `${a.name} · ${a.currency}` })),
@@ -490,13 +493,20 @@ export class TransactionForm implements OnInit {
     const payee = this.form.controls.payee.value.trim();
     if (!payee) return;
     try {
-      const name = (await previewRules({ merchant: payee })).category;
+      const preview = await previewRules({ merchant: payee });
+      const name = preview.category;
       if (!name) return;
       const match = this.categories().find((c) => c.name.toLowerCase() === name.toLowerCase());
-      if (match) {
-        categoryCtrl.setValue(match.id);
-        this.suggestedCategory.set(match.name);
-      }
+      if (!match) return;
+      categoryCtrl.setValue(match.id);
+      // Rust already picked the causal rule (the last one that set category - later rules override
+      // earlier ones). Only phrase a specific reason for the everyday payee-driven case (matched on
+      // "merchant" - shown to the user as "payee", matching the field label). A chained rule whose
+      // last category-setter matched on a category value would read as a confusing self-referential
+      // "category equals ..." - leave the reason empty so the template falls back to the generic copy.
+      const cr = preview.categoryReason;
+      const reason = cr && cr.matchField === 'merchant' ? `payee ${cr.matchOp} "${cr.matchValue}"` : '';
+      this.suggestion.set({ category: match.name, reason });
     } catch {
       // Suggestions are best-effort; never block entry on a preview failure.
     }
