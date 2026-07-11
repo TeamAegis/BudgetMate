@@ -245,6 +245,9 @@ export interface AppliedRule {
   ordinal: number;
   setField: RuleField;
   setValue: string;
+  matchField: RuleField;
+  matchOp: MatchOp;
+  matchValue: string;
 }
 
 /** Result of previewing the active rules over sample fields (mirrors Rust `RulePreview`). */
@@ -253,6 +256,7 @@ export interface RulePreview {
   category: string | null;
   account: string | null;
   applied: AppliedRule[];
+  categoryReason: AppliedRule | null;
 }
 
 /** Sample fields to preview rules against (mirrors Rust `PreviewInput`). */

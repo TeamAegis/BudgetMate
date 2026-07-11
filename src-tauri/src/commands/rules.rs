@@ -6,7 +6,7 @@ use tauri::State;
 
 use crate::db::rules::{self, ImportRule, RuleInput};
 use crate::error::AppError;
-use crate::rules::engine::RuleFields;
+use crate::rules::engine::{MatchOp, RuleFields};
 use crate::state::DbState;
 
 #[derive(Debug, Deserialize)]
@@ -93,12 +93,15 @@ pub struct PreviewInput {
     pub account: Option<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AppliedRule {
     pub ordinal: i64,
     pub set_field: String,
     pub set_value: String,
+    pub match_field: String,
+    pub match_op: MatchOp,
+    pub match_value: String,
 }
 
 /// The result of running the active rules over sample fields: the resulting values plus the trace
@@ -110,6 +113,11 @@ pub struct RulePreview {
     pub category: Option<String>,
     pub account: Option<String>,
     pub applied: Vec<AppliedRule>,
+    /// The rule that actually set `category`, i.e. the LAST applied rule with `set_field ==
+    /// "category"` (later rules override earlier ones - `rules::engine::apply_rules_traced` is
+    /// ordinal-ascending, last-wins). This is causality, not formatting, so Rust picks it - the
+    /// frontend only decides how to phrase it.
+    pub category_reason: Option<AppliedRule>,
 }
 
 #[tauri::command]
@@ -119,14 +127,24 @@ pub fn preview_rules(state: State<'_, DbState>, input: PreviewInput) -> Result<R
             c,
             RuleFields { merchant: input.merchant, category: input.category, account: input.account },
         )?;
+        let applied: Vec<AppliedRule> = applied
+            .into_iter()
+            .map(|a| AppliedRule {
+                ordinal: a.ordinal,
+                set_field: a.set_field,
+                set_value: a.set_value,
+                match_field: a.match_field,
+                match_op: a.match_op,
+                match_value: a.match_value,
+            })
+            .collect();
+        let category_reason = applied.iter().rev().find(|a| a.set_field == "category").cloned();
         Ok(RulePreview {
             merchant: fields.merchant,
             category: fields.category,
             account: fields.account,
-            applied: applied
-                .into_iter()
-                .map(|a| AppliedRule { ordinal: a.ordinal, set_field: a.set_field, set_value: a.set_value })
-                .collect(),
+            applied,
+            category_reason,
         })
     })
 }

@@ -251,6 +251,39 @@ mod tests {
     }
 
     #[test]
+    fn last_category_setting_rule_in_a_chain_is_the_overriding_one() {
+        // A chained scenario: rule 1 sets the category from the merchant, rule 2 then overrides
+        // the category again by matching on the category value rule 1 just set. The trace must
+        // still end with the LAST category-setting `Applied` entry being the true winner (what
+        // `preview_rules` reports as `category_reason` via `.rev().find(set_field == "category")`).
+        let conn = db();
+        create(&conn, input("uber", "Rideshare")).unwrap();
+        let chained = RuleInput {
+            match_field: "category",
+            match_op: "equals",
+            match_value: "Rideshare",
+            set_field: "category",
+            set_value: "Transport",
+            active: true,
+        };
+        create(&conn, chained).unwrap();
+
+        let (fields, applied) =
+            apply(&conn, RuleFields { merchant: Some("UBER *TRIP".into()), ..Default::default() })
+                .unwrap();
+
+        assert_eq!(fields.category.as_deref(), Some("Transport"));
+        let category_applied: Vec<&Applied> =
+            applied.iter().filter(|a| a.set_field == "category").collect();
+        assert_eq!(category_applied.len(), 2, "both category-setting rules fired");
+        // The winner is the LAST category-setting entry in the trace, not the first.
+        let winner = applied.iter().rev().find(|a| a.set_field == "category").unwrap();
+        assert_eq!(winner.set_value, "Transport");
+        assert_eq!(winner.match_field, "category");
+        assert_eq!(winner.match_value, "Rideshare");
+    }
+
+    #[test]
     fn rejects_unknown_fields_or_ops() {
         let conn = db();
         let mut bad = input("x", "y");
