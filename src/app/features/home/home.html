@@ -38,19 +38,13 @@
       @for (t of recent(); track t.id) {
         <li app-list-row [name]="rowName(t)" [meta]="rowMeta(t)">
           <span lead class="avatar" [class.income]="t.amountMinor > 0">{{ monogram(rowName(t)) }}</span>
-          <span amount>
-            @if (t.amountMinor > 0) {
-              <span class="visually-hidden">Income</span>
-            } @else if (t.amountMinor < 0) {
-              <span class="visually-hidden">Expense</span>
-            }
-            <span
-              class="amount numeric"
-              [class.income]="t.amountMinor > 0"
-              [class.expense]="t.amountMinor < 0"
-              >{{ { amountMinor: t.amountMinor, currency: t.currency } | money: true }}</span
-            >
-          </span>
+          <span
+            amount
+            class="amount numeric"
+            [class.income]="t.amountMinor > 0"
+            [class.expense]="t.amountMinor < 0"
+            >{{ { amountMinor: t.amountMinor, currency: t.currency } | money: true }}</span
+          >
         </li>
       }
     </ul>
