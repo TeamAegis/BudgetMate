@@ -52,6 +52,10 @@
     background: none;
     border: none;
     cursor: pointer;
+    // Left-anchor the 24px arrow inside its 48px tap target so the glyph box sits at the screen
+    // gutter (--space-6), matching page titles and content - not centred 12px further in (issue I2).
+    // Scoped to .back, so the right-side settings / header-action icons keep their centred placement.
+    justify-content: flex-start;
   }
 
   // Trailing destructive action (Delete / Archive) on a full-screen EDIT page - a danger icon-button
