@@ -49,14 +49,74 @@ pub enum MoneyParseError {
     Overflow,
 }
 
-/// Minor-unit digits for a currency (the ISO-4217 "exponent"). Defaults to 2 and covers the common
-/// 0- and 3-digit exceptions; extend as needed. Kept deliberately small (no full code list - binary
-/// size). Money parsing/scaling lives in Rust, never TS.
+/// Default minor-unit digits for a currency with no listed exception (ISO-4217 exponent 2).
+pub const DEFAULT_MINOR_UNIT_DIGITS: u32 = 2;
+
+/// The ONE list of currencies whose minor-unit digit count differs from
+/// `DEFAULT_MINOR_UNIT_DIGITS`. Kept deliberately small (no full ISO-4217 code list - binary
+/// size); extend as needed. This is the single source of truth for money scale: `minor_unit_digits`
+/// consults it, and `commands::vault::currency_minor_units` exposes it verbatim to the frontend so
+/// TypeScript never re-derives currency digits itself (CLAUDE.md - all money math lives in Rust).
+pub fn minor_unit_digit_exceptions() -> &'static [(&'static str, u32)] {
+    &[
+        ("JPY", 0),
+        ("KRW", 0),
+        ("VND", 0),
+        ("CLP", 0),
+        ("ISK", 0),
+        ("HUF", 0),
+        ("UGX", 0),
+        ("XAF", 0),
+        ("XOF", 0),
+        ("BHD", 3),
+        ("KWD", 3),
+        ("OMR", 3),
+        ("TND", 3),
+        ("IQD", 3),
+        ("JOD", 3),
+        ("LYD", 3),
+    ]
+}
+
+/// Minor-unit digits for a currency (the ISO-4217 "exponent"). Falls back to
+/// `DEFAULT_MINOR_UNIT_DIGITS` for any currency not in `minor_unit_digit_exceptions`. Money
+/// parsing/scaling lives in Rust, never TS.
 pub fn minor_unit_digits(currency: &str) -> u32 {
-    match currency {
-        "JPY" | "KRW" | "VND" | "CLP" | "ISK" | "HUF" | "UGX" | "XAF" | "XOF" => 0,
-        "BHD" | "KWD" | "OMR" | "TND" | "IQD" | "JOD" | "LYD" => 3,
-        _ => 2,
+    minor_unit_digit_exceptions()
+        .iter()
+        .find(|(code, _)| *code == currency)
+        .map(|(_, digits)| *digits)
+        .unwrap_or(DEFAULT_MINOR_UNIT_DIGITS)
+}
+
+/// One currency's minor-unit digit count (mirrors TS `CurrencyDigits`).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CurrencyDigits {
+    pub currency: String,
+    pub digits: u32,
+}
+
+/// The authoritative currency minor-unit-digit table (mirrors TS `CurrencyMinorUnits`). Single
+/// source of truth for money scale, exposed over IPC via `currency_minor_units` so the frontend
+/// never hardcodes per-currency digit knowledge (CLAUDE.md).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CurrencyMinorUnits {
+    pub default_digits: u32,
+    pub exceptions: Vec<CurrencyDigits>,
+}
+
+impl CurrencyMinorUnits {
+    /// Build the canonical table from `DEFAULT_MINOR_UNIT_DIGITS` + `minor_unit_digit_exceptions`.
+    pub fn canonical() -> Self {
+        Self {
+            default_digits: DEFAULT_MINOR_UNIT_DIGITS,
+            exceptions: minor_unit_digit_exceptions()
+                .iter()
+                .map(|(code, digits)| CurrencyDigits { currency: (*code).to_string(), digits: *digits })
+                .collect(),
+        }
     }
 }
 
@@ -107,6 +167,19 @@ mod tests {
         assert_eq!(parse_minor("1500", "JPY"), Ok(1_500));
         // Three-decimal currency.
         assert_eq!(parse_minor("1.234", "BHD"), Ok(1_234));
+    }
+
+    #[test]
+    fn canonical_currency_table_is_the_single_source_of_truth() {
+        let table = CurrencyMinorUnits::canonical();
+        assert_eq!(table.default_digits, 2);
+        let find = |code: &str| table.exceptions.iter().find(|e| e.currency == code).map(|e| e.digits);
+        assert_eq!(find("IQD"), Some(3));
+        assert_eq!(find("JPY"), Some(0));
+        // Every listed exception must agree with `minor_unit_digits` (one list, no drift).
+        for e in &table.exceptions {
+            assert_eq!(minor_unit_digits(&e.currency), e.digits);
+        }
     }
 
     #[test]

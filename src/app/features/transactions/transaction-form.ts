@@ -23,6 +23,7 @@ import type {
   TransactionPrefill,
 } from '../../core/models';
 import { HeaderActionService } from '../../core/layout/header-action.service';
+import { CurrencyService } from '../../core/money/currency.service';
 import { MoneyPipe } from '../../shared/pipes/money.pipe';
 import { IconButton } from '../../shared/ui/icon-button/icon-button';
 import { Banner } from '../../shared/ui/banner/banner';
@@ -85,6 +86,7 @@ export class TransactionForm implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly headerAction = inject(HeaderActionService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly currency = inject(CurrencyService);
 
   /** Entity + OCR prefill handed over via router state at construction (consumed once). */
   private readonly nav = this.router.getCurrentNavigation();
@@ -517,12 +519,9 @@ export class TransactionForm implements OnInit {
     return new Date().toISOString().slice(0, 10);
   }
 
-  /** Minor-unit digits for a currency (same Intl-derived scale the money pipe uses for display). */
+  /** Minor-unit digits for a currency (Rust's authoritative table, same one the money pipe uses). */
   private fractionDigits(currency: string): number {
-    return (
-      new Intl.NumberFormat(undefined, { style: 'currency', currency }).resolvedOptions()
-        .maximumFractionDigits ?? 2
-    );
+    return this.currency.fractionDigits(currency);
   }
 
   /** Exact integer parse of a major-unit string -> minor units for display math; null if invalid. */

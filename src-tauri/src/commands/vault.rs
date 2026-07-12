@@ -171,6 +171,13 @@ pub fn set_base_currency<R: Runtime>(
     update_settings(&app, move |s| s.base_currency = code)
 }
 
+/// Authoritative currency minor-unit-digit table (single source of truth for money scale). The
+/// frontend caches this and never re-derives digits itself (all money scale lives in Rust).
+#[tauri::command]
+pub fn currency_minor_units() -> Result<crate::domain::money::CurrencyMinorUnits, AppError> {
+    Ok(crate::domain::money::CurrencyMinorUnits::canonical())
+}
+
 fn update_settings<R: Runtime>(
     app: &AppHandle<R>,
     f: impl FnOnce(&mut vault::VaultSettings),

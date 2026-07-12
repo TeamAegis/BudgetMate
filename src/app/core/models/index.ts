@@ -49,6 +49,22 @@ export interface Money {
   currency: Iso4217;
 }
 
+/** Mirrors Rust `CurrencyDigits` (domain::money). One currency's minor-unit digit count. */
+export interface CurrencyDigits {
+  currency: Iso4217;
+  digits: number;
+}
+
+/**
+ * Mirrors Rust `CurrencyMinorUnits` (domain::money): the authoritative minor-unit scale table.
+ * Single source of truth for money scale - fetched once via `currencyMinorUnits()` and cached by
+ * `CurrencyService` (core/money). No currency-digit knowledge is hardcoded in TypeScript.
+ */
+export interface CurrencyMinorUnits {
+  defaultDigits: number;
+  exceptions: CurrencyDigits[];
+}
+
 // ── Accounts & Categories (mirror domain::account / domain::category) ──────────────
 
 /** Mirrors Rust `AccountKind`. */

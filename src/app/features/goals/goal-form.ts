@@ -12,6 +12,7 @@ import {
 } from '../../core/bridge';
 import type { Goal } from '../../core/models';
 import { HeaderActionService } from '../../core/layout/header-action.service';
+import { CurrencyService } from '../../core/money/currency.service';
 import { Banner } from '../../shared/ui/banner/banner';
 import { Spinner } from '../../shared/ui/spinner/spinner';
 import { FormField } from '../../shared/ui/form-field/form-field';
@@ -39,6 +40,7 @@ export class GoalForm implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly headerAction = inject(HeaderActionService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly currency = inject(CurrencyService);
 
   /** Entity handed over via router state at construction (consumed once). */
   private readonly nav = this.router.getCurrentNavigation();
@@ -194,9 +196,7 @@ export class GoalForm implements OnInit {
 
   /** Stored minor units → a major-unit string for the edit fields (display only; Rust re-parses). */
   private majorAmount(amountMinor: number, currency: string): string {
-    const digits =
-      new Intl.NumberFormat(undefined, { style: 'currency', currency }).resolvedOptions()
-        .maximumFractionDigits ?? 2;
+    const digits = this.currency.fractionDigits(currency);
     return (amountMinor / Math.pow(10, digits)).toFixed(digits);
   }
 }
