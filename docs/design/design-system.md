@@ -301,7 +301,7 @@ and the tokens it consumes. Components are dumb/presentational (`shared/`) unles
   `--radius-sm` top. **Implement with bundled Chart.js (canvas)**, not static images.
 - **TransactionListItem** - leading **monogram avatar** (via `ListRow`'s `[lead]` slot), title, date,
   trailing signed amount (`+ Rs 500`). Sign coloured: income `--c-positive`, expense
-  `--c-danger`/`--c-text`. Income rows use the positive tint on the avatar **paired with the signed
+  `--c-danger-700`/`--c-text`. Income rows use the positive tint on the avatar **paired with the signed
   amount** - never colour alone.
 #### Actions and toggles
 - **SegmentedToggle** - Daily/Weekly/Monthly and Ongoing/Completed. Pill, active segment
