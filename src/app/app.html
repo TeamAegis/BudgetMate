@@ -8,7 +8,7 @@
       (back)="goBack()"
     />
 
-    @if (appInfo() || health() || coreError()) {
+    @if (showDiagnostics && (appInfo() || health() || coreError())) {
       <div class="core-status">
         @if (appInfo(); as info) {
           <span class="ok">core {{ info.version }} · {{ info.platform }}</span>
