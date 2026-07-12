@@ -36,6 +36,12 @@
   --c-info-700: #1f5f94;           // accessible blue for small text/icons on white (AA)
   --c-info-soft: rgba(58, 134, 200, 0.10);     // neutral info / tip tint fill
 
+  // ---- Interaction (focus ring + touch feedback; issue I1) ----
+  --c-focus-ring: var(--c-primary-700);   // AA coral keyboard focus outline (via :focus-visible only)
+  --tap-highlight: transparent;            // kills the Android WebView default blue tap overlay
+  --c-press-tint: var(--c-primary-05);     // pressed-state tint for transparent-surface controls
+  --c-selection: var(--c-primary-10);      // text-selection band (replaces the WebView blue default)
+
   // ---- Elevation ----
   --c-shadow-pink: rgba(255, 203, 203, 0.29);
   --elev-card: 5px 5px 0px 0px var(--c-shadow-pink);

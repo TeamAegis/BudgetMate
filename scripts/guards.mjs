@@ -156,6 +156,18 @@ function checkFloatMoney() {
   }
 }
 
+// ── 3b. Tap-highlight kill (issue I1): the Android WebView blue tap flash must stay disabled. ──
+function checkTapHighlight() {
+  const file = join(ROOT, 'src', 'styles.scss');
+  if (!existsSync(file)) return;
+  if (!/-webkit-tap-highlight-color\s*:/.test(readFileSync(file, 'utf8'))) {
+    errors.push(
+      '[tap-highlight] src/styles.scss must set -webkit-tap-highlight-color (issue I1) - without ' +
+        'it the Android WebView paints a blue tap overlay on every control.',
+    );
+  }
+}
+
 function* walk(dir) {
   for (const entry of readdirSync(dir)) {
     const full = join(dir, entry);
@@ -325,6 +337,7 @@ checkCargoLock();
 checkAndroidManifest();
 checkTelemetry();
 checkFloatMoney();
+checkTapHighlight();
 checkStyle();
 checkIpcContract();
 
