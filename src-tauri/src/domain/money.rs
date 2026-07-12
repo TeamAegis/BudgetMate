@@ -64,7 +64,6 @@ pub fn minor_unit_digit_exceptions() -> &'static [(&'static str, u32)] {
         ("VND", 0),
         ("CLP", 0),
         ("ISK", 0),
-        ("HUF", 0),
         ("UGX", 0),
         ("XAF", 0),
         ("XOF", 0),
@@ -180,6 +179,18 @@ mod tests {
         for e in &table.exceptions {
             assert_eq!(minor_unit_digits(&e.currency), e.digits);
         }
+    }
+
+    #[test]
+    fn huf_uses_the_iso_4217_two_digit_default_not_zero() {
+        // HUF (Hungarian Forint) has ISO-4217 exponent 2 (subunit filler): it must NOT appear in
+        // the exceptions table, and must fall back to the 2-digit default (regression for #85).
+        assert_eq!(minor_unit_digits("HUF"), 2);
+        assert!(
+            !minor_unit_digit_exceptions().iter().any(|(code, _)| *code == "HUF"),
+            "HUF must not be listed as a minor-unit-digit exception"
+        );
+        assert_eq!(parse_minor("1.99", "HUF"), Ok(199));
     }
 
     #[test]
