@@ -237,7 +237,10 @@ deterministic extractor (§6.3) decides from text + position, never from confide
 A pure-Rust post-processor turns OCR blocks into `{ merchant, date, total }`:
 - **Total:** scan for currency-amount patterns; prefer the largest amount near a
   "total/amount due/balance" keyword, with tax/subtotal exclusion heuristics.
-- **Date:** match common date formats; pick the most recent plausible date on the receipt.
+- **Date:** match common date formats; across multiple dates on a receipt pick the most recent
+  plausible one, and for a single ambiguous slashed date (DD/MM vs MM/DD) prefer the DD/MM
+  (Mauritius) reading, falling back to MM/DD only when DD/MM is invalid or implausible
+  (financial-knowledge.md §8).
 - **Merchant:** top-of-receipt heuristic (largest/first text block, filtered against address
   noise).
 - Output is always shown to the user for confirmation before saving (FR-2.1). Nothing is

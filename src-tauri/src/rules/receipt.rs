@@ -88,11 +88,15 @@ fn parse_plausible_date(line: &str, today: NaiveDate) -> Option<NaiveDate> {
         let a: u32 = c[1].parse().ok()?;
         let b: u32 = c[2].parse().ok()?;
         let y = normalise_year(c[3].parse::<i32>().ok()?);
-        // Ambiguous: try day/month and month/day; keep whichever is valid + plausible.
-        for (d, m) in [(a, b), (b, a)] {
-            if let Some(date) = NaiveDate::from_ymd_opt(y, m, d) {
-                consider(date);
-            }
+        // Ambiguous: a slashed date could be day/month or month/day. Mauritius uses
+        // DD/MM/YYYY (docs/financial-knowledge.md §8), so prefer the day/month reading;
+        // only fall back to month/day when day/month is not a valid, plausible date
+        // (e.g. the first number is > 12 and so cannot be a month).
+        let plausible = |d: NaiveDate| (d <= today && d >= earliest).then_some(d);
+        let ddmm = NaiveDate::from_ymd_opt(y, b, a).and_then(plausible);
+        let mmdd = NaiveDate::from_ymd_opt(y, a, b).and_then(plausible);
+        if let Some(date) = ddmm.or(mmdd) {
+            consider(date);
         }
     }
     best
@@ -276,7 +280,27 @@ mod tests {
         let r = extract(&blocks, today);
         assert_eq!(r.merchant.as_deref(), Some("WHOLE FOODS MARKET"));
         assert_eq!(r.total_minor, Some(2000)); // 20.00, not the 18.00 subtotal
-        assert_eq!(r.date.as_deref(), Some("2026-04-03")); // 03/04 = 3 April or 4 March; algorithm picks most-recent = April 3 (2026-04-03)
+        assert_eq!(r.date.as_deref(), Some("2026-04-03")); // 03/04/2026 read as DD/MM (Mauritius) = 3 April 2026
+    }
+
+    #[test]
+    fn ambiguous_slashed_date_prefers_ddmm_mauritius() {
+        // 06/05/2026 is ambiguous: DD/MM = 6 May 2026, MM/DD = 5 June 2026. "Latest wins"
+        // would pick 5 June (2026-06-05); Mauritius uses DD/MM/YYYY, so 6 May must win.
+        let blocks = vec![block("Date: 06/05/2026", 0.0), block("TOTAL 10.00", 10.0)];
+        let today = NaiveDate::from_ymd_opt(2026, 6, 5).unwrap();
+        let r = extract(&blocks, today);
+        assert_eq!(r.date.as_deref(), Some("2026-05-06"));
+    }
+
+    #[test]
+    fn slashed_date_falls_back_to_mmdd_when_ddmm_invalid() {
+        // 05/13/2026: DD/MM would need month 13, which is invalid, so month/day (13 May) is
+        // the only valid reading and must be picked.
+        let blocks = vec![block("Date: 05/13/2026", 0.0), block("TOTAL 10.00", 10.0)];
+        let today = NaiveDate::from_ymd_opt(2026, 6, 5).unwrap();
+        let r = extract(&blocks, today);
+        assert_eq!(r.date.as_deref(), Some("2026-05-13"));
     }
 
     #[test]
