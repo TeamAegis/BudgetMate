@@ -276,7 +276,7 @@ mod tests {
         let r = extract(&blocks, today);
         assert_eq!(r.merchant.as_deref(), Some("WHOLE FOODS MARKET"));
         assert_eq!(r.total_minor, Some(2000)); // 20.00, not the 18.00 subtotal
-        assert_eq!(r.date.as_deref(), Some("2026-04-03")); // 03/04 -> 4 Mar plausible
+        assert_eq!(r.date.as_deref(), Some("2026-04-03")); // 03/04 = 3 April or 4 March; algorithm picks most-recent = April 3 (2026-04-03)
     }
 
     #[test]
