@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, provideRouter, convertToParamMap } from '@angular/router';
 import { TransactionForm } from './transaction-form';
+import { CurrencyService } from '../../core/money/currency.service';
 import type { Account, TransactionPrefill } from '../../core/models';
 
 /**
@@ -12,6 +13,10 @@ import type { Account, TransactionPrefill } from '../../core/models';
  * seeds the `accounts`/`baseCurrency` signals directly, and invokes the private `patchForCreate`
  * exactly as `ngOnInit` would on the create route with an OCR hand-off - this exercises the real
  * method the reviewers flagged, without touching production code to make it testable.
+ *
+ * `CurrencyService` normally caches its minor-unit-digit table from Rust at app bootstrap
+ * (app.config.ts); that initializer never runs here, so the JPY case seeds the service's cache
+ * directly (same reflection approach as `currency.service.spec.ts`) rather than mocking the bridge.
  *
  * `createComponent` deliberately returns `any` so the tests can reach the protected/private
  * `form`/`accounts`/`baseCurrency`/`patchForCreate` members from outside the class.
@@ -31,6 +36,9 @@ describe('TransactionForm - patchForCreate multi-currency prefill', () => {
         },
       ],
     });
+    // Seed the 0-decimal JPY exception the real Rust-backed table carries; the app-bootstrap
+    // initializer that would normally populate this doesn't run in the test harness.
+    (TestBed.inject(CurrencyService) as any).digitsByCode.set('JPY', 0);
     // Constructing does not run ngOnInit (only `detectChanges()` does), so no bridge call happens.
     // Typed `any`: the test reaches into protected/private members (`form`, `accounts`,
     // `baseCurrency`, `patchForCreate`) deliberately - see the file doc above.

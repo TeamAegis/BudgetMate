@@ -5,6 +5,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { LucideScanLine, LucideTriangleAlert } from '@lucide/angular';
 import { extractReceipt, pickReceiptImage, getSettings, isTauri } from '../../core/bridge';
 import { LockService } from '../../core/lock/lock.service';
+import { CurrencyService } from '../../core/money/currency.service';
 import type { TransactionPrefill } from '../../core/models';
 import { MoneyPipe } from '../../shared/pipes/money.pipe';
 import { Button } from '../../shared/ui/button/button';
@@ -59,6 +60,7 @@ export class Import {
   private readonly fb = inject(FormBuilder);
   private readonly router = inject(Router);
   private readonly lockService = inject(LockService);
+  private readonly currency = inject(CurrencyService);
 
   protected readonly phase = signal<Phase>('idle');
   protected readonly error = signal<string | null>(null);
@@ -202,12 +204,9 @@ export class Import {
     void this.router.navigate(['/expenses/new']);
   }
 
-  /** Minor-unit digits for a currency - same Intl-derived scale the money pipe and transaction form use. */
+  /** Minor-unit digits for a currency (Rust's authoritative table, same one the money pipe uses). */
   private fractionDigits(currency: string): number {
-    return (
-      new Intl.NumberFormat(undefined, { style: 'currency', currency }).resolvedOptions()
-        .maximumFractionDigits ?? 2
-    );
+    return this.currency.fractionDigits(currency);
   }
 
   /** Exact major-unit string for a base-currency minor-unit total (display/edit only - no money math). */

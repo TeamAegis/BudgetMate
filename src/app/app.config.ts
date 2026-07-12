@@ -10,6 +10,7 @@ import { provideLucideConfig } from '@lucide/angular';
 
 import { routes } from './app.routes';
 import { LockService } from './core/lock/lock.service';
+import { CurrencyService } from './core/money/currency.service';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -19,6 +20,8 @@ export const appConfig: ApplicationConfig = {
     // Resolve vault/lock state BEFORE the first route activates, so the unlock guard routes to
     // /setup or /unlock correctly on cold start (no flash of the wrong lock screen).
     provideAppInitializer(() => inject(LockService).refreshState()),
+    // Cache the authoritative currency minor-unit-digit table (reads no DB, safe while locked).
+    provideAppInitializer(() => inject(CurrencyService).load()),
     // Global icon defaults - refined single-weight outline to match the light Poppins type.
     provideLucideConfig({ strokeWidth: 1.75 }),
   ],

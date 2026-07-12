@@ -11,6 +11,7 @@ import type {
   AppState,
   DbHealth,
   VaultSettings,
+  CurrencyMinorUnits,
   Account,
   NewAccount,
   UpdateAccount,
@@ -87,6 +88,10 @@ export function setBiometricEnabled(enabled: boolean): Promise<VaultSettings> {
 /** Set the base (reporting) currency (FR-1.4); validated as a 3-letter ISO-4217 code in Rust. */
 export function setBaseCurrency(currency: string): Promise<VaultSettings> {
   return invoke<VaultSettings>('set_base_currency', { currency });
+}
+/** Authoritative currency minor-unit-digit table from Rust (single source of truth for money scale). */
+export function currencyMinorUnits(): Promise<CurrencyMinorUnits> {
+  return invoke<CurrencyMinorUnits>('currency_minor_units');
 }
 
 // ── Accounts ───────────────────────────────────────────────────────────────────
