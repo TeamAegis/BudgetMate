@@ -18,21 +18,22 @@
   flex: 1;
 }
 
-// Tone backgrounds use the soft semantic tints; the icon + text colour carries the meaning, so
-// it is never signalled by colour alone (icon present in every tone).
+// Tone backgrounds use the soft semantic tints; the foreground uses the accessible "-700" tone
+// variant (AA) so the icon (inherits currentColor) and text both clear 4.5:1 on the tint. The
+// icon still carries the meaning too, so it is never signalled by colour alone.
 .banner.error {
   background: var(--c-danger-soft);
-  color: var(--c-danger);
+  color: var(--c-danger-700);
 }
 .banner.warning {
   background: var(--c-warning-soft);
-  color: var(--c-warning);
+  color: var(--c-warning-700);
 }
 .banner.success {
   background: var(--c-positive-soft);
-  color: var(--c-positive);
+  color: var(--c-positive-700);
 }
 .banner.info {
   background: var(--c-info-soft);
-  color: var(--c-info);
+  color: var(--c-info-700);
 }
