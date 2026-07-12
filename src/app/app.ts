@@ -1,4 +1,4 @@
-import { Component, OnInit, effect, inject, signal } from '@angular/core';
+import { Component, OnInit, effect, inject, isDevMode, signal } from '@angular/core';
 import { Location } from '@angular/common';
 import { NavigationEnd, Params, Router, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs/operators';
@@ -28,6 +28,10 @@ export class App implements OnInit {
   protected readonly appInfo = signal<AppInfo | null>(null);
   protected readonly health = signal<DbHealth | null>(null);
   protected readonly coreError = signal<string | null>(null);
+  // The bridge diagnostics strip is a dev-only aid; keep it during `tauri dev` / `npm run start`
+  // but strip it from the optimized production Android build so it never ships on feature screens.
+  // isDevMode() is false under an AOT production build and true under the dev server (no env files).
+  protected readonly showDiagnostics = isDevMode();
 
   // AppHeader state, driven by the active route's `data` (see app.routes.ts). Home omits
   // `title`, so the header shows the "BudgetMate" brand wordmark; titled screens show their name.
