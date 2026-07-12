@@ -65,10 +65,10 @@ top of this: a semantic state always carries a sign/icon/label, not just hue.
 | `--c-danger` (`#D8453B`) | borderline | Fill/icon (paired with label/sign), on `--c-danger-soft`; never small text on white. |
 | `--c-info` (`#3A86C8`) | borderline | Fill/icon (paired with label), on `--c-info-soft`; never small text on white. |
 | `--c-positive` (`#2E9E6B`) | ≈ 3.3:1 | Large/bold text + fills only (e.g. signed amounts ≥19px bold); not small body text. |
-| `--c-warning-700` (`#8A5300`) | ≈ 6.3:1 - passes AA | Accessible amber for small text/icons on white or `--c-warning-soft` (AA). |
-| `--c-danger-700` (`#B3261E`) | ≈ 6.5:1 - passes AA | Accessible red for small text/icons on white or `--c-danger-soft` (AA). |
-| `--c-info-700` (`#1F5F94`) | ≈ 6.7:1 - passes AA | Accessible blue for small text/icons on white or `--c-info-soft` (AA). |
-| `--c-positive-700` (`#1B7A4F`) | ≈ 5.3:1 - passes AA | Accessible green for small text/icons on white or `--c-positive-soft` (AA). |
+| `--c-warning-700` (`#8A5300`) | ≈ 6.3:1 - passes AA | Accessible amber for small text/icons on white or `--c-warning-soft` (on `--c-warning-soft` itself ≈ 5.8:1 - AA). |
+| `--c-danger-700` (`#B3261E`) | ≈ 6.5:1 - passes AA | Accessible red for small text/icons on white or `--c-danger-soft` (on `--c-danger-soft` itself ≈ 5.7:1 - AA). |
+| `--c-info-700` (`#1F5F94`) | ≈ 6.7:1 - passes AA | Accessible blue for small text/icons on white or `--c-info-soft` (on `--c-info-soft` itself ≈ 6.0:1 - AA). |
+| `--c-positive-700` (`#1B7A4F`) | ≈ 5.3:1 - passes AA | Accessible green for small text/icons on white or `--c-positive-soft` (on `--c-positive-soft` itself ≈ 4.8:1 - the tightest margin, still clears the 4.5:1 AA floor). |
 
 The soft tokens (`--c-danger-soft`, `--c-warning-soft`, `--c-positive-soft`, `--c-info-soft`) are
 the Banner/surface background tints behind their parent colour (see §7 Banner). Foreground text and
