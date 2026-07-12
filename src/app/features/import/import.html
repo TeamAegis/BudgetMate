@@ -58,10 +58,7 @@
     <!-- Review: editable suggestions; the user confirms by handing off to the Add form. -->
     @case ('review') {
       @if (lowConfidence()) {
-        <div class="low-confidence" role="status">
-          <svg lucideTriangleAlert [size]="20" aria-hidden="true"></svg>
-          <span>Couldn’t read much from that image. Check the fields below or enter it by hand.</span>
-        </div>
+        <app-banner tone="warning">Couldn’t read much from that image. Check the fields below or enter it by hand.</app-banner>
       } @else {
         <p class="note">Review the suggestions and correct anything before continuing.</p>
       }

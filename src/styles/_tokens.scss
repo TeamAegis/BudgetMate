@@ -24,13 +24,16 @@
 
   // ---- Color: semantic (required by FR-3.1 / FR-2.4 / states) ----
   --c-positive: #2e9e6b;
+  --c-positive-700: #1b7a4f;       // accessible green for small text/icons on white (AA) - mirrors --c-primary-700
   --c-positive-soft: rgba(46, 158, 107, 0.10);  // success banner / on-track tint fill
   --c-warning: #e8a13a;
   --c-warning-700: #8a5300;        // accessible amber for small text/icons on white (AA) - mirrors --c-primary-700
   --c-warning-soft: rgba(232, 161, 58, 0.12);  // low-confidence/approaching tint fill (OCR, budgets)
   --c-danger: #d8453b;
+  --c-danger-700: #b3261e;         // accessible red for small text/icons on white (AA) - mirrors --c-warning-700
   --c-danger-soft: rgba(216, 69, 59, 0.10);    // error banner / over-budget tint fill
   --c-info: #3a86c8;
+  --c-info-700: #1f5f94;           // accessible blue for small text/icons on white (AA)
   --c-info-soft: rgba(58, 134, 200, 0.10);     // neutral info / tip tint fill
 
   // ---- Elevation ----

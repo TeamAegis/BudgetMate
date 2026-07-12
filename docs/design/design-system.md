@@ -35,9 +35,13 @@ The Figma has no success/error/warning states, but envelope budgeting (FR-3.1), 
 | Token | Value | Use |
 |---|---|---|
 | `--c-positive` | `#2E9E6B` | Income, on-track, savings progress. |
+| `--c-positive-700` | `#1B7A4F` | **Accessible** green for *small text/icons on white or a soft tint* (see §2.3). |
 | `--c-warning` | `#E8A13A` | Approaching budget cap, dedup "review" flag. |
+| `--c-warning-700` | `#8A5300` | **Accessible** amber for *small text/icons on white or a soft tint* (see §2.3). |
 | `--c-danger` | `#D8453B` | Over budget, destructive actions, errors. |
+| `--c-danger-700` | `#B3261E` | **Accessible** red for *small text/icons on white or a soft tint* (see §2.3). |
 | `--c-info` | `#3A86C8` | Neutral info, tips. |
+| `--c-info-700` | `#1F5F94` | **Accessible** blue for *small text/icons on white or a soft tint* (see §2.3). |
 
 ### 2.3 Accessibility note (important)
 `#FF7755` on white is ≈ **2.8:1** contrast - it **fails** WCAG AA for normal text (needs
@@ -61,11 +65,17 @@ top of this: a semantic state always carries a sign/icon/label, not just hue.
 | `--c-danger` (`#D8453B`) | borderline | Fill/icon (paired with label/sign), on `--c-danger-soft`; never small text on white. |
 | `--c-info` (`#3A86C8`) | borderline | Fill/icon (paired with label), on `--c-info-soft`; never small text on white. |
 | `--c-positive` (`#2E9E6B`) | ≈ 3.3:1 | Large/bold text + fills only (e.g. signed amounts ≥19px bold); not small body text. |
+| `--c-warning-700` (`#8A5300`) | ≈ 6.3:1 - passes AA | Accessible amber for small text/icons on white or `--c-warning-soft` (on `--c-warning-soft` itself ≈ 5.8:1 - AA). |
+| `--c-danger-700` (`#B3261E`) | ≈ 6.5:1 - passes AA | Accessible red for small text/icons on white or `--c-danger-soft` (on `--c-danger-soft` itself ≈ 5.7:1 - AA). |
+| `--c-info-700` (`#1F5F94`) | ≈ 6.7:1 - passes AA | Accessible blue for small text/icons on white or `--c-info-soft` (on `--c-info-soft` itself ≈ 6.0:1 - AA). |
+| `--c-positive-700` (`#1B7A4F`) | ≈ 5.3:1 - passes AA | Accessible green for small text/icons on white or `--c-positive-soft` (on `--c-positive-soft` itself ≈ 4.8:1 - the tightest margin, still clears the 4.5:1 AA floor). |
 
 The soft tokens (`--c-danger-soft`, `--c-warning-soft`, `--c-positive-soft`, `--c-info-soft`) are
-the Banner/surface background tints behind their parent colour (see §7 Banner). Foreground text on a
-soft tint uses `--c-text`, not the semantic hue. **Dark-mode contrast caveat:** these ratios are for
-the light theme only - re-verify every pairing when the dark-mode override lands (see §2.4).
+the Banner/surface background tints behind their parent colour (see §7 Banner). Foreground text and
+icons on a soft tint use `--c-text` or the tone's accessible `-700` variant (`--c-warning-700`,
+`--c-danger-700`, `--c-info-700`, `--c-positive-700`), never the base semantic hue. **Dark-mode
+contrast caveat:** these ratios are for the light theme only - re-verify every pairing when the
+dark-mode override lands (see §2.4).
 
 ### 2.4 Dark mode (deferred to v2)
 **Dark mode is deferred to v2.** Tokens are light-only today. When it lands, a
@@ -367,7 +377,10 @@ and the tokens it consumes. Components are dumb/presentational (`shared/`) unles
 - **RuleBuilderRow** - "If [field] [op] [value] → set [field] [value]" (FR-2.3).
 - **SettingsList + BackupRestorePanel** - base currency, lock timeout, export, encrypted
   backup/restore (FR-4.x, FR-5.2).
-- **Banner/Toast** - success/warning/error feedback (semantic colours).
+- **Banner/Toast** - success/warning/error feedback (semantic colours). Background is the tone's
+  soft tint (`--c-*-soft`); foreground (icon + text) uses the tone's accessible `-700` variant
+  (`--c-warning-700`, `--c-danger-700`, `--c-positive-700`, `--c-info-700`), never the base hue, so
+  both clear AA on the tint.
 
 ---
 

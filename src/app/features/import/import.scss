@@ -41,7 +41,7 @@
 }
 
 .state-icon {
-  color: var(--c-warning);
+  color: var(--c-warning-700);
 }
 
 .state-actions,
@@ -54,21 +54,6 @@
 
 .state-actions {
   justify-content: center;
-}
-
-.low-confidence {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-3);
-  border-radius: var(--radius-md);
-  background: var(--c-warning-soft);
-  color: var(--c-warning);
-  font-size: var(--t-body);
-
-  svg {
-    flex-shrink: 0;
-  }
 }
 
 .extracted-total {
