@@ -99,8 +99,8 @@ export class Home implements OnInit {
     return `${this.categoryLabel(t)} · ${t.postedDate}`;
   }
 
-  /** Open a goal's edit page from the preview (mirrors the Goals list hand-off). */
-  protected editGoal(g: Goal): void {
-    void this.router.navigate(['/goals', g.id, 'edit'], { state: { goal: g } });
+  /** Open a goal's detail page from the preview (mirrors the Goals list hand-off). */
+  protected openGoal(g: Goal): void {
+    void this.router.navigate(['/goals', g.id], { state: { goal: g } });
   }
 }

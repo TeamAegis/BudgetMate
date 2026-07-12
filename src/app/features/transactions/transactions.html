@@ -36,10 +36,16 @@
           @for (t of group.items; track t.tx.id) {
             <li
               app-list-row
+              role="button"
+              tabindex="0"
               animate.enter="list-item-enter"
               [style.animation-delay]="(t.flatIndex < 12 ? t.flatIndex * 40 : 0) + 'ms'"
+              [attr.aria-label]="'View ' + rowName(t.tx)"
               [name]="rowName(t.tx)"
               [meta]="metaLine(t.tx)"
+              (click)="openTransaction(t.tx)"
+              (keydown.enter)="openTransaction(t.tx)"
+              (keydown.space)="openTransaction(t.tx); $event.preventDefault()"
             >
               <span lead class="avatar" [class.income]="t.tx.amountMinor > 0">{{ monogram(rowName(t.tx)) }}</span>
               <span amount class="amount-cell">
@@ -62,9 +68,7 @@
                   >
                 }
               </span>
-              <app-icon-button actions ariaLabel="Edit" (click)="editTransaction(t.tx)">
-                <svg lucidePencil [size]="18" aria-hidden="true"></svg>
-              </app-icon-button>
+              <svg actions lucideChevronRight [size]="18" class="chevron" aria-hidden="true"></svg>
             </li>
           }
         </ul>

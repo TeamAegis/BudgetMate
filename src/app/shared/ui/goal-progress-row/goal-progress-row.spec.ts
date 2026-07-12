@@ -33,11 +33,20 @@ describe('GoalProgressRow', () => {
     expect(el.querySelector('.name.done')).toBeTruthy();
   });
 
-  it('emits edit when the row is activated', () => {
+  it('emits open when the row is activated', () => {
     const fixture = make(100, 1_000);
-    const spy = jasmine.createSpy('edit');
-    fixture.componentInstance.edit.subscribe(spy);
+    const spy = jasmine.createSpy('open');
+    fixture.componentInstance.open.subscribe(spy);
     (fixture.nativeElement as HTMLElement).querySelector('button')!.click();
     expect(spy).toHaveBeenCalled();
+  });
+
+  it('renders a static (non-button) row when interactive is false', () => {
+    const fixture = make(100, 1_000);
+    fixture.componentRef.setInput('interactive', false);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('button')).toBeNull();
+    expect(el.querySelector('.goal-row.static')).toBeTruthy();
   });
 });

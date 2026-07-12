@@ -1,0 +1,57 @@
+// Reserve space so content clears the fixed bottom action bar (FormActions), matching the forms.
+.detail-page {
+  padding-bottom: calc(var(--tap-target-min) + var(--space-8) + var(--keyboard-inset));
+}
+
+.detail-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-6) 0 var(--space-4);
+}
+.hero .amount {
+  font-size: var(--t-screen-title);
+  font-weight: var(--fw-bold);
+  color: var(--c-text);
+}
+// Colour reinforces the signed amount + the visually-hidden type word (never the sole cue). Use the
+// -700 tones so the large figure clears AA on white.
+.hero .amount.income {
+  color: var(--c-positive-700);
+}
+.hero .amount.expense {
+  color: var(--c-danger-700);
+}
+.hero .base {
+  color: var(--c-text-muted);
+  font-size: var(--t-body);
+}
+
+.detail-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.splits {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.splits li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.split-cat {
+  color: var(--c-text-muted);
+}
