@@ -30,9 +30,13 @@
   display: flex;
   flex-direction: column;
   align-items: flex-end;
+  // Sized to content, never shrinks into or collides with the title + meta column (issue I4).
+  flex: none;
+  text-align: right;
 }
 .amount-cell .base {
   color: var(--c-text-muted);
+  white-space: nowrap;
 }
 
 .date-group {
@@ -69,25 +73,17 @@
   border-radius: var(--radius-md);
 }
 
-// Right-aligned amount. Direction is conveyed by icon + a visually-hidden label (see
-// transactions.html) plus the numeric sign; colour is reinforcement only, never the sole cue.
+// Right-aligned amount. Direction is conveyed by the numeric sign (+/-, money pipe `signed` mode)
+// plus a visually-hidden label (see transactions.html); colour is reinforcement only, never the sole
+// cue. Issue I3: the redundant leading direction arrow was removed (sign + colour already carry it).
 .amount-line {
   display: flex;
   align-items: center;
   gap: var(--space-1);
 }
-.direction-icon {
-  flex: none;
-  color: var(--c-text);
-}
-.direction-icon.income {
-  color: var(--c-positive);
-}
-.direction-icon.expense {
-  color: var(--c-danger);
-}
 .amount {
   color: var(--c-text);
+  white-space: nowrap;
 }
 .amount.income {
   color: var(--c-positive);

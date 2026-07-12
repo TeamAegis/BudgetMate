@@ -18,6 +18,14 @@
 .name {
   font-weight: var(--fw-medium);
 }
+// Truncate to one line so a long name or meta never wraps and collides with a trailing amount or
+// action (issue I4). .row-main is min-width:0, so the ellipsis engages under width pressure.
+.name,
+.meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .meta {
   font-size: var(--t-caption);
   color: var(--c-text-muted);

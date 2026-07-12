@@ -1,6 +1,6 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { LucidePencil, LucideArrowUp, LucideArrowDown } from '@lucide/angular';
+import { LucidePencil } from '@lucide/angular';
 import { listTransactions, listAccounts, getSettings, toUserMessage, isTauri } from '../../core/bridge';
 import type { Transaction, Account } from '../../core/models';
 import { MoneyPipe } from '../../shared/pipes/money.pipe';
@@ -35,8 +35,6 @@ interface DateGroup {
   imports: [
     MoneyPipe,
     LucidePencil,
-    LucideArrowUp,
-    LucideArrowDown,
     FabMenu,
     IconButton,
     Banner,

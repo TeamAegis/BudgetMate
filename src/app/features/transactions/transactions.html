@@ -45,11 +45,6 @@
               <span amount class="amount-cell">
                 <span class="amount-line">
                   @if (t.tx.amountMinor > 0) {
-                    <svg class="direction-icon income" lucideArrowUp [size]="16" aria-hidden="true"></svg>
-                  } @else if (t.tx.amountMinor < 0) {
-                    <svg class="direction-icon expense" lucideArrowDown [size]="16" aria-hidden="true"></svg>
-                  }
-                  @if (t.tx.amountMinor > 0) {
                     <span class="visually-hidden">Income</span>
                   } @else if (t.tx.amountMinor < 0) {
                     <span class="visually-hidden">Expense</span>
@@ -58,7 +53,7 @@
                     class="amount numeric"
                     [class.income]="t.tx.amountMinor > 0"
                     [class.expense]="t.tx.amountMinor < 0"
-                    >{{ { amountMinor: t.tx.amountMinor, currency: t.tx.currency } | money }}</span
+                    >{{ { amountMinor: t.tx.amountMinor, currency: t.tx.currency } | money: true }}</span
                   >
                 </span>
                 @if (t.tx.currency !== baseCurrency()) {

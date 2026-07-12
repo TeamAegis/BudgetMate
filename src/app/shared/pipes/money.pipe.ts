@@ -13,7 +13,7 @@ import { CurrencyService } from '../../core/money/currency.service';
 export class MoneyPipe implements PipeTransform {
   private readonly currency = inject(CurrencyService);
 
-  transform(value: Money | null | undefined, locale?: string): string {
+  transform(value: Money | null | undefined, signed = false, locale?: string): string {
     if (!value) {
       return '';
     }
@@ -26,6 +26,10 @@ export class MoneyPipe implements PipeTransform {
       currencyDisplay: 'narrowSymbol',
       minimumFractionDigits: digits,
       maximumFractionDigits: digits,
+      // `signed` rows (transactions) show +/- as the non-colour direction cue (issue I3/I4), so the
+      // redundant arrow could be dropped; 'exceptZero' keeps a neutral zero unsigned. Presentation
+      // only (sign placement is locale-aware), never money math.
+      signDisplay: signed ? 'exceptZero' : 'auto',
     });
     const major = amountMinor / Math.pow(10, digits);
     return fmt.format(major);
