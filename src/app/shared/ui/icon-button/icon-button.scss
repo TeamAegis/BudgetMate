@@ -25,3 +25,7 @@
   outline: 2px solid var(--c-primary-700);
   outline-offset: 1px;
 }
+// Tactile press feedback replacing the removed WebView tap flash (issue I1).
+.icon-btn:active:not(:disabled) {
+  background: var(--c-press-tint);
+}

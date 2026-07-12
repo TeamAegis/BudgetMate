@@ -7,6 +7,10 @@
 
 * {
   box-sizing: border-box;
+  // Kill the Android System WebView default tap-highlight overlay (renders blue on most OEM skins).
+  // Inherited, but set on every element for robustness; touch feedback comes from explicit :active
+  // states on the controls, not this UA flash (issue I1).
+  -webkit-tap-highlight-color: var(--tap-highlight);
 }
 
 // Native-app feel: content still scrolls, but the scrollbar is never shown (it's an app, not a
@@ -48,6 +52,26 @@ textarea,
 [contenteditable] {
   -webkit-user-select: text;
   user-select: text;
+}
+
+// Focus-ring policy (issue I1). Components own their coral :focus-visible ring for keyboard/AT
+// focus; strip the UA outline for pointer/touch focus so a tapped control never keeps a sticky
+// ring in the WebView. Text inputs match :focus-visible when focused, so their outline is unaffected.
+:focus:not(:focus-visible) {
+  outline: none;
+}
+// Baseline keyboard/AT focus ring for any focusable element lacking its own (never on pointer tap),
+// so removing the blue flash can never regress into an invisible focus (WCAG 2.4.7).
+:focus-visible {
+  outline: 2px solid var(--c-focus-ring);
+  outline-offset: 2px;
+}
+// Brand-tint the selection band and native form-control accent (WebView defaults are blue).
+::selection {
+  background: var(--c-selection);
+}
+:root {
+  accent-color: var(--c-focus-ring);
 }
 
 h1 {
