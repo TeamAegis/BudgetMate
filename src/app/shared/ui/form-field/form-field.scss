@@ -47,7 +47,7 @@
 }
 .form-field .error-msg {
   font-weight: var(--fw-regular);
-  color: var(--c-danger);
+  color: var(--c-danger-700);
 }
 // Advisory attention flag (set via the `flag` input) - e.g. "not detected, please enter". Warning
 // tone, not an error: no border change on the control, text carries the meaning (icon is
