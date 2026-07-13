@@ -69,30 +69,44 @@ in the current Figma - design them to this spec.
 - **Figma:** `124:224` (Mobile Home). Tokens validated from this node.
 - **FR:** FR-3.x preview, entry points to FR-1.x/2.x.
 - **Components:** AppHeader (brand + settings icon `124:297`); **BalanceCard** (`app-balance-card`,
-  `124:302`) as the balance/summary **hero** - coral-40 fill + offset pink shadow, showing an honest
-  count-based caption (e.g. activity/goal counts) until the deferred `get_dashboard` total exists,
-  then the money figure; a grid of **labelled** quick-action tiles (**ActionTile**, old-MCB-Juice
+  `124:302`) as the balance/summary **hero** - coral-40 fill + offset pink shadow, showing the live
+  total balance from `get_dashboard()`; a "ready to spend" secondary line (total minus what is set
+  aside for ongoing base-currency goals, phrased gently, never alarm-red, even when over-committed);
+  a this-month-spend figure; a grid of **labelled** quick-action tiles (**ActionTile**, old-MCB-Juice
   layout: hero on top, then the tile grid) - *Add expense* (-> `/expenses/new`), *Scan receipt*
-  (-> `/import`), *Add goal* (-> `/goals/new`); labelled tiles only, never icon-only; a live
-  **Recent activity** list and a **goals preview** (display-only, from existing `listTransactions` /
-  `listGoals`); BottomNav (`124:355`). Recent-activity rows reuse TransactionListItem with the
-  leading **monogram avatar** (income uses the positive tint paired with the signed amount, never
-  colour alone). TrendChart (`130:7`, rebuild in Chart.js) returns with `get_dashboard`.
-- **Data:** recent transactions and goals preview today (display-only); current/usable balance and
-  balance-trend series deferred to `get_dashboard`.
-- **Commands:** `listTransactions` / `listGoals` (display-only) today; `get_dashboard()` →
-  `{ balance, usable, trend[], goals[] }` deferred.
-- **Status (2026-06):** the hero shows an honest count-based caption (no fabricated Rs 0 total);
-  `get_dashboard` is not implemented yet, so the balance/trend totals are deferred to the reporting
-  aggregations (FR-3.3). Recent activity and goals preview are live from the existing list commands.
-- **States:** loading (progressive), empty (`133:641` - "No goals? Create one!"), populated.
+  (-> `/import`), *Add goal* (-> `/goals/new`); labelled tiles only, never icon-only; a lazily-loaded
+  (`@defer (on viewport)`) trailing 6-month TOTAL-balance **TrendChart** (Chart.js, skipped entirely
+  for an all-zero first run); a live **Recent activity** list and a **goals preview** (from
+  `get_dashboard()` and `listTransactions`). Recent-activity rows reuse the monogram-avatar list row
+  (income uses the positive tint paired with the signed amount, never colour alone) and show the
+  base-currency equivalent for a foreign-currency transaction, same as the Expenses list. BottomNav
+  (`124:355`).
+- **Data:** `get_dashboard()` aggregates, as of today, total balance, usable ("ready to spend")
+  balance, this-month spend, a trailing 6-month total-balance trend, and a top-3 ongoing-goals
+  preview; recent transactions come from `listTransactions`. A confirmed transaction dated in the
+  future is not counted until its date arrives, so the hero total and the trend's current-month
+  point always agree. Non-archived accounts (and ongoing goals) in a currency other than the base
+  currency cannot be honestly converted from an opening balance/reservation and are excluded from
+  the totals; an info banner names the excluded count and links to Manage accounts.
+- **Commands:** `get_dashboard()` -> `DashboardData` (total/usable balance, goals-reserved,
+  this-month spend, balance trend, goals preview, excluded-account/goal counts, `isEmpty`);
+  `listTransactions` for Recent activity.
+- **Status:** implemented (issue #50). `get_dashboard` is live; the reporting aggregations (FR-3.3)
+  remain the source for the Analytics screen's own spend breakdowns.
+- **States:** loading (skeleton placeholders), teaching-empty (illustration + "Add an expense" CTA,
+  shown only when there are no confirmed transactions, a zero total, no ongoing goals, and no
+  foreign-currency account), populated, busy (a background refresh keeps the dashboard mounted with
+  a spinner on the spend figure), error (banner, shown alongside a still-mounted dashboard on a
+  refresh failure).
 
 ### 3.2 Dashboard (empty)
 - **Figma:** `133:641`.
-- **Components:** BalanceCard hero with its empty caption, ActionTile grid, EmptyState patterns for
-  the empty Recent activity / goals preview.
-- **Commands:** `listTransactions` / `listGoals` return empty; `get_dashboard()` (deferred) would
-  return zeros/empty.
+- **Components:** BalanceCard hero replaced by EmptyState (illustration + "Add an expense" CTA); the
+  Recent activity and Goals sections keep their header + a one-line teaching prompt instead of
+  vanishing.
+- **Commands:** `get_dashboard()` reports `isEmpty: true` (no confirmed transactions, a zero total
+  balance, no ongoing goals, and no non-archived foreign-currency account); `listTransactions`
+  returns empty.
 
 ---
 

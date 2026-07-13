@@ -83,23 +83,31 @@
           @for (t of recent(); track t.id) {
             <li app-list-row [name]="rowName(t)" [meta]="rowMeta(t)">
               <span lead class="avatar" [class.income]="t.amountMinor > 0">{{ monogram(rowName(t)) }}</span>
-              <span
-                amount
-                class="amount numeric"
-                [class.income]="t.amountMinor > 0"
-                [class.expense]="t.amountMinor < 0"
-                >{{ { amountMinor: t.amountMinor, currency: t.currency } | money: true }}</span
-              >
+              <span amount class="amount-cell">
+                <span
+                  class="amount numeric"
+                  [class.income]="t.amountMinor > 0"
+                  [class.expense]="t.amountMinor < 0"
+                  >{{ { amountMinor: t.amountMinor, currency: t.currency } | money: true }}</span
+                >
+                @if (t.currency !== d.baseCurrency) {
+                  <small class="base numeric"
+                    >≈ {{ { amountMinor: t.baseAmountMinor, currency: d.baseCurrency } | money }}</small
+                  >
+                }
+              </span>
             </li>
           }
         </ul>
       }
 
-      @if (d.goals.length > 0) {
-        <div class="section-row">
-          <p class="section-title">Goals</p>
-          <a routerLink="/goals" class="see-all">All goals</a>
-        </div>
+      <div class="section-row">
+        <p class="section-title">Goals</p>
+        <a routerLink="/goals" class="see-all">All goals</a>
+      </div>
+      @if (d.goals.length === 0) {
+        <p class="empty-line">No goals yet. Add one with the actions above.</p>
+      } @else {
         <ul class="rows">
           @for (g of d.goals; track g.id) {
             <li>

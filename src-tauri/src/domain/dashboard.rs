@@ -2,19 +2,24 @@
 //! does all the money math and month-end bucketing. Money semantics (validated by `/finance-check`,
 //! see CLAUDE.md issue #50 discussion - kept here as the single source of truth):
 //!
+//! - Everything is computed **as of `today`**: a confirmed transaction dated in the future is not
+//!   counted until its date arrives (see `db::dashboard`, which filters rows to `posted_date <=
+//!   today` before this module ever sees them). This keeps the hero total and `balance_trend`'s
+//!   current-month point in exact agreement - both are "as of today", never "as of whenever the
+//!   last confirmed row happens to be dated".
 //! - **Total balance** (base currency) = the sum of base-currency accounts' opening balances, PLUS
-//!   every `pending_review = 0` transaction's own `base_amount_minor` (already fx-correct) across
-//!   ALL accounts, regardless of the account's own currency. Foreign-currency accounts' openings
-//!   are excluded (there is no stored fx rate for an opening balance, so it cannot be honestly
-//!   converted) - but their transactions still count, since each transaction carries its own
-//!   `base_amount_minor`. Accounts are NOT filtered by `archived` - archiving only hides an account
-//!   from pickers; its historical money is still real.
+//!   every `pending_review = 0`, not-future-dated transaction's own `base_amount_minor` (already
+//!   fx-correct) across ALL accounts, regardless of the account's own currency. Foreign-currency
+//!   accounts' openings are excluded (there is no stored fx rate for an opening balance, so it
+//!   cannot be honestly converted) - but their transactions still count, since each transaction
+//!   carries its own `base_amount_minor`. Accounts are NOT filtered by `archived` - archiving only
+//!   hides an account from pickers; its historical money is still real.
 //! - **Usable balance** = total balance minus the `current_minor` of every ONGOING (not completed),
 //!   base-currency goal (foreign-currency goals are excluded from the netting, same fx reasoning).
 //!   It MAY be negative (over-committed) - never clamp it.
 //! - **Balance trend** is the TOTAL balance (never usable) at each of the trailing 6 months' ends,
-//!   because goals have no history table, so a past "usable balance" is unreconstructable, while
-//!   total balance IS exactly reconstructable from the ledger.
+//!   as of `today` (never past it), because goals have no history table, so a past "usable balance"
+//!   is unreconstructable, while total balance IS exactly reconstructable from the ledger.
 //!
 //! All money stays integer minor units; no floats anywhere in this module.
 
@@ -75,8 +80,11 @@ fn first_of_month(date: NaiveDate) -> NaiveDate {
 /// containing `today`). For each month, the point is `base_opening_sum` (the base-currency
 /// accounts' opening balances - constant across all points, it has no date) plus every row's
 /// `base_amount_minor` whose `posted_date` falls strictly before the first day of the month AFTER
-/// that point's month (i.e. "as of that month's end"). Pure and deterministic - takes `today`
-/// rather than reading the clock, so it is unit-testable without mocking time.
+/// that point's month (i.e. "as of that month's end"). `rows` is expected to already be filtered
+/// to `posted_date <= today` by the caller (`db::dashboard`) - a future-dated row must never
+/// appear here, so the current-month point always equals the caller's "as of today" hero total.
+/// Pure and deterministic - takes `today` rather than reading the clock, so it is unit-testable
+/// without mocking time.
 ///
 /// ```
 /// use app_lib::domain::dashboard::balance_trend;

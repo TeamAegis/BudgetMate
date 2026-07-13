@@ -2,6 +2,11 @@
 //! and delegates ALL money math/bucketing to it (and to the already-tested `db::reports::report`
 //! for this-month spend). See `domain::dashboard` for the exact, `/finance-check`-validated money
 //! semantics - this module only selects/filters rows.
+//!
+//! Everything here is computed **as of `today`**: a confirmed transaction dated in the future is
+//! not counted yet (it has not happened), so it is filtered out of both `total_balance_minor` and
+//! `balance_trend` at the same point, keeping the hero total and the trend's current-month point
+//! in exact agreement.
 
 use chrono::NaiveDate;
 use rusqlite::{params, Connection};
@@ -35,6 +40,11 @@ pub fn dashboard(conn: &Connection, base_currency: &str, today: NaiveDate) -> Re
 
     // Every CONFIRMED transaction's own (already fx-correct) base amount, across ALL accounts -
     // pending_review rows are unconfirmed dedup candidates and never count (matches db::reports).
+    // Only rows dated on or before `today` count: the dashboard is a balance "as of today", and a
+    // transaction dated in the future has not happened yet - counting it would inflate the hero
+    // total while `balance_trend`'s current-month point (which already caps at `today`) stayed
+    // lower, so the two would visibly disagree. Filtering here keeps the hero total and the
+    // trend's last point in exact agreement (see the regression test below).
     let mut stmt =
         conn.prepare("SELECT posted_date, base_amount_minor FROM transactions WHERE pending_review = 0")?;
     let raw_rows = stmt
@@ -52,6 +62,9 @@ pub fn dashboard(conn: &Connection, base_currency: &str, today: NaiveDate) -> Re
         let date = NaiveDate::parse_from_str(&date_str, ISO_DATE).map_err(|_| {
             DbError::Invalid(format!("invalid posted date stored on a transaction: {date_str}"))
         })?;
+        if date > today {
+            continue;
+        }
         ledger_sum += amount_minor;
         tx_rows.push((date, amount_minor));
     }
@@ -75,7 +88,10 @@ pub fn dashboard(conn: &Connection, base_currency: &str, today: NaiveDate) -> Re
 
     let balance_trend_points = balance_trend(today, base_opening_sum, &tx_rows);
 
-    let is_empty = !has_confirmed_transactions && total_balance_minor == 0 && !has_ongoing_goals;
+    let is_empty = !has_confirmed_transactions
+        && total_balance_minor == 0
+        && !has_ongoing_goals
+        && excluded_accounts == 0;
 
     Ok(DashboardData {
         base_currency: base_currency.to_string(),
@@ -229,5 +245,55 @@ mod tests {
         assert_eq!(data.total_balance_minor, 0);
         assert_eq!(data.goals.len(), 0);
         assert!(data.is_empty);
+    }
+
+    #[test]
+    fn future_dated_transaction_is_excluded_from_balance_and_trend_matches_hero_total() {
+        let conn = db();
+
+        // Confirmed, but dated in a month AFTER "today" - must not count yet.
+        transactions::create(
+            &conn,
+            TxInput {
+                account_id: 1,
+                posted_date: "2026-12-01",
+                amount: "1000.00",
+                currency: None,
+                fx_rate: None,
+                splits: &[SplitInput { category_id: 9, amount: "1000.00" }],
+                payee: None,
+                note: None,
+            },
+            "2026-07-13T00:00:00Z",
+        )
+        .unwrap();
+
+        let today = NaiveDate::from_ymd_opt(2026, 7, 13).unwrap();
+        let data = dashboard(&conn, "MUR", today).unwrap();
+
+        assert_eq!(
+            data.total_balance_minor, 0,
+            "a confirmed transaction dated in a future month must not inflate today's balance"
+        );
+        let last_trend_point = data.balance_trend.last().unwrap();
+        assert_eq!(
+            last_trend_point.amount_minor, data.total_balance_minor,
+            "the hero total must exactly equal the trend's current-month point"
+        );
+    }
+
+    #[test]
+    fn foreign_only_account_vault_is_not_reported_empty() {
+        let conn = db();
+        // The vault's only setup is a non-archived foreign-currency account with a nonzero
+        // opening balance - it must not be hidden behind the teaching-empty state.
+        accounts::create(&conn, "USD Wallet", AccountKind::Wallet, "USD", 50_000).unwrap();
+
+        let today = NaiveDate::from_ymd_opt(2026, 7, 13).unwrap();
+        let data = dashboard(&conn, "MUR", today).unwrap();
+
+        assert_eq!(data.total_balance_minor, 0, "the foreign account's opening is excluded from the base total");
+        assert_eq!(data.excluded_accounts, 1);
+        assert!(!data.is_empty, "a foreign-currency-only account must not be invisible behind the empty state");
     }
 }

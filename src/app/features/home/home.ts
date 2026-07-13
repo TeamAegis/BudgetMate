@@ -57,8 +57,6 @@ export class Home implements OnInit {
   private readonly router = inject(Router);
   private readonly money = inject(MoneyPipe);
 
-  protected readonly skeletonRows = [0, 1, 2];
-
   protected readonly dashboard = signal<DashboardData | null>(null);
   protected readonly transactions = signal<Transaction[]>([]);
   protected readonly loading = signal(true);

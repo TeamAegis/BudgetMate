@@ -157,6 +157,47 @@ describe('Home', () => {
     expect(host.querySelector('app-balance-trend-chart')).toBeNull();
   });
 
+  it('recent-activity row shows the base-currency equivalent only for a foreign-currency transaction', () => {
+    const fixture = createFixture();
+    fixture.detectChanges();
+    const component = fixture.componentInstance as unknown as HomeInternals;
+    component.loading.set(false);
+    component.error.set(null);
+    component.dashboard.set(sampleDashboard); // baseCurrency: MUR
+    const foreignTransaction: Transaction = {
+      ...sampleTransaction,
+      id: 2,
+      currency: 'USD',
+      amountMinor: -1_000,
+      baseAmountMinor: -45_050,
+    };
+    component.transactions.set([sampleTransaction, foreignTransaction]);
+    fixture.detectChanges();
+
+    const host = fixture.nativeElement as HTMLElement;
+    const baseLines = host.querySelectorAll('.amount-cell .base');
+    // Only the foreign-currency row (USD, base MUR) gets a base-equivalent line.
+    expect(baseLines.length).toBe(1);
+    // baseAmountMinor -45_050 minor MUR -> Rs 450.50.
+    expect(baseLines[0].textContent).toContain('450.50');
+  });
+
+  it('goals preview: an empty goals list shows a teaching line, not a vanished section', () => {
+    const fixture = createFixture();
+    fixture.detectChanges();
+    const component = fixture.componentInstance as unknown as HomeInternals;
+    component.loading.set(false);
+    component.error.set(null);
+    component.dashboard.set({ ...sampleDashboard, goals: [] });
+    fixture.detectChanges();
+
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.querySelector('app-goal-progress-row')).toBeNull();
+    expect(host.textContent).toContain('Goals');
+    expect(host.textContent).toContain('All goals');
+    expect(host.textContent).toContain('No goals yet. Add one with the actions above.');
+  });
+
   it('over-committed usable balance is phrased gently as information, never an alarm', () => {
     const fixture = createFixture();
     fixture.detectChanges();
