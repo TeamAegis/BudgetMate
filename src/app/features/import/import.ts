@@ -6,6 +6,7 @@ import { LucideScanLine, LucideTriangleAlert } from '@lucide/angular';
 import { extractReceipt, pickReceiptImage, getSettings, isTauri } from '../../core/bridge';
 import { LockService } from '../../core/lock/lock.service';
 import { CurrencyService } from '../../core/money/currency.service';
+import { maxFractionDigits } from '../../core/money/amount-validators';
 import type { TransactionPrefill } from '../../core/models';
 import { MoneyPipe } from '../../shared/pipes/money.pipe';
 import { Button } from '../../shared/ui/button/button';
@@ -79,7 +80,10 @@ export class Import {
   protected readonly form = this.fb.nonNullable.group({
     merchant: this.fb.nonNullable.control(''),
     date: this.fb.nonNullable.control(''),
-    total: this.fb.nonNullable.control('', Validators.pattern(DECIMAL)),
+    total: this.fb.nonNullable.control('', [
+      Validators.pattern(DECIMAL),
+      maxFractionDigits(() => this.fractionDigits(this.baseCurrency())),
+    ]),
   });
 
   // Reactive mirrors of the control values (form.reset(...) emits valueChanges, so the initial
@@ -207,6 +211,24 @@ export class Import {
   /** Minor-unit digits for a currency (Rust's authoritative table, same one the money pipe uses). */
   private fractionDigits(currency: string): number {
     return this.currency.fractionDigits(currency);
+  }
+
+  /**
+   * Inline message for the total field (base currency; touched + invalid only). The total is NOT
+   * required (OCR may not detect one), so there is no "required" branch - but a malformed non-blank
+   * value must still be explained, or the disabled "Use these details" button becomes a dead end.
+   */
+  protected totalError(): string | null {
+    const c = this.form.controls.total;
+    if (!c.invalid || !c.touched) return null;
+    if (c.hasError('maxFractionDigits')) {
+      const cur = this.baseCurrency();
+      const max = this.fractionDigits(cur);
+      if (max === 0) return `Amounts in ${cur} don't use decimal places.`;
+      return `Amounts in ${cur} use at most ${max} decimal place${max === 1 ? '' : 's'}.`;
+    }
+    if (c.hasError('pattern')) return 'Enter the total as a number, for example 12.50.';
+    return null;
   }
 
   /** Exact major-unit string for a base-currency minor-unit total (display/edit only - no money math). */

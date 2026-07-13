@@ -1,5 +1,6 @@
 import { Component, DestroyRef, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import {
   createGoal,
@@ -13,6 +14,7 @@ import {
 import type { Goal } from '../../core/models';
 import { HeaderActionService } from '../../core/layout/header-action.service';
 import { CurrencyService } from '../../core/money/currency.service';
+import { maxFractionDigits } from '../../core/money/amount-validators';
 import { Banner } from '../../shared/ui/banner/banner';
 import { Spinner } from '../../shared/ui/spinner/spinner';
 import { FormField } from '../../shared/ui/form-field/form-field';
@@ -62,8 +64,14 @@ export class GoalForm implements OnInit {
 
   protected readonly form = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.maxLength(60)]],
-    target: ['', [Validators.required, Validators.pattern(DECIMAL)]],
-    current: ['0', [Validators.required, Validators.pattern(DECIMAL)]],
+    target: [
+      '',
+      [Validators.required, Validators.pattern(DECIMAL), maxFractionDigits(() => this.goalFractionDigits())],
+    ],
+    current: [
+      '0',
+      [Validators.required, Validators.pattern(DECIMAL), maxFractionDigits(() => this.goalFractionDigits())],
+    ],
     currency: ['MUR', [Validators.required, Validators.pattern(/^[A-Za-z]{3}$/)]],
     targetDate: [''],
   });
@@ -80,6 +88,18 @@ export class GoalForm implements OnInit {
       );
     });
     this.destroyRef.onDestroy(() => this.headerAction.clear());
+
+    // The max-fraction-digits cap follows the goal's own currency field - revalidate target/current
+    // whenever it changes, so an already-typed over-precise value is re-flagged (or cleared) on switch.
+    this.form.controls.currency.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => {
+      this.form.controls.target.updateValueAndValidity({ emitEvent: false });
+      this.form.controls.current.updateValueAndValidity({ emitEvent: false });
+    });
+  }
+
+  /** The goal's own currency (falls back to base while the field is empty/unset). */
+  private goalFractionDigits(): number {
+    return this.currency.fractionDigits(this.form.controls.currency.value || this.baseCurrency());
   }
 
   // ── Inline validation messages (A9) - message only when invalid AND touched; null otherwise. ──
@@ -92,13 +112,25 @@ export class GoalForm implements OnInit {
   protected targetError(): string | null {
     const c = this.form.controls.target;
     if (!c.invalid || !c.touched) return null;
-    return c.hasError('required') ? 'Enter a target amount.' : 'Target must be a number greater than 0.';
+    if (c.hasError('required')) return 'Enter a target amount.';
+    if (c.hasError('maxFractionDigits')) return this.precisionError();
+    return 'Target must be a number greater than 0.';
   }
 
   protected currentError(): string | null {
     const c = this.form.controls.current;
     if (!c.invalid || !c.touched) return null;
-    return c.hasError('required') ? 'Enter an amount (use 0 if none).' : 'Use a number, e.g. 0.';
+    if (c.hasError('required')) return 'Enter an amount (use 0 if none).';
+    if (c.hasError('maxFractionDigits')) return this.precisionError();
+    return 'Use a number, e.g. 0.';
+  }
+
+  /** Shared "too many decimal places" wording for this goal's currency (target + current). */
+  private precisionError(): string {
+    const cur = (this.form.controls.currency.value || this.baseCurrency()).toUpperCase();
+    const max = this.goalFractionDigits();
+    if (max === 0) return `Amounts in ${cur} don't use decimal places.`;
+    return `Amounts in ${cur} use at most ${max} decimal place${max === 1 ? '' : 's'}.`;
   }
 
   protected currencyError(): string | null {
