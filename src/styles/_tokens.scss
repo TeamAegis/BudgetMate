@@ -53,6 +53,7 @@
   --fw-light: 300;
   --fw-regular: 400;
   --fw-medium: 500;
+  --fw-semibold: 600;       // dialog titles' inline weight, chip/amount emphasis (below bold)
   --fw-bold: 700;
 
   // type scale - expressed in rem (root = 16px) so OS dynamic-type scaling is honoured
@@ -72,6 +73,7 @@
   --lh-tight: 1.2;           // single-line headings / dense rows
 
   // ---- Spacing (4px base) ----
+  --space-0-5: 2px;         // hairline padding (e.g. a small pill/chip's vertical inset)
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;

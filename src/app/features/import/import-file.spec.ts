@@ -87,7 +87,9 @@ describe('ImportFile - duplicate keep/skip toggling + summary', () => {
         note: null,
         sourceRef: null,
         suggestedCategory: 'Groceries',
+        suggestedCategoryReason: "matched rule: merchant contains 'winners'",
         duplicate: false,
+        duplicateReason: null,
       },
       {
         row: 1,
@@ -97,8 +99,10 @@ describe('ImportFile - duplicate keep/skip toggling + summary', () => {
         payee: 'Cafe',
         note: null,
         sourceRef: null,
-        suggestedCategory: null,
+        suggestedCategory: 'Uncategorized',
+        suggestedCategoryReason: null,
         duplicate: true,
+        duplicateReason: 'same amount as a transaction on 2026-05-31',
       },
     ],
     errors: [{ row: 2, message: "unrecognised date 'oops'" }],
@@ -138,14 +142,72 @@ describe('ImportFile - duplicate keep/skip toggling + summary', () => {
     expect(c.toImportCount()).toBe(0);
   });
 
-  it('summarises duplicates and malformed rows in plain language', () => {
+  it('summarises duplicates and malformed rows in plain language, never conflating the two', () => {
     const c = createComponent();
     c.previewData.set(preview);
     c.skipRows.set(new Set([1]));
 
+    // "could not be read" (malformed) is never worded as "skipped" - that word is reserved for
+    // rows the user chose to exclude (finance#7).
     expect(c.summaryText()).toBe(
-      '1 transaction to import, 1 possible duplicate, 1 row skipped for errors',
+      '1 transaction to import, 1 possible duplicate, 1 row could not be read',
     );
+  });
+
+  it('has no importable rows only when the parsed rows array is empty', () => {
+    const c = createComponent();
+    c.previewData.set(preview);
+    expect(c.noImportableRows()).toBe(false);
+
+    c.previewData.set({ rows: [], errors: preview.errors, duplicateCount: 0, currency: 'MUR' });
+    expect(c.noImportableRows()).toBe(true);
+  });
+
+  it('builds a per-row accessible name from payee, date, and amount', () => {
+    const c = createComponent();
+    const label = c.rowToggleLabel(preview.rows[0]);
+    expect(label).toContain('Winners');
+    expect(label).toContain('2026-06-01');
+  });
+
+  it('falls back to a generic phrase when a row has no payee', () => {
+    const c = createComponent();
+    const label = c.rowToggleLabel({ ...preview.rows[0], payee: null });
+    expect(label).toContain('this transaction');
+  });
+});
+
+describe('ImportFile - foreign-currency warning (finance#1 / code#5)', () => {
+  const accounts: Account[] = [
+    { id: 1, name: 'USD Card', accountType: 'card', currency: 'USD', openingBalanceMinor: 0, archived: false },
+    { id: 2, name: 'Cash', accountType: 'cash', currency: 'MUR', openingBalanceMinor: 0, archived: false },
+  ];
+
+  it('warns when the chosen account currency differs from the base reporting currency', () => {
+    const c = createComponent();
+    c.accounts.set(accounts);
+    c.baseCurrency.set('MUR');
+    c.accountId.set(1);
+
+    expect(c.fxWarning()).toContain('USD');
+    expect(c.fxWarning()).toContain('MUR');
+    expect(c.fxWarning()).toContain('not be converted');
+  });
+
+  it('shows no warning when the account currency matches the base currency', () => {
+    const c = createComponent();
+    c.accounts.set(accounts);
+    c.baseCurrency.set('MUR');
+    c.accountId.set(2);
+
+    expect(c.fxWarning()).toBeNull();
+  });
+
+  it('shows no warning before an account or the base currency is known', () => {
+    const c = createComponent();
+    c.accounts.set(accounts);
+
+    expect(c.fxWarning()).toBeNull();
   });
 });
 

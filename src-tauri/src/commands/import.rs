@@ -1,9 +1,14 @@
-//! Bank-file import commands (FR-2.2). Thin wrappers: read the picked file from its local path
-//! (the dialog returns a path, exactly like `extract_receipt` - no `fs:` ACL permission needed),
-//! then delegate to the pure CSV parser (`import::csv`) for the header preview and to the
-//! DB-aware pipeline (`db::imports`) for preview/commit. Nothing is written until
-//! `import_commit`, and even then only the rows the user did not skip; malformed rows are
-//! reported (never silently dropped). Only CSV is wired - OFX/QFX are issue #13.
+//! Bank-file import commands (FR-2.2). Thin wrappers: read the picked file from its local path via
+//! `std::fs::read_to_string` - no new `fs:` ACL permission needed, since the dialog already returns
+//! a path. This works on the Windows desktop dev/test target; on ANDROID the file picker returns a
+//! `content://` URI that `std::fs` cannot open, so a content-URI-aware read
+//! (`tauri-plugin-android-fs`, already a dependency) is a tracked follow-up (see
+//! `docs/adr/0006-csv-import-model.md`) - unlike `extract_receipt`, which forwards its path to the
+//! native OCR plugin and never touches `std::fs` in Rust at all. Delegates to the pure CSV parser
+//! (`import::csv`) for the header preview and to the DB-aware pipeline (`db::imports`) for
+//! preview/commit. Nothing is written until `import_commit`, and even then only the rows the user
+//! did not skip; malformed rows are reported (never silently dropped). Only CSV is wired - OFX/QFX
+//! are issue #13.
 
 use serde::{Deserialize, Serialize};
 use tauri::State;

@@ -200,9 +200,9 @@ v1 scope as requirements regardless of status; Status only reflects current prog
 |---|---|---|
 | FR-1.1/1.2/1.3/1.4 (entry, splits, recurring, multi-currency) | §4 Domain & Data Model, §3 Frontend | Built |
 | FR-2.1 OCR | §6 OCR Subsystem | Built (Android; iOS deferred) |
-| FR-2.2 Import (CSV/OFX/QFX) | §8 Import Pipeline | Specified |
-| FR-2.3 Rule engine | §8 Rule Engine | Built (rule management + preview); applied-at-import pending with FR-2.2 |
-| FR-2.4 Dedup | §8 Dedup | Partial (logic written, not yet wired into import or manual entry) |
+| FR-2.2 Import (CSV/OFX/QFX) | §8 Import Pipeline | Built for CSV (column mapping, rule suggestion, dedup review, ACID commit - ADR 0006); OFX/QFX still pending (issue #13). The Android file read (`content://` URI) is a known gap not yet verified on-device - tracked follow-up, see ADR 0006 |
+| FR-2.3 Rule engine | §8 Rule Engine | Built (rule management + preview; now applied at CSV import time, not just manual entry) |
+| FR-2.4 Dedup | §8 Dedup | Built for CSV import (preview + commit flag likely duplicates for user keep/skip); still not wired into manual entry |
 | FR-3.1 Envelope budgeting | §3 Frontend, §4 aggregations | Specified (schema only; no spent-vs-remaining logic yet) |
 | FR-3.2 Savings goals | §3 Frontend, §4 | Built |
 | FR-3.3 Local reporting (charts) | §3 Frontend (charts), §4 aggregations | Specified (no aggregation queries yet) |

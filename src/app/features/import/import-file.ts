@@ -1,12 +1,19 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { LucideCopy, LucideCircleCheck, LucideTriangleAlert } from '@lucide/angular';
+import {
+  LucideCopy,
+  LucideCircleCheck,
+  LucideTriangleAlert,
+  LucideSquare,
+  LucideSquareCheck,
+} from '@lucide/angular';
 import {
   listAccounts,
   pickImportFile,
   importReadHeaders,
   importPreview,
   importCommit,
+  getSettings,
   isTauri,
   toUserMessage,
 } from '../../core/bridge';
@@ -16,6 +23,8 @@ import type {
   ColumnMappingInput,
   ImportHeaders,
   ImportPreviewData,
+  Iso4217,
+  PreviewRow,
   ImportResultData,
 } from '../../core/models';
 import { MoneyPipe } from '../../shared/pipes/money.pipe';
@@ -49,6 +58,8 @@ type Phase = 'idle' | 'mapping' | 'reviewing' | 'committing' | 'done' | 'error';
     LucideCopy,
     LucideCircleCheck,
     LucideTriangleAlert,
+    LucideSquare,
+    LucideSquareCheck,
     Button,
     Banner,
     EmptyState,
@@ -57,12 +68,16 @@ type Phase = 'idle' | 'mapping' | 'reviewing' | 'committing' | 'done' | 'error';
     Spinner,
     Skeleton,
   ],
+  // MoneyPipe is also provided here so `rowToggleLabel()` can reuse its (presentation-only)
+  // formatting to build a per-row accessible name (design#3) without duplicating format logic.
+  providers: [MoneyPipe],
   templateUrl: './import-file.html',
   styleUrl: './import-file.scss',
 })
 export class ImportFile implements OnInit {
   private readonly router = inject(Router);
   private readonly lockService = inject(LockService);
+  private readonly money = inject(MoneyPipe);
 
   protected readonly phase = signal<Phase>('idle');
   protected readonly error = signal<string | null>(null);
@@ -73,6 +88,9 @@ export class ImportFile implements OnInit {
   protected readonly loadingAccounts = signal(true);
   protected readonly accounts = signal<Account[]>([]);
   protected readonly accountId = signal<number | null>(null);
+  /** The reporting/base currency (`getSettings().baseCurrency`) - used only to warn (never to
+   *  convert) when the chosen account's currency differs (finance#1 / code#5). */
+  protected readonly baseCurrency = signal<Iso4217 | null>(null);
 
   protected readonly path = signal<string | null>(null);
   protected readonly headers = signal<ImportHeaders | null>(null);
@@ -92,6 +110,18 @@ export class ImportFile implements OnInit {
   protected readonly accountOptions = computed<SelectOption[]>(() =>
     this.accounts().map((a) => ({ value: a.id, label: `${a.name} (${a.currency})` })),
   );
+
+  /**
+   * Imported amounts are stored at a fixed fx rate of 1 (docs/adr/0006 - a v1 limitation, no fx
+   * input in this ticket). When the chosen account's currency differs from the base reporting
+   * currency, warn plainly rather than silently importing unconverted amounts (finance#1 / code#5).
+   */
+  protected readonly fxWarning = computed(() => {
+    const base = this.baseCurrency();
+    const account = this.accounts().find((a) => a.id === this.accountId());
+    if (!base || !account || account.currency === base) return null;
+    return `This account is in ${account.currency} but your reports add up in ${base}. Imported amounts will not be converted for reporting yet.`;
+  });
 
   protected readonly filename = computed(() => {
     const p = this.path();
@@ -122,7 +152,9 @@ export class ImportFile implements OnInit {
   });
 
   /** Plain-language summary for the reviewing banner: how many will import, how many look like
-   *  duplicates, and how many rows could not be read at all. */
+   *  duplicates, and how many rows could not be read at all. "Skipped"/"left out" is reserved for
+   *  rows the USER excludes; malformed rows always read "could not be read" (finance#7) so the two
+   *  never conflate. */
   protected readonly summaryText = computed(() => {
     const data = this.previewData();
     if (!data) return '';
@@ -135,11 +167,15 @@ export class ImportFile implements OnInit {
     }
     if (data.errors.length > 0) {
       parts.push(
-        `${data.errors.length} row${data.errors.length === 1 ? '' : 's'} skipped for errors`,
+        `${data.errors.length} row${data.errors.length === 1 ? '' : 's'} could not be read`,
       );
     }
     return parts.join(', ');
   });
+
+  /** True when the file parsed to zero importable rows (header-only, or every row malformed) - the
+   *  reviewing step shows a teaching state instead of an empty list under a "0 to import" banner. */
+  protected readonly noImportableRows = computed(() => (this.previewData()?.rows.length ?? 0) === 0);
 
   async ngOnInit(): Promise<void> {
     if (!isTauri()) {
@@ -147,8 +183,9 @@ export class ImportFile implements OnInit {
       return;
     }
     try {
-      const accts = await listAccounts(false);
+      const [accts, settings] = await Promise.all([listAccounts(false), getSettings()]);
       this.accounts.set(accts);
+      this.baseCurrency.set(settings.baseCurrency);
       if (accts.length > 0) this.accountId.set(accts[0].id);
     } catch (e) {
       this.phase.set('error');
@@ -188,6 +225,15 @@ export class ImportFile implements OnInit {
       else next.add(row);
       return next;
     });
+  }
+
+  /** Per-row accessible name for the keep/skip control - payee + date + amount, so screen reader
+   *  and switch users can tell rows apart (design#3; the control's own label used to read "Import"
+   *  for every row). `aria-pressed` (set in the template) already conveys the keep/skip state. */
+  protected rowToggleLabel(row: PreviewRow): string {
+    const payee = row.payee?.trim() || 'this transaction';
+    const amount = this.money.transform({ amountMinor: row.amountMinor, currency: row.currency }, true);
+    return `${payee}, ${row.postedDate}, ${amount}`;
   }
 
   /** Pick a local CSV file and read its header row for the mapping step. */

@@ -117,9 +117,19 @@
   border-radius: var(--radius-md);
   background: var(--c-surface);
   border: 1px solid var(--c-border);
+  border-left: 3px solid transparent; // reserved so toggling skip never shifts layout
 
+  // Left-out rows: a neutral surface tint + strikethrough (never opacity - opacity would drop the
+  // already-muted caption text below AA contrast, design#2). Paired with the toggle's icon + "Left
+  // out" label switch, never colour alone.
   &.skipped {
-    opacity: 0.55;
+    background: var(--c-border);
+    border-left-color: var(--c-text-muted);
+
+    .row-title,
+    .row-amount {
+      text-decoration: line-through;
+    }
   }
 }
 
@@ -143,12 +153,19 @@
   font-size: var(--t-caption);
 }
 
+// The deterministic "why" for a suggested category or a possible-duplicate flag
+// (.claude/rules/design.md "Show the deterministic reason...") - small caption text under the row.
+.row-reason {
+  color: var(--c-text-muted);
+  font-size: var(--t-caption);
+}
+
 .dup-flag {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
   width: fit-content;
-  padding: 2px var(--space-2);
+  padding: var(--space-0-5) var(--space-2);
   border-radius: var(--radius-sm);
   background: var(--c-warning-soft);
   color: var(--c-warning-700);
@@ -157,21 +174,37 @@
 }
 
 .row-amount {
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   white-space: nowrap;
 }
 
+// The keep/skip control: a real button (not a bare checkbox) so the whole thing is >= the
+// tap-target-min floor (design#1) and carries a per-row accessible name (design#3, see the
+// template's [attr.aria-label]) instead of the generic "Import".
 .row-toggle {
   display: flex;
+  flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: var(--space-1);
-  font-size: var(--t-caption);
+  min-width: var(--tap-target-min);
+  min-height: var(--tap-target-min);
+  padding: var(--space-1) var(--space-2);
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
   color: var(--c-text-muted);
+  font: inherit;
+  font-size: var(--t-caption);
+  cursor: pointer;
 
-  input[type='checkbox'] {
-    width: var(--space-4);
-    height: var(--space-4);
-    accent-color: var(--c-primary-700);
+  &[aria-pressed='true'] {
+    color: var(--c-positive-700);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--c-focus-ring);
+    outline-offset: 2px;
   }
 }
 

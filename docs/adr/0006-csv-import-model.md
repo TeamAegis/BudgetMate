@@ -14,9 +14,18 @@ state the import commands should carry.
 
 - **No new migration.** The `imports` audit table (`id, filename, format, imported_at, row_count`)
   already existed in `0001_init.sql` and is used as-is.
-- **No new ACL.** Rust reads the picked file via `std::fs::read_to_string` given a path, exactly
-  like the OCR flow (`extract_receipt(path)`) - the dialog returns a path, Rust reads it. The
-  existing `dialog:allow-open` capability is sufficient; no `fs:` permission was added.
+- **No new ACL, but the file read is a known Android gap.** Rust reads the picked file via
+  `std::fs::read_to_string` given a path - the file dialog returns a path, Rust reads it, and the
+  existing `dialog:allow-open` capability is sufficient (no `fs:` permission was added). This is
+  **not** "exactly like the OCR flow": `extract_receipt(image_path)` forwards its path unopened to
+  the native OCR plugin (ML Kit on Android via Kotlin), which is content-URI aware and never touches
+  `std::fs` in Rust. CSV import has no such native forwarding step - it reads the path directly in
+  Rust. That works on the **Windows desktop dev/test target**, where the dialog returns a real
+  filesystem path. On **Android**, the picker returns a `content://` URI, which `std::fs` cannot
+  open - `import_read_headers`/`import_preview`/`import_commit` will fail to read the file at all on
+  a real device. A content-URI-aware read (`tauri-plugin-android-fs`, already a dependency) is
+  required and is a **tracked follow-up**, not yet implemented; this is why the feature has not been
+  verified on-device and needs a human to confirm the fix once it lands.
 - **Imported rows store the file's SIGNED amount directly.** Manual entry derives the sign from the
   chosen category's kind (`domain::transaction::signed_amount`); an imported row has no such
   category at parse time; a raw CSV amount is already signed (negative = money out, positive =
@@ -28,11 +37,18 @@ state the import commands should carry.
   dedicated `db::imports::commit` insert path does not call `db::transactions::create`/`prepare`.
 - **Category for imported rows** is resolved by running the active rule engine
   (`db::rules::active_engine_rules` + `rules::engine::apply_rules_traced`) against
-  `merchant = payee`. If a fired rule's category NAME matches an existing category (case
-  insensitive), that category is used; a rule never creates a category. Otherwise the row falls
-  back to a get-or-create "Uncategorized" expense category, created lazily inside the commit
-  transaction (not added to `db::seed_defaults`, keeping that function's existing idempotency test
-  untouched).
+  `merchant = payee`, then taking the LAST category-setting rule in the trace (later rules override
+  earlier ones - the same `.rev().find(set_field == "category")` convention `preview_rules` uses in
+  `db/rules.rs`). If that rule's category NAME matches an existing category (case insensitive)
+  **whose `kind` matches the row's sign**, that category is used; a rule never creates a category,
+  and a kind/sign mismatch (e.g. a rule naming an income category for a negative-amount row) is
+  never stored. Otherwise the row falls back to a sign-aware, get-or-create Uncategorized bucket:
+  negative amounts to an expense-kind "Uncategorized", positive amounts to an income-kind
+  "Uncategorized income" - so an imported income row never lands in an expense-kind category and
+  vice versa. Both buckets are created lazily inside the commit transaction (not added to
+  `db::seed_defaults`, keeping that function's existing idempotency test untouched). `preview` and
+  `commit` share the exact same resolution function, so the review screen's suggested category is
+  always the real name `commit` will store, never stale rule text.
 - **One signed `amount` column; no separate debit/credit columns.** This matches the existing
   `transactions.amount_minor` schema and keeps the importer simple. Out of scope for this change;
   a bank export with separate debit/credit columns would need a small pre-merge step (a later
@@ -47,6 +63,16 @@ state the import commands should carry.
 - **OFX/QFX are out of scope for this change** (tracked as issue #13). `ImportFormat` already has
   `Ofx`/`Qfx` variants for the TS union and future commands; all three import commands reject a
   non-CSV `format` with a plain-language `Validation` error rather than silently no-oping.
+- **Foreign-currency imports do not convert for reporting (v1 limitation).** Every imported
+  transaction is stored with `fx_rate = '1'` and `base_amount_minor = amount_minor` unconditionally,
+  even when the account's currency differs from the base reporting currency
+  (`getSettings().baseCurrency`) - identical to a same-currency import. This is honest, not silent:
+  when the chosen account's currency differs from the base currency, the import wizard shows a
+  plain-language warning banner on the idle/mapping step so the user knows up front that these
+  amounts will not be converted for reporting yet. Building a full fx-rate input for import is out
+  of scope for this change; a future change could ask for (or look up) a rate at import time,
+  mirroring the per-transaction user-entered rate manual entry already has
+  (`domain::transaction::signed_amount`).
 
 ## Consequences
 

@@ -399,9 +399,15 @@ export interface ImportPreviewInput {
 /**
  * One parsed row annotated for the review screen (mirrors Rust `db::imports::PreviewRow`).
  * `amountMinor` is the file's SIGNED amount (sign comes from the data, NOT a category kind - the
- * one place imports differ from manual entry, see `docs/adr/0005-csv-import-model.md`).
- * `suggestedCategory` is a fired rule's category NAME (not yet resolved to an id); `duplicate` is
- * advisory only (FR-2.4 never deletes) - the reviewing step lets the user keep or skip each row.
+ * one place imports differ from manual entry, see `docs/adr/0006-csv-import-model.md`).
+ * `suggestedCategory` is always the ACTUAL category NAME `importCommit` will store (a fired rule's
+ * category when it names an existing, sign-matching category, else the sign-correct
+ * "Uncategorized"/"Uncategorized income" fallback) - never stale rule text, and preview always
+ * agrees with commit. `suggestedCategoryReason` is the deterministic reason (e.g. "matched rule:
+ * merchant contains 'winners'"), `null` when it is the Uncategorized fallback. `duplicate` is
+ * advisory only (FR-2.4 never deletes) - the reviewing step lets the user keep or skip each row;
+ * `duplicateReason` names the matched row's date (e.g. "same amount as a transaction on
+ * 2026-06-01"), `null` when not a duplicate.
  */
 export interface PreviewRow {
   row: number;
@@ -411,8 +417,10 @@ export interface PreviewRow {
   payee: string | null;
   note: string | null;
   sourceRef: string | null;
-  suggestedCategory: string | null;
+  suggestedCategory: string;
+  suggestedCategoryReason: string | null;
   duplicate: boolean;
+  duplicateReason: string | null;
 }
 
 /** Result of `importPreview` (mirrors Rust `db::imports::ImportPreviewData`). Nothing is written -

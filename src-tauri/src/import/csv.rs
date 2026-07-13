@@ -107,7 +107,7 @@ fn cell(rec: &StringRecord, idx: usize) -> Option<&str> {
 /// unrecognised date, missing or unrecognised amount) are reported as a `RowError` (a 0-based row
 /// index plus a plain-language reason) and excluded from `rows` - never silently dropped. The
 /// amount's SIGN from the file is preserved (negative is money out, positive is money in);
-/// imports do not derive sign from a category kind the way manual entry does (docs/adr/0005).
+/// imports do not derive sign from a category kind the way manual entry does (docs/adr/0006).
 pub fn parse_rows(content: &str, mapping: &ColumnMapping, currency: &str) -> ParsedRows {
     let mut rows = Vec::new();
     let mut errors = Vec::new();

@@ -28,10 +28,15 @@
           />
         </app-form-field>
 
+        @if (fxWarning(); as warning) {
+          <app-banner tone="warning">{{ warning }}</app-banner>
+        }
+
         <app-empty-state
           image="assets/illustrations/get-started.svg"
           message="Import a CSV bank statement. Nothing is saved until you review and confirm the transactions."
           cta="Choose a CSV file"
+          [ctaLoading]="busy()"
           (action)="chooseFile()"
         />
 
@@ -53,6 +58,10 @@
     @case ('mapping') {
       @if (filename(); as fn) {
         <p class="note">File: {{ fn }}</p>
+      }
+
+      @if (fxWarning(); as warning) {
+        <app-banner tone="warning">{{ warning }}</app-banner>
       }
 
       <app-form-field label="Date column">
@@ -137,58 +146,99 @@
 
     <!-- Reviewing: nothing has been saved yet. Confirm which rows to import. -->
     @case ('reviewing') {
-      <app-banner tone="info">{{ summaryText() }}</app-banner>
+      @if (noImportableRows()) {
+        <!-- Zero importable rows (header-only or every row malformed): a teaching state, not an
+             empty list under a "0 to import" banner (design#9). -->
+        <app-empty-state
+          image="assets/illustrations/get-started.svg"
+          message="We could not find any transactions to import in this file."
+          cta="Choose another file"
+          (action)="startOver()"
+        />
 
-      <ul class="preview-rows">
-        @for (row of previewData()?.rows ?? []; track row.row) {
-          <li class="preview-row" [class.skipped]="isSkipped(row.row)">
-            <div class="row-main">
-              <span class="row-title">{{ row.payee || 'No payee' }}</span>
-              <span class="row-meta">
-                {{ row.postedDate }} · {{ row.suggestedCategory || 'Uncategorized' }}
-              </span>
-              @if (row.duplicate) {
-                <span class="dup-flag">
-                  <svg lucideCopy [size]="14" aria-hidden="true"></svg>
-                  <span>Possible duplicate</span>
-                </span>
+        @if ((previewData()?.errors?.length ?? 0) > 0) {
+          <div class="malformed">
+            <h2>
+              <svg lucideTriangleAlert [size]="16" aria-hidden="true"></svg>
+              <span>Rows that could not be read</span>
+            </h2>
+            <ul>
+              @for (err of previewData()?.errors ?? []; track err.row) {
+                <li>Row {{ err.row + 1 }}: {{ err.message }}</li>
               }
-            </div>
-            <span class="row-amount numeric">{{
-              { amountMinor: row.amountMinor, currency: row.currency } | money: true
-            }}</span>
-            <label class="row-toggle">
-              <input
-                type="checkbox"
-                [checked]="!isSkipped(row.row)"
-                (change)="toggleSkip(row.row)"
-              />
-              <span>Import</span>
-            </label>
-          </li>
+            </ul>
+          </div>
         }
-      </ul>
+      } @else {
+        <app-banner tone="info">{{ summaryText() }}</app-banner>
 
-      @if ((previewData()?.errors?.length ?? 0) > 0) {
-        <div class="malformed">
-          <h2>
-            <svg lucideTriangleAlert [size]="16" aria-hidden="true"></svg>
-            <span>Rows not imported</span>
-          </h2>
-          <ul>
-            @for (err of previewData()?.errors ?? []; track err.row) {
-              <li>Row {{ err.row + 1 }}: {{ err.message }}</li>
-            }
-          </ul>
+        <ul class="preview-rows">
+          @for (row of previewData()?.rows ?? []; track row.row; let i = $index) {
+            <li
+              class="preview-row"
+              [class.skipped]="isSkipped(row.row)"
+              animate.enter="list-item-enter"
+              [style.animation-delay]="(i < 12 ? i * 40 : 0) + 'ms'"
+            >
+              <div class="row-main">
+                <span class="row-title">{{ row.payee || 'No payee' }}</span>
+                <span class="row-meta">{{ row.postedDate }} · {{ row.suggestedCategory }}</span>
+                @if (row.suggestedCategoryReason; as reason) {
+                  <span class="row-reason">{{ reason }}</span>
+                }
+                @if (row.duplicate) {
+                  <span class="dup-flag">
+                    <svg lucideCopy [size]="14" aria-hidden="true"></svg>
+                    <span>Possible duplicate</span>
+                  </span>
+                  @if (row.duplicateReason; as reason) {
+                    <span class="row-reason">{{ reason }}</span>
+                  }
+                }
+              </div>
+              <span class="row-amount numeric">{{
+                { amountMinor: row.amountMinor, currency: row.currency } | money: true
+              }}</span>
+              <button
+                type="button"
+                class="row-toggle"
+                [attr.aria-pressed]="!isSkipped(row.row)"
+                [attr.aria-label]="rowToggleLabel(row)"
+                (click)="toggleSkip(row.row)"
+              >
+                @if (isSkipped(row.row)) {
+                  <svg lucideSquare [size]="20" aria-hidden="true"></svg>
+                  <span>Left out</span>
+                } @else {
+                  <svg lucideSquareCheck [size]="20" aria-hidden="true"></svg>
+                  <span>Keep</span>
+                }
+              </button>
+            </li>
+          }
+        </ul>
+
+        @if ((previewData()?.errors?.length ?? 0) > 0) {
+          <div class="malformed">
+            <h2>
+              <svg lucideTriangleAlert [size]="16" aria-hidden="true"></svg>
+              <span>Rows that could not be read</span>
+            </h2>
+            <ul>
+              @for (err of previewData()?.errors ?? []; track err.row) {
+                <li>Row {{ err.row + 1 }}: {{ err.message }}</li>
+              }
+            </ul>
+          </div>
+        }
+
+        <div class="wizard-actions">
+          <app-button variant="ghost" (click)="startOver()">Start over</app-button>
+          <app-button variant="primary" [disabled]="toImportCount() === 0" (click)="commit()">
+            Import {{ toImportCount() }} transaction{{ toImportCount() === 1 ? '' : 's' }}
+          </app-button>
         </div>
       }
-
-      <div class="wizard-actions">
-        <app-button variant="ghost" (click)="startOver()">Start over</app-button>
-        <app-button variant="primary" [disabled]="toImportCount() === 0" (click)="commit()">
-          Import {{ toImportCount() }} transaction{{ toImportCount() === 1 ? '' : 's' }}
-        </app-button>
-      </div>
     }
 
     <!-- Committing: the ACID batch insert is running; the UI stays responsive. -->

@@ -36,7 +36,7 @@
   },
   "typography": {
     "fontFamily": "Poppins, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
-    "weights": { "extralight": 200, "light": 300, "regular": 400, "medium": 500, "bold": 700 },
+    "weights": { "extralight": 200, "light": 300, "regular": 400, "medium": 500, "semibold": 600, "bold": 700 },
     "scaleNote": "size is px at the default 16px root; CSS expresses these in rem so OS dynamic-type scaling is honoured (ui-ux-principles §2.2).",
     "scale": {
       "wordmark": { "size": 32, "weight": 700, "tracking": "0.15em" },
@@ -50,7 +50,7 @@
     },
     "lineHeight": { "body": 1.5, "tight": 1.2 }
   },
-  "spacing": { "1": 4, "2": 8, "3": 12, "4": 16, "5": 20, "6": 24, "8": 32 },
+  "spacing": { "0.5": 2, "1": 4, "2": 8, "3": 12, "4": 16, "5": 20, "6": 24, "8": 32 },
   "radius": { "sm": 5, "md": 10, "lg": 20, "pill": 999, "button": 14 },
   "layout": {
     "artboard": { "w": 412, "h": 917 },

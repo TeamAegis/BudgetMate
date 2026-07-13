@@ -1,7 +1,7 @@
 //! Bank-file import persistence (FR-2.2/2.3/2.4): preview a parsed CSV against the active rule
 //! engine + dedup, then commit it as ONE ACID batch. Money stays integer minor units throughout;
 //! amounts are the file's SIGNED value (sign from the data, NOT derived from a category kind -
-//! the one place imports differ from manual entry - see `docs/adr/0005-csv-import-model.md`).
+//! the one place imports differ from manual entry - see `docs/adr/0006-csv-import-model.md`).
 //! Commands are stateless: both `preview` and `commit` re-parse the file (it is the source of
 //! truth) - `commit` additionally honours `skip_rows`, identified by the parsed row's stable
 //! 0-based data-row index.
@@ -13,9 +13,10 @@ use rusqlite::{params, Connection};
 use serde::Serialize;
 
 use super::DbError;
+use crate::domain::category::CategoryKind;
 use crate::import::csv::{self, ColumnMapping, RowError};
 use crate::rules::dedup::{is_likely_duplicate, DedupKey};
-use crate::rules::engine::{apply_rules_traced, RuleFields};
+use crate::rules::engine::{apply_rules_traced, Applied, RuleFields};
 
 /// Default dedup window (FR-2.4): flag rows within this many days of an existing/earlier-in-batch
 /// row at the same account and exact amount as a possible duplicate.
@@ -33,12 +34,22 @@ pub struct PreviewRow {
     pub payee: Option<String>,
     pub note: Option<String>,
     pub source_ref: Option<String>,
-    /// A fired rule's category name, if any (not yet resolved to an id - `commit` does that, so a
-    /// preview never depends on a category existing).
-    pub suggested_category: Option<String>,
+    /// The category NAME `commit` will actually use for this row: a fired rule's category when it
+    /// names an existing category whose `kind` matches the row's sign, else the sign-correct
+    /// "Uncategorized" / "Uncategorized income" fallback. Preview and commit MUST agree
+    /// (finance#2) - this is always the real, resolved name, never stale rule text.
+    pub suggested_category: String,
+    /// The deterministic reason `suggested_category` was chosen, e.g. "matched rule: merchant
+    /// contains 'winners'" (the LAST category-setting rule in the trace - later rules override
+    /// earlier ones, the same convention `preview_rules` uses in `db/rules.rs`). `None` when the
+    /// category is the Uncategorized fallback (no rule's category actually resolved).
+    pub suggested_category_reason: Option<String>,
     /// True if this row looks like a duplicate of an existing transaction (or an earlier row in
     /// this same batch). Advisory only - dedup never deletes; the user chooses keep/skip.
     pub duplicate: bool,
+    /// The deterministic reason `duplicate` is true, e.g. "same amount as a transaction on
+    /// 2026-06-01" (the matched row's date). `None` when `duplicate` is false.
+    pub duplicate_reason: Option<String>,
 }
 
 /// Preview of an import (mirrors TS `ImportPreviewData`). Writes nothing.
@@ -98,22 +109,52 @@ fn existing_keys(conn: &Connection, account_id: i64) -> Result<Vec<DedupKey>, Db
     Ok(keys)
 }
 
-/// Whether `staged` (already converted to a `DedupKey`, if its date parsed) looks like a duplicate
-/// of any existing row or any earlier row already seen in this batch.
-fn flag_duplicate(key: Option<&DedupKey>, existing: &[DedupKey], seen: &[DedupKey], window_days: i64) -> bool {
-    key.is_some_and(|k| {
-        existing.iter().any(|e| is_likely_duplicate(k, e, window_days))
-            || seen.iter().any(|e| is_likely_duplicate(k, e, window_days))
-    })
+/// The date of the existing/earlier-in-batch row that makes `key` look like a likely duplicate of
+/// it, if any - used both to set the `duplicate` flag and to build a plain-language reason
+/// (finance#4). `None` when the row's date didn't parse, or nothing matches.
+fn find_duplicate_match(
+    key: Option<&DedupKey>,
+    existing: &[DedupKey],
+    seen: &[DedupKey],
+    window_days: i64,
+) -> Option<NaiveDate> {
+    let k = key?;
+    existing
+        .iter()
+        .chain(seen.iter())
+        .find(|e| is_likely_duplicate(k, e, window_days))
+        .map(|e| e.posted_date)
 }
 
-/// Get the id of the "Uncategorized" expense category, creating it if missing. The caller owns
-/// the surrounding transaction (called only from `commit`, inside its ACID batch).
-fn ensure_uncategorized(conn: &Connection) -> Result<i64, DbError> {
+/// Sign-aware "Uncategorized" bucket name: negative amounts (money out) fall back to the expense
+/// bucket, positive amounts (money in) to the income bucket - an imported income row must never
+/// land in an expense-kind category, and vice versa (finance#3 / code#2).
+fn uncategorized_name(amount_minor: i64) -> &'static str {
+    if amount_minor < 0 {
+        "Uncategorized"
+    } else {
+        "Uncategorized income"
+    }
+}
+
+fn uncategorized_kind(amount_minor: i64) -> CategoryKind {
+    if amount_minor < 0 {
+        CategoryKind::Expense
+    } else {
+        CategoryKind::Income
+    }
+}
+
+/// Get the id of the sign-correct "Uncategorized" bucket, creating it if missing. Idempotent - safe
+/// to call once per falling-back row; the caller owns the surrounding transaction (only called from
+/// `commit`, inside its ACID batch).
+fn ensure_uncategorized(conn: &Connection, amount_minor: i64) -> Result<i64, DbError> {
+    let name = uncategorized_name(amount_minor);
+    let kind = uncategorized_kind(amount_minor);
     let existing: Option<i64> = conn
         .query_row(
-            "SELECT id FROM categories WHERE name = 'Uncategorized' AND kind = 'expense'",
-            [],
+            "SELECT id FROM categories WHERE name = ?1 AND kind = ?2",
+            params![name, kind.as_str()],
             |r| r.get(0),
         )
         .ok();
@@ -121,21 +162,82 @@ fn ensure_uncategorized(conn: &Connection) -> Result<i64, DbError> {
         return Ok(id);
     }
     conn.execute(
-        "INSERT INTO categories (name, parent_id, kind, archived)
-         VALUES ('Uncategorized', NULL, 'expense', 0)",
-        [],
+        "INSERT INTO categories (name, parent_id, kind, archived) VALUES (?1, NULL, ?2, 0)",
+        params![name, kind.as_str()],
     )?;
     Ok(conn.last_insert_rowid())
 }
 
-/// Resolve a category NAME (from a fired rule) to an existing category id sharing that name,
-/// case-insensitively. A rule only sets a label - it never creates a category.
-fn category_id_by_name(conn: &Connection, name: &str) -> Result<Option<i64>, DbError> {
+/// Resolve a category NAME (from a fired rule) to an existing category sharing that name, case
+/// insensitively, whose `kind` matches the row's sign. A rule only sets a label - it never creates
+/// a category - and a kind/sign mismatch (e.g. a rule naming an income category for an expense row)
+/// is never stored; such a row falls back to the sign-correct Uncategorized bucket instead.
+fn category_matching_sign(
+    conn: &Connection,
+    name: &str,
+    amount_minor: i64,
+) -> Result<Option<(i64, String)>, DbError> {
     Ok(conn
-        .query_row("SELECT id FROM categories WHERE name = ?1 COLLATE NOCASE", params![name], |r| {
-            r.get(0)
-        })
+        .query_row(
+            "SELECT id, name FROM categories WHERE name = ?1 COLLATE NOCASE AND kind = ?2",
+            params![name, uncategorized_kind(amount_minor).as_str()],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
         .ok())
+}
+
+/// The winning category-setting rule - the LAST one in the trace (later rules override earlier
+/// ones, matching the `preview_rules` convention in `db/rules.rs`: `.rev().find(set_field ==
+/// "category")`) - whose named category actually exists with a sign-matching kind. `None` when no
+/// rule fired a category, or the one that did names a category that doesn't exist (or has the
+/// wrong kind for this row's sign).
+fn winning_category<'a>(
+    conn: &Connection,
+    applied: &'a [Applied],
+    amount_minor: i64,
+) -> Result<Option<(i64, String, &'a Applied)>, DbError> {
+    let Some(winner) = applied.iter().rev().find(|a| a.set_field == "category") else {
+        return Ok(None);
+    };
+    let Some((id, name)) = category_matching_sign(conn, &winner.set_value, amount_minor)? else {
+        return Ok(None);
+    };
+    Ok(Some((id, name, winner)))
+}
+
+/// Resolve the category NAME + deterministic reason for the review screen - MUST use exactly the
+/// same resolution `commit` uses (finance#2), so preview never shows stale rule text that commit
+/// would not actually store.
+fn resolve_category_name(
+    conn: &Connection,
+    applied: &[Applied],
+    amount_minor: i64,
+) -> Result<(String, Option<String>), DbError> {
+    match winning_category(conn, applied, amount_minor)? {
+        Some((_, name, winner)) => {
+            let reason = format!(
+                "matched rule: {} {} '{}'",
+                winner.match_field,
+                winner.match_op.as_str(),
+                winner.match_value
+            );
+            Ok((name, Some(reason)))
+        }
+        None => Ok((uncategorized_name(amount_minor).to_string(), None)),
+    }
+}
+
+/// Resolve the category ID `commit` inserts the split against, creating the sign-correct
+/// Uncategorized bucket lazily (idempotently) if this row falls back to it.
+fn resolve_category_id(
+    conn: &Connection,
+    applied: &[Applied],
+    amount_minor: i64,
+) -> Result<i64, DbError> {
+    match winning_category(conn, applied, amount_minor)? {
+        Some((id, _, _)) => Ok(id),
+        None => ensure_uncategorized(conn, amount_minor),
+    }
 }
 
 /// Preview a CSV file against `mapping`: parse it, suggest a category per row from the active
@@ -160,15 +262,20 @@ pub fn preview(
 
     for staged in &parsed.rows {
         let tx = &staged.staged;
-        let (fields, _) = apply_rules_traced(
+        let (_, applied) = apply_rules_traced(
             &rules,
             RuleFields { merchant: tx.payee.clone(), ..Default::default() },
         );
+        let (suggested_category, suggested_category_reason) =
+            resolve_category_name(conn, &applied, tx.amount_minor)?;
 
         let key = NaiveDate::parse_from_str(&tx.posted_date, "%Y-%m-%d")
             .ok()
             .map(|posted_date| DedupKey { account_id, amount_minor: tx.amount_minor, posted_date });
-        let duplicate = flag_duplicate(key.as_ref(), &existing, &seen, window_days);
+        let dup_match = find_duplicate_match(key.as_ref(), &existing, &seen, window_days);
+        let duplicate = dup_match.is_some();
+        let duplicate_reason =
+            dup_match.map(|d| format!("same amount as a transaction on {}", d.format("%Y-%m-%d")));
         if duplicate {
             duplicate_count += 1;
         }
@@ -184,8 +291,10 @@ pub fn preview(
             payee: tx.payee.clone(),
             note: tx.note.clone(),
             source_ref: tx.source_ref.clone(),
-            suggested_category: fields.category,
+            suggested_category,
+            suggested_category_reason,
             duplicate,
+            duplicate_reason,
         });
     }
 
@@ -193,11 +302,12 @@ pub fn preview(
 }
 
 /// Commit a CSV import as ONE ACID transaction: re-parse the file (deterministic; the file is the
-/// source of truth), skip `input.skip_rows`, resolve each remaining row's category (a fired
-/// rule's category name if it matches an existing category, else "Uncategorized", created if
-/// missing), insert the transaction + exactly one split (the split amount == the parent, so the
-/// split-sum invariant holds trivially), flag `pending_review` on rows that look like a
-/// duplicate, then record the `imports` audit row. Rolls back on any error (all-or-nothing).
+/// source of truth), skip `input.skip_rows`, resolve each remaining row's category exactly as
+/// `preview` did (a fired rule's category when it names an existing, sign-matching category, else
+/// the sign-correct Uncategorized bucket, created if missing), insert the transaction + exactly one
+/// split (the split amount == the parent, so the split-sum invariant holds trivially), flag
+/// `pending_review` on rows that look like a duplicate, then record the `imports` audit row. Rolls
+/// back on any error (all-or-nothing).
 pub fn commit(conn: &Connection, input: CommitInput, now_iso: &str) -> Result<ImportResultData, DbError> {
     let currency = account_currency(conn, input.account_id)?;
     let window_days = input.window_days.unwrap_or(DEFAULT_WINDOW_DAYS);
@@ -207,7 +317,6 @@ pub fn commit(conn: &Connection, input: CommitInput, now_iso: &str) -> Result<Im
     let skip: HashSet<usize> = input.skip_rows.iter().copied().collect();
 
     let tx = conn.unchecked_transaction()?;
-    let uncategorized = ensure_uncategorized(&tx)?;
     let mut seen: Vec<DedupKey> = Vec::new();
     let mut inserted = 0i64;
     let mut skipped = 0i64;
@@ -218,19 +327,16 @@ pub fn commit(conn: &Connection, input: CommitInput, now_iso: &str) -> Result<Im
             continue;
         }
         let row = &staged.staged;
-        let (fields, _) = apply_rules_traced(
+        let (_, applied) = apply_rules_traced(
             &rules,
             RuleFields { merchant: row.payee.clone(), ..Default::default() },
         );
-        let category_id = match fields.category.as_deref() {
-            Some(name) => category_id_by_name(&tx, name)?.unwrap_or(uncategorized),
-            None => uncategorized,
-        };
+        let category_id = resolve_category_id(&tx, &applied, row.amount_minor)?;
 
         let key = NaiveDate::parse_from_str(&row.posted_date, "%Y-%m-%d")
             .ok()
             .map(|posted_date| DedupKey { account_id: input.account_id, amount_minor: row.amount_minor, posted_date });
-        let duplicate = flag_duplicate(key.as_ref(), &existing, &seen, window_days);
+        let duplicate = find_duplicate_match(key.as_ref(), &existing, &seen, window_days).is_some();
         if let Some(k) = key {
             seen.push(k);
         }
@@ -312,12 +418,107 @@ mod tests {
         let data = preview(&conn, CONTENT, &mapping(), 1, None).unwrap();
         assert_eq!(data.rows.len(), 2);
         assert_eq!(data.currency, "MUR");
-        assert_eq!(data.rows[0].suggested_category.as_deref(), Some("Groceries"));
+        assert_eq!(data.rows[0].suggested_category, "Groceries");
+        assert_eq!(
+            data.rows[0].suggested_category_reason.as_deref(),
+            Some("matched rule: merchant contains 'winners'")
+        );
         assert_eq!(data.rows[0].amount_minor, -45_000);
         assert!(!data.rows[0].duplicate);
+        assert!(data.rows[0].duplicate_reason.is_none());
 
         let count: i64 = conn.query_row("SELECT count(*) FROM transactions", [], |r| r.get(0)).unwrap();
         assert_eq!(count, 0, "preview must never write");
+    }
+
+    #[test]
+    fn preview_agrees_with_commit_when_a_rule_names_a_nonexistent_category() {
+        let conn = db();
+        rules::create(
+            &conn,
+            RuleInput {
+                match_field: "merchant",
+                match_op: "contains",
+                match_value: "winners",
+                set_field: "category",
+                set_value: "NoSuchCategory",
+                active: true,
+            },
+        )
+        .unwrap();
+
+        let data = preview(&conn, CONTENT, &mapping(), 1, None).unwrap();
+        assert_eq!(
+            data.rows[0].suggested_category, "Uncategorized",
+            "falls back to the sign-correct bucket, never the stale rule text"
+        );
+        assert!(
+            data.rows[0].suggested_category_reason.is_none(),
+            "no rule actually won - the named category doesn't exist"
+        );
+
+        let result = commit(
+            &conn,
+            CommitInput {
+                content: CONTENT,
+                mapping: &mapping(),
+                account_id: 1,
+                filename: "x.csv",
+                format: "csv",
+                skip_rows: &[],
+                window_days: None,
+            },
+            "2026-06-06T10:00:00Z",
+        )
+        .unwrap();
+        assert_eq!(result.inserted, 2);
+
+        let category_name: String = conn
+            .query_row(
+                "SELECT c.name FROM tx_splits s
+                   JOIN categories c ON c.id = s.category_id
+                   JOIN transactions t ON t.id = s.transaction_id
+                 WHERE t.amount_minor = -45000",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(category_name, "Uncategorized", "commit resolves exactly what preview showed");
+    }
+
+    #[test]
+    fn income_row_falls_back_to_uncategorized_income_never_an_expense_category() {
+        let conn = db();
+        let data = preview(&conn, CONTENT, &mapping(), 1, None).unwrap();
+        assert_eq!(data.rows[0].suggested_category, "Uncategorized", "expense row");
+        assert_eq!(data.rows[1].suggested_category, "Uncategorized income", "income row");
+
+        commit(
+            &conn,
+            CommitInput {
+                content: CONTENT,
+                mapping: &mapping(),
+                account_id: 1,
+                filename: "a.csv",
+                format: "csv",
+                skip_rows: &[],
+                window_days: None,
+            },
+            "2026-06-06T10:00:00Z",
+        )
+        .unwrap();
+
+        let kind: String = conn
+            .query_row(
+                "SELECT c.kind FROM tx_splits s
+                   JOIN categories c ON c.id = s.category_id
+                   JOIN transactions t ON t.id = s.transaction_id
+                 WHERE t.amount_minor = 2000000",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(kind, "income", "an imported income row never lands in an expense-kind category");
     }
 
     #[test]
@@ -376,7 +577,7 @@ mod tests {
     }
 
     #[test]
-    fn commit_falls_back_to_uncategorized_and_is_idempotent_to_create() {
+    fn commit_falls_back_to_sign_correct_uncategorized_and_is_idempotent_to_create() {
         let conn = db();
         commit(
             &conn,
@@ -392,7 +593,7 @@ mod tests {
             "2026-06-06T10:00:00Z",
         )
         .unwrap();
-        // Second import: "Uncategorized" must not be created twice.
+        // Second import: neither Uncategorized bucket must be created twice.
         commit(
             &conn,
             CommitInput {
@@ -408,24 +609,43 @@ mod tests {
         )
         .unwrap();
 
-        let n: i64 = conn
+        let expense_buckets: i64 = conn
             .query_row(
-                "SELECT count(*) FROM categories WHERE name = 'Uncategorized'",
+                "SELECT count(*) FROM categories WHERE name = 'Uncategorized' AND kind = 'expense'",
                 [],
                 |r| r.get(0),
             )
             .unwrap();
-        assert_eq!(n, 1, "Uncategorized is created once, then reused");
+        assert_eq!(expense_buckets, 1, "the expense Uncategorized bucket is created once, then reused");
 
-        let categorised: i64 = conn
+        let income_buckets: i64 = conn
+            .query_row(
+                "SELECT count(*) FROM categories WHERE name = 'Uncategorized income' AND kind = 'income'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(income_buckets, 1, "the income Uncategorized bucket is created once, then reused");
+
+        let categorised_expense: i64 = conn
             .query_row(
                 "SELECT count(*) FROM tx_splits s JOIN categories c ON c.id = s.category_id
-                 WHERE c.name = 'Uncategorized'",
+                 WHERE c.name = 'Uncategorized' AND c.kind = 'expense'",
                 [],
                 |r| r.get(0),
             )
             .unwrap();
-        assert_eq!(categorised, 4, "all 4 rows (2 files x 2 rows) fall back to Uncategorized");
+        assert_eq!(categorised_expense, 2, "both files' expense row falls back to Uncategorized");
+
+        let categorised_income: i64 = conn
+            .query_row(
+                "SELECT count(*) FROM tx_splits s JOIN categories c ON c.id = s.category_id
+                 WHERE c.name = 'Uncategorized income' AND c.kind = 'income'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(categorised_income, 2, "both files' income row falls back to Uncategorized income");
     }
 
     #[test]
@@ -487,8 +707,19 @@ mod tests {
         let data = preview(&conn, content, &mapping(), 1, None).unwrap();
         assert_eq!(data.duplicate_count, 2, "the existing-row dup + the second within-batch dup");
         assert!(data.rows[0].duplicate, "matches the existing seeded row");
+        assert_eq!(
+            data.rows[0].duplicate_reason.as_deref(),
+            Some("same amount as a transaction on 2026-06-01"),
+            "names the date of the row it matched"
+        );
         assert!(!data.rows[1].duplicate, "first occurrence is not itself flagged");
+        assert!(data.rows[1].duplicate_reason.is_none());
         assert!(data.rows[2].duplicate, "second occurrence within the batch is flagged");
+        assert_eq!(
+            data.rows[2].duplicate_reason.as_deref(),
+            Some("same amount as a transaction on 2026-06-10"),
+            "names the earlier in-batch row's date"
+        );
         assert!(!data.rows[3].duplicate);
     }
 
