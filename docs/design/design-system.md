@@ -281,7 +281,9 @@ and the tokens it consumes. Components are dumb/presentational (`shared/`) unles
 > ghost / **danger** variants, slightly rounded via `--radius-button`), Card, FormField, IconButton,
 > Banner, ListRow (with optional `[lead]` slot), SelectField, Skeleton, Spinner,
 > **Modal** (ConfirmDialog substrate only), **ConfirmDialog**, **FabMenu**, **GoalProgressRow**,
-> **FormActions** (bottom Save bar), **BalanceCard**, **ActionTile**, **SettingsRow**.
+> **FormActions** (bottom Save bar), **BalanceCard**, **ActionTile**, **SettingsRow**,
+> **PrivacyNote** (`app-privacy-note`, static persistent trust/reassurance note - not a live
+> region, unlike the transient Banner).
 > Reuse/extend these rather than re-inlining markup - see the `ui-component`
 > skill. The remaining entries below are still to be built as they're needed.
 
