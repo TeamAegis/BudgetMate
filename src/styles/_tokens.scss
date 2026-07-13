@@ -90,6 +90,7 @@
   // ---- Component metrics (not on the spacing grid; component-specific) ----
   --progress-track-h: 8px;  // GoalProgressRow / EnvelopeCard pill track height
   --progress-knob-size: 16px;
+  --size-avatar-sm: 38px;   // transaction-row monogram avatar (Home recent activity)
 
   // ---- Icons (all icons via @lucide/angular; see docs/design/design-system.md §5) ----
   --icon-size-sm: 24px;     // inline / action icons (nav uses 22-24)

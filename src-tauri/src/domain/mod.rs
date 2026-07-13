@@ -3,6 +3,7 @@
 
 pub mod account;
 pub mod category;
+pub mod dashboard;
 pub mod goal;
 pub mod money;
 pub mod recurring;
@@ -11,6 +12,7 @@ pub mod transaction;
 
 pub use account::{Account, AccountKind};
 pub use category::{Category, CategoryKind};
+pub use dashboard::{BalancePoint, DashboardData};
 pub use goal::Goal;
 pub use money::{base_amount_minor, splits_sum_to_parent, Money};
 pub use recurring::{plan, Schedule};

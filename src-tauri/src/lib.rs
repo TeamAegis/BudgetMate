@@ -89,6 +89,7 @@ pub fn run() {
             commands::rules::preview_rules,
             commands::ocr::extract_receipt,
             commands::report::get_report,
+            commands::dashboard::get_dashboard,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
