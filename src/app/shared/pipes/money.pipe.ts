@@ -30,7 +30,7 @@ export class MoneyPipe implements PipeTransform {
   // System WebView. Presentation only - not a currency scale/rate table.
   private static readonly SYMBOLS: Record<string, string> = { MUR: 'Rs' };
 
-  transform(value: Money | null | undefined, locale?: string): string {
+  transform(value: Money | null | undefined, signed = false, locale?: string): string {
     if (!value) {
       return '';
     }
@@ -49,6 +49,10 @@ export class MoneyPipe implements PipeTransform {
       currencyDisplay: symbol ? 'code' : 'narrowSymbol',
       minimumFractionDigits: whole ? 0 : digits,
       maximumFractionDigits: digits,
+      // `signed` rows (transactions) show +/- as the non-colour direction cue (issue I3/I4), so the
+      // redundant arrow could be dropped; 'exceptZero' keeps a neutral zero unsigned. Presentation
+      // only (sign placement is locale-aware), never money math.
+      signDisplay: signed ? 'exceptZero' : 'auto',
     });
     const major = amountMinor / scale;
     const formatted = fmt.format(major);
