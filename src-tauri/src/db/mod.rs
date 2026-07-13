@@ -8,6 +8,7 @@ use std::path::Path;
 pub mod accounts;
 pub mod categories;
 pub mod goals;
+pub mod imports;
 pub mod recurring;
 pub mod rules;
 pub mod transactions;

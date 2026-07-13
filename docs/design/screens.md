@@ -168,19 +168,30 @@ in the current Figma - design them to this spec.
   types a value), engine-unavailable (plugin `NotImplemented` on desktop/iOS), failed
   (retry/manual entry). **Never auto-saves** - the user confirms on the Add expense page.
 
-### 4.5 Import Wizard **[NEW]**
+### 4.5 Import Wizard **[BUILT for CSV]**
 - **FR:** FR-2.2/2.3/2.4.
-- **Components:** ImportWizard steps - file picker (dialog), CSV column-mapping,
-  parsed-row preview, rule-applied list (shows matched rule), **dedup review** (keep/skip),
-  confirm.
-- **Data:** file (CSV/OFX/QFX), staged rows, rule matches, duplicate flags.
-- **Commands:** `parse_import(path, format)`, `apply_rules(rows)`, `scan_duplicates(rows)`,
-  `commit_import(resolved)` (ACID batch).
-- **Status (2026-06):** spec - none of these commands exist yet. Parsing crates are selected and
-  the dedup matcher is written (`rules/dedup.rs`) but unwired; the wizard is not built
-  (`architecture.md` §8).
-- **States:** picking, parsing, mapping (CSV), reviewing, dedup-flagged, committing, error
-  (bad/again).
+- **Components:** `ImportFile` (`features/import/import-file`) - account picker + file picker
+  (dialog, `pickImportFile`), CSV column-mapping (Date/Amount required, Payee/Note/Reference
+  optional, with a sample-rows preview table), a reviewing step (rule-suggested category per row,
+  **dedup review** with a per-row keep/skip toggle defaulting possible duplicates to skipped, and
+  malformed rows listed separately with their reason), a committing spinner, and a done summary.
+  Reached from Settings ("Import transactions") - route `import/file`, distinct from the OCR scan
+  route (`import`).
+- **Data:** a local CSV file (path only - read via `std::fs`, never uploaded), the parsed/staged
+  rows, rule-suggested categories, duplicate flags, parse errors.
+- **Commands:** `import_read_headers(path, format)` (header row + sample rows),
+  `import_preview(input)` (parses + suggests categories + flags duplicates; writes nothing),
+  `import_commit(input)` (re-parses and inserts as one ACID batch, honouring `skipRows`, then
+  records the `imports` audit row). All three reject a non-CSV `format` today.
+- **Status (2026-07):** CSV is wired end-to-end (issue #12; model decisions in ADR 0006). OFX/QFX
+  parsing is deferred (issue #13) - the commands accept the `format` field but reject anything
+  other than `'csv'` with a plain-language validation error.
+- **States:** idle (account picker + "Choose a CSV file", loading while accounts load, empty when
+  there are no accounts yet), mapping (column selects + sample rows, Preview disabled until
+  Date+Amount are chosen), reviewing (summary banner, per-row duplicate flag + keep/skip, malformed
+  rows listed separately, nothing saved yet), committing (spinner, UI stays responsive), done
+  (inserted/skipped/malformed summary), error (plain-language + start over / try again). Nothing
+  auto-commits - the reviewing step always requires an explicit "Import N transactions" tap.
 
 ---
 

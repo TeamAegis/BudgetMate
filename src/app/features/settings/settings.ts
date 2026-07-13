@@ -8,6 +8,7 @@ import {
   LucideRepeat,
   LucideCoins,
   LucideFunnel,
+  LucideFileUp,
 } from '@lucide/angular';
 import { LockService } from '../../core/lock/lock.service';
 import { getSettings, setBaseCurrency, isTauri } from '../../core/bridge';
@@ -25,6 +26,7 @@ import { SettingsRow } from '../../shared/ui/settings-row/settings-row';
     LucideRepeat,
     LucideCoins,
     LucideFunnel,
+    LucideFileUp,
     SelectField,
     SettingsRow,
   ],
@@ -53,6 +55,12 @@ import { SettingsRow } from '../../shared/ui/settings-row/settings-row';
         <li>
           <a app-settings-row routerLink="/settings/rules" label="Rules" hint="Auto-categorise by merchant">
             <svg icon lucideFunnel [size]="24" aria-hidden="true"></svg>
+            <svg trailing lucideChevronRight [size]="18" aria-hidden="true"></svg>
+          </a>
+        </li>
+        <li>
+          <a app-settings-row routerLink="/import/file" label="Import transactions" hint="Bring in a CSV bank statement">
+            <svg icon lucideFileUp [size]="24" aria-hidden="true"></svg>
             <svg trailing lucideChevronRight [size]="18" aria-hidden="true"></svg>
           </a>
         </li>

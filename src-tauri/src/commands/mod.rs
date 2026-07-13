@@ -4,6 +4,7 @@
 pub mod accounts;
 pub mod categories;
 pub mod goals;
+pub mod import;
 pub mod ocr;
 pub mod recurring;
 pub mod rules;

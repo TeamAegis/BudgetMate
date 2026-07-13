@@ -1,0 +1,233 @@
+<section class="feature-page">
+  @if (error(); as err) {
+    <app-banner>{{ err }}</app-banner>
+  }
+
+  @switch (phase()) {
+    <!-- Idle: choose the account, then a CSV file. Nothing is read until a file is picked. -->
+    @case ('idle') {
+      @if (loadingAccounts()) {
+        <div class="loading-accounts" aria-busy="true">
+          <app-skeleton variant="text" width="40%" />
+          <app-skeleton variant="block" height="48px" />
+        </div>
+      } @else if (accounts().length === 0) {
+        <app-empty-state
+          image="assets/illustrations/get-started.svg"
+          message="Add an account first, then come back here to import a bank statement."
+          cta="Add an account"
+          (action)="goToAccounts()"
+        />
+      } @else {
+        <app-form-field label="Import into" hint="Which account does this statement belong to?">
+          <app-select-field
+            ariaLabel="Account"
+            [options]="accountOptions()"
+            [value]="accountId()"
+            (valueChange)="setAccountId($event)"
+          />
+        </app-form-field>
+
+        <app-empty-state
+          image="assets/illustrations/get-started.svg"
+          message="Import a CSV bank statement. Nothing is saved until you review and confirm the transactions."
+          cta="Choose a CSV file"
+          (action)="chooseFile()"
+        />
+
+        @if (busy()) {
+          <div class="processing" role="status" aria-live="polite">
+            <app-spinner [size]="24" label="Reading file" />
+            <p>Reading the file…</p>
+          </div>
+        }
+
+        <p class="note">
+          The file stays on your device - nothing is uploaded. You will map its columns and confirm
+          every row before anything is saved.
+        </p>
+      }
+    }
+
+    <!-- Mapping: tell us which column is which. Date and amount are required. -->
+    @case ('mapping') {
+      @if (filename(); as fn) {
+        <p class="note">File: {{ fn }}</p>
+      }
+
+      <app-form-field label="Date column">
+        <app-select-field
+          ariaLabel="Date column"
+          [options]="columnOptions()"
+          [value]="dateCol()"
+          (valueChange)="setDateCol($event)"
+        />
+      </app-form-field>
+
+      <app-form-field
+        label="Amount column"
+        hint="We use the file's own sign as-is: negative for money out, positive for money in."
+      >
+        <app-select-field
+          ariaLabel="Amount column"
+          [options]="columnOptions()"
+          [value]="amountCol()"
+          (valueChange)="setAmountCol($event)"
+        />
+      </app-form-field>
+
+      <app-form-field label="Payee (optional)">
+        <app-select-field
+          ariaLabel="Payee column"
+          [options]="optionalColumnOptions()"
+          [value]="payeeCol()"
+          (valueChange)="setPayeeCol($event)"
+        />
+      </app-form-field>
+
+      <app-form-field label="Note (optional)">
+        <app-select-field
+          ariaLabel="Note column"
+          [options]="optionalColumnOptions()"
+          [value]="noteCol()"
+          (valueChange)="setNoteCol($event)"
+        />
+      </app-form-field>
+
+      <app-form-field label="Reference (optional)" hint="A statement or cheque number, if the file has one.">
+        <app-select-field
+          ariaLabel="Reference column"
+          [options]="optionalColumnOptions()"
+          [value]="refCol()"
+          (valueChange)="setRefCol($event)"
+        />
+      </app-form-field>
+
+      @if (headers(); as h) {
+        <div class="sample-table-wrap">
+          <table class="sample-table">
+            <caption>First rows of the file, for reference</caption>
+            <thead>
+              <tr>
+                @for (col of h.headers; track $index) {
+                  <th scope="col">{{ col.trim() || ('Column ' + ($index + 1)) }}</th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of h.sampleRows; track $index) {
+                <tr>
+                  @for (cell of row; track $index) {
+                    <td>{{ cell }}</td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+      <div class="wizard-actions">
+        <app-button variant="ghost" (click)="startOver()">Start over</app-button>
+        <app-button variant="primary" [disabled]="!canPreview()" [loading]="busy()" (click)="preview()">
+          Preview
+        </app-button>
+      </div>
+    }
+
+    <!-- Reviewing: nothing has been saved yet. Confirm which rows to import. -->
+    @case ('reviewing') {
+      <app-banner tone="info">{{ summaryText() }}</app-banner>
+
+      <ul class="preview-rows">
+        @for (row of previewData()?.rows ?? []; track row.row) {
+          <li class="preview-row" [class.skipped]="isSkipped(row.row)">
+            <div class="row-main">
+              <span class="row-title">{{ row.payee || 'No payee' }}</span>
+              <span class="row-meta">
+                {{ row.postedDate }} · {{ row.suggestedCategory || 'Uncategorized' }}
+              </span>
+              @if (row.duplicate) {
+                <span class="dup-flag">
+                  <svg lucideCopy [size]="14" aria-hidden="true"></svg>
+                  <span>Possible duplicate</span>
+                </span>
+              }
+            </div>
+            <span class="row-amount numeric">{{
+              { amountMinor: row.amountMinor, currency: row.currency } | money: true
+            }}</span>
+            <label class="row-toggle">
+              <input
+                type="checkbox"
+                [checked]="!isSkipped(row.row)"
+                (change)="toggleSkip(row.row)"
+              />
+              <span>Import</span>
+            </label>
+          </li>
+        }
+      </ul>
+
+      @if ((previewData()?.errors?.length ?? 0) > 0) {
+        <div class="malformed">
+          <h2>
+            <svg lucideTriangleAlert [size]="16" aria-hidden="true"></svg>
+            <span>Rows not imported</span>
+          </h2>
+          <ul>
+            @for (err of previewData()?.errors ?? []; track err.row) {
+              <li>Row {{ err.row + 1 }}: {{ err.message }}</li>
+            }
+          </ul>
+        </div>
+      }
+
+      <div class="wizard-actions">
+        <app-button variant="ghost" (click)="startOver()">Start over</app-button>
+        <app-button variant="primary" [disabled]="toImportCount() === 0" (click)="commit()">
+          Import {{ toImportCount() }} transaction{{ toImportCount() === 1 ? '' : 's' }}
+        </app-button>
+      </div>
+    }
+
+    <!-- Committing: the ACID batch insert is running; the UI stays responsive. -->
+    @case ('committing') {
+      <div class="processing" role="status" aria-live="polite">
+        <app-spinner [size]="32" label="Importing transactions" />
+        <p>Importing your transactions…</p>
+      </div>
+    }
+
+    <!-- Done: summary + a clear way back to the ledger. -->
+    @case ('done') {
+      <div class="state-card">
+        <svg lucideCircleCheck [size]="32" aria-hidden="true" class="state-icon success"></svg>
+        <h2>Import complete</h2>
+        <p>
+          Imported {{ result()?.inserted ?? 0 }} transaction{{ (result()?.inserted ?? 0) === 1 ? '' : 's' }}.
+          @if ((result()?.skipped ?? 0) > 0) {
+            {{ result()?.skipped }} skipped.
+          }
+          @if ((result()?.malformed ?? 0) > 0) {
+            {{ result()?.malformed }} row{{ (result()?.malformed ?? 0) === 1 ? '' : 's' }} could not be read.
+          }
+        </p>
+        <app-button variant="primary" (click)="finish()">Done</app-button>
+      </div>
+    }
+
+    <!-- Error: plain-language message + a way back. -->
+    @case ('error') {
+      <div class="state-card">
+        <svg lucideTriangleAlert [size]="32" aria-hidden="true" class="state-icon"></svg>
+        <h2>Something went wrong</h2>
+        <p>{{ error() || 'Could not complete the import.' }}</p>
+        <div class="state-actions">
+          <app-button variant="ghost" (click)="startOver()">Start over</app-button>
+          <app-button variant="primary" (click)="retry()">Try again</app-button>
+        </div>
+      </div>
+    }
+  }
+</section>

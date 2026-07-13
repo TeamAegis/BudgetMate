@@ -400,12 +400,16 @@ traceability table (`functional-requirements.md` §5) carries the same status pe
   user-entered fx rate + derived base amount), recurrence (lazy materialisation), savings goals,
   deterministic categorisation rules (management + `preview_rules`), accounts, categories, OCR
   field extraction (Android), passphrase/biometric unlock, lock-on-background, SQLCipher at rest,
-  schema migrations.
-- **Partial:** dedup (matcher written in `rules/dedup.rs`, not wired into import or manual entry);
-  performance metrics (web payload size tracked; Android install-size metric pending issue #4).
+  schema migrations, **CSV bank-file import** (FR-2.2/2.3/2.4: `import_read_headers` /
+  `import_preview` / `import_commit`, column mapping, rule-engine category suggestion, dedup
+  review with a keep/skip toggle, ACID batch commit + `imports` audit row - see ADR 0006). OFX/QFX
+  parsing is deferred (issue #13).
+- **Partial:** dedup (matcher in `rules/dedup.rs`; wired into CSV import's preview/commit, still
+  not wired into manual entry); performance metrics (web payload size tracked; Android
+  install-size metric pending issue #4).
 - **Specified only (little or no runtime code):** envelope budgeting (FR-3.1; `budgets` table
   exists, no spent-vs-remaining logic), local reporting/analytics aggregations (FR-3.3), the home
-  dashboard (`get_dashboard`), the import pipeline + review UI (FR-2.2), backup/restore/export
+  dashboard (`get_dashboard`), OFX/QFX bank-file import (FR-2.2, issue #13), backup/restore/export
   (FR-4.x), the income/onboarding profile (`set_onboarding_profile`), and savings-backed allowances
   (FR-3.4; domain spec `docs/allowances.md` + ADR 0005, no schema or runtime code yet).
 

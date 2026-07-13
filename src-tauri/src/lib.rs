@@ -88,6 +88,9 @@ pub fn run() {
             commands::rules::reorder_rules,
             commands::rules::preview_rules,
             commands::ocr::extract_receipt,
+            commands::import::import_read_headers,
+            commands::import::import_preview,
+            commands::import::import_commit,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
