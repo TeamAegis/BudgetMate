@@ -43,6 +43,10 @@ export function toUserMessage(e: unknown): string {
   if (lower.includes('not found') || lower.includes('no such') || lower.includes('missing')) {
     return "We couldn't find that - it may have been removed. Refresh and try again.";
   }
+  // Too many decimal places for the currency (Rust's `parse_minor` / `MoneyParseError::TooPrecise`).
+  if (lower.includes('decimal places')) {
+    return 'That amount has too many decimal places for its currency. Remove the extra digits and try again.';
+  }
   // Generic validation failures from the domain layer.
   if (lower.includes('invalid') || lower.includes('validation') || lower.includes('must ')) {
     return 'Some of the details look off. Check the form and try again.';

@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { Import, receiptTotalToBaseMinor } from './import';
+import { CurrencyService } from '../../core/money/currency.service';
 
 describe('receiptTotalToBaseMinor', () => {
   it('is the identity for a 2-decimal base currency (MUR/USD)', () => {
@@ -71,5 +72,67 @@ describe('Import - per-field low-confidence flags', () => {
     expect(component.merchantNotDetected()).toBe(true);
     expect(component.dateNotDetected()).toBe(true);
     expect(component.totalNotDetected()).toBe(true);
+  });
+});
+
+/**
+ * Amount-precision cap on the review total (issue #86). The total is always in the BASE currency;
+ * constructing the component never runs a bridge call (that only happens on `scan()`), so the tests
+ * drive `baseCurrency`/the form control directly and read back the validation + `totalError()`
+ * message, the way the review UI does. `CurrencyService`'s Rust-backed table isn't populated in the
+ * harness, so the JPY (0dp) case seeds it directly (same approach as currency.service.spec.ts).
+ */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+describe('Import - total precision + malformed message', () => {
+  function createComponent(): any {
+    TestBed.configureTestingModule({
+      imports: [Import],
+      providers: [provideRouter([])],
+    });
+    (TestBed.inject(CurrencyService) as any).digitsByCode.set('JPY', 0);
+    return TestBed.createComponent(Import).componentInstance;
+  }
+
+  it('flags an over-precise total for the base currency (MUR 2dp)', () => {
+    const component = createComponent();
+    component.baseCurrency.set('MUR');
+    const c = component.form.controls.total;
+    c.setValue('1.005');
+    c.markAsTouched();
+
+    expect(c.hasError('maxFractionDigits')).toBeTrue();
+    expect(component.totalError()).toBe('Amounts in MUR use at most 2 decimal places.');
+  });
+
+  it('flags any decimal at all for a 0-decimal base currency (JPY)', () => {
+    const component = createComponent();
+    component.baseCurrency.set('JPY');
+    const c = component.form.controls.total;
+    c.setValue('1.5');
+    c.markAsTouched();
+
+    expect(c.hasError('maxFractionDigits')).toBeTrue();
+    expect(component.totalError()).toBe("Amounts in JPY don't use decimal places.");
+  });
+
+  it('accepts a trailing-zero total (value-based, like Rust parse_minor)', () => {
+    const component = createComponent();
+    component.baseCurrency.set('MUR');
+    const c = component.form.controls.total;
+    c.setValue('12.500');
+
+    expect(c.hasError('maxFractionDigits')).toBeFalse();
+  });
+
+  it('explains a malformed total instead of leaving the disabled button a dead end', () => {
+    const component = createComponent();
+    component.baseCurrency.set('MUR');
+    const c = component.form.controls.total;
+    c.setValue('1.2.3');
+    c.markAsTouched();
+
+    expect(c.hasError('pattern')).toBeTrue();
+    expect(c.hasError('maxFractionDigits')).toBeFalse();
+    expect(component.totalError()).toBe('Enter the total as a number, for example 12.50.');
   });
 });
