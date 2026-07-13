@@ -35,6 +35,7 @@ import type {
   ReceiptExtraction,
   ReportData,
   ReportPeriod,
+  DashboardData,
 } from '../models';
 
 /** Whether we are running inside the Tauri runtime (vs. plain browser `ng serve`). */
@@ -237,4 +238,15 @@ export function extractReceipt(imagePath: string): Promise<ReceiptExtraction> {
  */
 export function getReport(period: ReportPeriod, categoryId?: number | null): Promise<ReportData> {
   return invoke<ReportData>('get_report', { period, categoryId: categoryId ?? null });
+}
+
+// ── Home dashboard (issue #50) ───────────────────────────────────────────────────
+
+/**
+ * The Home dashboard aggregate: total/usable balance, the goals-reserved figure, this-month
+ * spend, the trailing 6-month balance trend, and a goals preview. All money math (fx-aware
+ * summing, goal netting, month bucketing) happens in Rust; this only marshals the call.
+ */
+export function getDashboard(): Promise<DashboardData> {
+  return invoke<DashboardData>('get_dashboard');
 }

@@ -7,6 +7,7 @@ use std::path::Path;
 
 pub mod accounts;
 pub mod categories;
+pub mod dashboard;
 pub mod goals;
 pub mod recurring;
 pub mod reports;

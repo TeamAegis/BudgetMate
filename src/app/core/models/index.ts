@@ -397,6 +397,42 @@ export interface ReportData {
   granularity: Granularity;
 }
 
+// ── Home dashboard (issue #50, mirror domain::dashboard) ─────────────────────────
+
+/**
+ * One point on the trailing balance-trend chart (mirrors Rust `BalancePoint`): a short
+ * Rust-formatted month label (e.g. "Jul") and the TOTAL balance (never usable balance - goals have
+ * no history table, so only total balance is exactly reconstructable) as of that month's end.
+ */
+export interface BalancePoint {
+  label: string;
+  amountMinor: number;
+}
+
+/**
+ * The Home dashboard aggregate (mirrors Rust `DashboardData`, from `get_dashboard`). All money is
+ * integer minor units in `baseCurrency`. `usableBalanceMinor` MAY be negative (over-committed to
+ * goals) - never clamp it. `excludedAccounts`/`excludedGoals` count non-archived accounts / ongoing
+ * goals in a currency other than `baseCurrency` (their openings/reservations can't be honestly
+ * converted, so they are left out of the totals) - the UI shows a caveat note when either is > 0.
+ */
+export interface DashboardData {
+  baseCurrency: Iso4217;
+  totalBalanceMinor: number;
+  usableBalanceMinor: number;
+  /** The amount netted out of totalBalanceMinor to reach usableBalanceMinor ("set aside for goals"). */
+  goalsReservedMinor: number;
+  thisMonthSpendMinor: number;
+  /** Trailing 6 months, oldest first, last point = the current month. */
+  balanceTrend: BalancePoint[];
+  /** Top few ongoing goals for the Home preview. */
+  goals: Goal[];
+  excludedAccounts: number;
+  excludedGoals: number;
+  /** True when there is nothing to show yet - drives the Home teaching-empty state. */
+  isEmpty: boolean;
+}
+
 // Errors (IPC rejections) ----------------------------------------------------------
 
 /** Discriminant of an `AppError` (mirrors Rust `error::AppError`, adjacently tagged on `kind`). */

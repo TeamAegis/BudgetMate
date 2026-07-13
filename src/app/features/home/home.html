@@ -1,73 +1,120 @@
 <section class="feature-page">
-  @if (error(); as err) {
-    <app-banner>{{ err }}</app-banner>
-  }
-
-  <app-balance-card label="This month" [caption]="loading() ? null : heroCaption()" />
-
-  <p class="section-title">Quick actions</p>
-  <div class="tiles">
-    <a app-action-tile routerLink="/expenses/new" label="Add expense">
-      <svg icon lucidePlus [size]="24" aria-hidden="true"></svg>
-    </a>
-    <a app-action-tile routerLink="/import" label="Scan receipt">
-      <svg icon lucideScanLine [size]="24" aria-hidden="true"></svg>
-    </a>
-    <a app-action-tile routerLink="/goals/new" label="Add goal">
-      <svg icon lucideTarget [size]="24" aria-hidden="true"></svg>
-    </a>
-  </div>
-
-  <div class="section-row">
-    <p class="section-title">Recent activity</p>
-    <a routerLink="/expenses" class="see-all">See all</a>
-  </div>
   @if (loading()) {
-    <ul class="rows" aria-busy="true">
-      @for (i of skeletonRows; track i) {
-        <li class="skeleton-row">
-          <app-skeleton variant="text" width="55%" />
-          <app-skeleton variant="text" width="22%" />
-        </li>
-      }
-    </ul>
-  } @else if (recent().length === 0) {
-    <p class="empty-line">No transactions yet. Add your first with the actions above.</p>
-  } @else {
-    <ul class="rows">
-      @for (t of recent(); track t.id) {
-        <li app-list-row [name]="rowName(t)" [meta]="rowMeta(t)">
-          <span lead class="avatar" [class.income]="t.amountMinor > 0">{{ monogram(rowName(t)) }}</span>
-          <span
-            amount
-            class="amount numeric"
-            [class.income]="t.amountMinor > 0"
-            [class.expense]="t.amountMinor < 0"
-            >{{ { amountMinor: t.amountMinor, currency: t.currency } | money: true }}</span
-          >
-        </li>
-      }
-    </ul>
-  }
-
-  @if (!loading() && topGoals().length > 0) {
-    <div class="section-row">
-      <p class="section-title">Goals</p>
-      <a routerLink="/goals" class="see-all">All goals</a>
+    <div class="skeletons" aria-busy="true">
+      <app-skeleton variant="block" height="120px" />
+      <app-skeleton variant="block" height="88px" />
+      <app-skeleton variant="block" height="180px" />
     </div>
-    <ul class="rows">
-      @for (g of topGoals(); track g.id) {
-        <li>
-          <app-goal-progress-row
-            [name]="g.name"
-            [currentMinor]="g.currentMinor"
-            [targetMinor]="g.targetMinor"
-            [currency]="g.currency"
-            [completed]="g.completed"
-            (open)="openGoal(g)"
-          />
-        </li>
+  } @else if (error() && !dashboard()) {
+    <app-banner>{{ error() }}</app-banner>
+    <app-button variant="primary" (click)="retry()">Try again</app-button>
+  } @else if (dashboard(); as d) {
+    @if (error()) {
+      <app-banner tone="warning">{{ error() }}</app-banner>
+    }
+
+    @if (d.isEmpty) {
+      <app-empty-state
+        image="assets/illustrations/get-started.svg"
+        message="Nothing here yet. Add your first expense and your balance, spending, and goals will show up here."
+        cta="Add an expense"
+        (action)="addExpense()"
+      />
+    } @else {
+      <app-balance-card
+        label="Total balance"
+        [amountMinor]="d.totalBalanceMinor"
+        [currency]="d.baseCurrency"
+      />
+      @if (readyToSpendLine(); as ready) {
+        <p class="ready-line">
+          {{ ready }}
+          @if (readyToSpendExplainer(); as explainer) {
+            <span class="ready-explainer">{{ explainer }}</span>
+          }
+        </p>
       }
-    </ul>
+
+      <app-card class="spend-figure" [attr.aria-busy]="refreshing() || null">
+        <span class="label">Spent this month</span>
+        <span class="amount numeric">{{ { amountMinor: d.thisMonthSpendMinor, currency: d.baseCurrency } | money }}</span>
+        <span class="caption">so far</span>
+        @if (refreshing()) {
+          <app-spinner [size]="18" label="Updating" />
+        }
+      </app-card>
+
+      @if (caveatNote(); as note) {
+        <app-banner tone="info">
+          {{ note }} <a routerLink="/settings/accounts">Manage accounts</a>
+        </app-banner>
+      }
+
+      @if (showTrend()) {
+        <p class="section-title">Balance trend</p>
+        @defer (on viewport) {
+          <app-balance-trend-chart [points]="linePoints()" [currency]="d.baseCurrency" />
+        } @placeholder {
+          <app-skeleton variant="block" height="180px" />
+        }
+      }
+
+      <p class="section-title">Quick actions</p>
+      <div class="tiles">
+        <a app-action-tile routerLink="/expenses/new" label="Add expense">
+          <svg icon lucidePlus [size]="24" aria-hidden="true"></svg>
+        </a>
+        <a app-action-tile routerLink="/import" label="Scan receipt">
+          <svg icon lucideScanLine [size]="24" aria-hidden="true"></svg>
+        </a>
+        <a app-action-tile routerLink="/goals/new" label="Add goal">
+          <svg icon lucideTarget [size]="24" aria-hidden="true"></svg>
+        </a>
+      </div>
+
+      <div class="section-row">
+        <p class="section-title">Recent activity</p>
+        <a routerLink="/expenses" class="see-all">See all</a>
+      </div>
+      @if (recent().length === 0) {
+        <p class="empty-line">No transactions yet. Add your first with the actions above.</p>
+      } @else {
+        <ul class="rows">
+          @for (t of recent(); track t.id) {
+            <li app-list-row [name]="rowName(t)" [meta]="rowMeta(t)">
+              <span lead class="avatar" [class.income]="t.amountMinor > 0">{{ monogram(rowName(t)) }}</span>
+              <span
+                amount
+                class="amount numeric"
+                [class.income]="t.amountMinor > 0"
+                [class.expense]="t.amountMinor < 0"
+                >{{ { amountMinor: t.amountMinor, currency: t.currency } | money: true }}</span
+              >
+            </li>
+          }
+        </ul>
+      }
+
+      @if (d.goals.length > 0) {
+        <div class="section-row">
+          <p class="section-title">Goals</p>
+          <a routerLink="/goals" class="see-all">All goals</a>
+        </div>
+        <ul class="rows">
+          @for (g of d.goals; track g.id) {
+            <li>
+              <app-goal-progress-row
+                [name]="g.name"
+                [currentMinor]="g.currentMinor"
+                [targetMinor]="g.targetMinor"
+                [currency]="g.currency"
+                [completed]="g.completed"
+                (open)="openGoal(g)"
+              />
+            </li>
+          }
+        </ul>
+      }
+    }
   }
 </section>
