@@ -32,6 +32,10 @@ import type {
   Goal,
   NewGoal,
   UpdateGoal,
+  Budget,
+  NewBudget,
+  UpdateBudget,
+  EnvelopeSummary,
   ReceiptExtraction,
 } from '../models';
 
@@ -197,6 +201,28 @@ export function updateGoal(goal: UpdateGoal): Promise<Goal> {
 }
 export function deleteGoal(id: number): Promise<void> {
   return invoke<void>('delete_goal', { id });
+}
+
+// ── Budgets / envelopes (FR-3.1) ────────────────────────────────────────────────
+// Spend aggregation (splits, base-currency conversion, period bounds, status) is computed in
+// Rust; the frontend only renders `EnvelopeSummary` and formats via the money pipe.
+
+/** Every budgeted category's cap/spend/status for the CURRENT calendar month. */
+export function listEnvelopes(): Promise<EnvelopeSummary[]> {
+  return invoke<EnvelopeSummary[]>('list_envelopes');
+}
+/** The raw budget row, for the edit form to preload. */
+export function getBudget(id: number): Promise<Budget> {
+  return invoke<Budget>('get_budget', { id });
+}
+export function createBudget(budget: NewBudget): Promise<Budget> {
+  return invoke<Budget>('create_budget', { budget });
+}
+export function updateBudget(budget: UpdateBudget): Promise<Budget> {
+  return invoke<Budget>('update_budget', { budget });
+}
+export function deleteBudget(id: number): Promise<void> {
+  return invoke<void>('delete_budget', { id });
 }
 
 // ── OCR receipt scan (FR-2.1) ──────────────────────────────────────────────────────

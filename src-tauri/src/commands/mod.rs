@@ -2,6 +2,7 @@
 //! No heavy logic here. Every DTO has a 1:1 mirror in `src/app/core/models` (kept in sync).
 
 pub mod accounts;
+pub mod budgets;
 pub mod categories;
 pub mod goals;
 pub mod ocr;

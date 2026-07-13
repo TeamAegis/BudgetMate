@@ -356,6 +356,57 @@ export interface UpdateGoal extends NewGoal {
   id: number;
 }
 
+// ── Budgets / envelopes (FR-3.1) ──────────────────────────────────────────────────
+
+/** v1 supports monthly budgets only. Mirrors Rust `domain::budget::MONTHLY_PERIOD`. */
+export type BudgetPeriod = 'monthly';
+
+/** A cap on spend for one category in one period - the raw row (mirrors Rust `Budget`). Used to
+ *  preload the edit form. */
+export interface Budget {
+  id: number;
+  categoryId: number;
+  period: BudgetPeriod;
+  capMinor: number;
+}
+
+/** Where an envelope sits against its cap (mirrors Rust `EnvelopeStatus`). NEVER render this by
+ *  colour alone - always pair with an icon + a plain-language label. */
+export type EnvelopeStatus = 'under' | 'approaching' | 'over';
+
+/** One envelope's spend-vs-cap for the current period (mirrors Rust `EnvelopeSummary`) - the
+ *  budgets-screen read model returned by `list_envelopes`. `spentMinor` is always a positive
+ *  "money out" figure; `remainingMinor` goes negative once over budget. `id` is the underlying
+ *  `budgets` row id, so the UI can route to `/budgets/:id/edit`. */
+export interface EnvelopeSummary {
+  id: number;
+  categoryId: number;
+  categoryName: string;
+  period: BudgetPeriod;
+  capMinor: number;
+  spentMinor: number;
+  remainingMinor: number;
+  /** The base (reporting) currency both `capMinor` and `spentMinor` are expressed in. */
+  currency: Iso4217;
+  status: EnvelopeStatus;
+}
+
+/** Input for create_budget (mirrors Rust `NewBudget`). `cap` is a non-negative major-unit string
+ *  (e.g. "100.00"), in the vault's base currency; Rust parses it to minor units (no money math in
+ *  TS - mirrors `NewGoal.target`). */
+export interface NewBudget {
+  categoryId: number;
+  period: BudgetPeriod;
+  cap: string;
+}
+
+/** Input for update_budget (mirrors Rust `UpdateBudget`). Category and period are not editable in
+ *  v1 - delete and recreate instead. */
+export interface UpdateBudget {
+  id: number;
+  cap: string;
+}
+
 // Errors (IPC rejections) ----------------------------------------------------------
 
 /** Discriminant of an `AppError` (mirrors Rust `error::AppError`, adjacently tagged on `kind`). */

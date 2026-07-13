@@ -266,7 +266,8 @@ and the tokens it consumes. Components are dumb/presentational (`shared/`) unles
 > ghost / **danger** variants, slightly rounded via `--radius-button`), Card, FormField, IconButton,
 > Banner, ListRow (with optional `[lead]` slot), SelectField, Skeleton, Spinner,
 > **Modal** (ConfirmDialog substrate only), **ConfirmDialog**, **FabMenu**, **GoalProgressRow**,
-> **FormActions** (bottom Save bar), **BalanceCard**, **ActionTile**, **SettingsRow**.
+> **FormActions** (bottom Save bar), **BalanceCard**, **ActionTile**, **SettingsRow**,
+> **EnvelopeCard**.
 > Reuse/extend these rather than re-inlining markup - see the `ui-component`
 > skill. The remaining entries below are still to be built as they're needed.
 
@@ -360,6 +361,15 @@ and the tokens it consumes. Components are dumb/presentational (`shared/`) unles
   + optional hint + a trailing chevron or inline control. Used to build the grouped Settings screen
   (Your money / General / Security - see `screens.md` §7.1). Display/presentational; the feature
   feeds it data and handles the tap.
+- **EnvelopeCard** (`app-envelope-card`, **built**, FR-3.1) - category name, cap/spent amounts (via
+  the money pipe) and an 8px (`--progress-track-h`) pill track. Three Rust-computed states: **under**
+  (`--c-positive` fill, no icon - nothing to flag), **approaching** (`--c-warning` fill +
+  `lucideTriangleAlert` + "Rs X left"), **over** (`--c-danger` fill + icon + "Rs Y over"). Meaning is
+  never colour-alone - approaching/over always pair the fill with the icon + a plain-language label.
+  The bar visually clamps at 100% width even when over (the label/percent carry "how much over", not
+  an overflowing bar) - phrased as information, not punitively (see "Over-budget is gentle" below).
+  Display-only; the whole card is a button that emits `open` (the Budgets screen navigates to the
+  budget's edit page).
 
 ### New - required by FRs, absent in Figma (specified here, to design)
 - **LockScreen** - biometric prompt + passphrase fallback (FR-5.1). App entry gate.
@@ -371,8 +381,6 @@ and the tokens it consumes. Components are dumb/presentational (`shared/`) unles
   (FR-1.2).
 - **CurrencyField** - amount + currency selector + user-entered FX rate + computed base
   amount (FR-1.4).
-- **EnvelopeCard** - category cap with spent/remaining bar; warning/over states using
-  `--c-warning`/`--c-danger` (FR-3.1).
 - **RecurringRuleForm** - template + schedule picker (FR-1.3).
 - **RuleBuilderRow** - "If [field] [op] [value] → set [field] [value]" (FR-2.3).
 - **SettingsList + BackupRestorePanel** - base currency, lock timeout, export, encrypted

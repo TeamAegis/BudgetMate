@@ -135,7 +135,8 @@ transactions(id, account_id, posted_date, amount_minor, currency,
                                                     -- allowance_id: optional allowance tag (FR-3.4, nullable)
 tx_splits(id, transaction_id, category_id, amount_minor) -- sum == parent amount (FR-1.2)
 recurring_rules(id, template_json, schedule, next_run_date, last_materialised_date, active)
-budgets(id, category_id, period, cap_minor)             -- envelope caps (FR-3.1)
+budgets(id, category_id, period, cap_minor)             -- envelope caps (FR-3.1); UNIQUE(category_id, period)
+                                                    -- (migration 0004) - one cap per category/period
 goals(id, name, target_minor, current_minor, currency, target_date) -- savings goals (FR-3.2); `currency` added in migration 0003
 allowances(id, name, currency, target_minor, balance_minor, kind, period,
            week_start, next_refresh_date, active, created_at) -- imprest envelopes (FR-3.4);
@@ -400,14 +401,15 @@ traceability table (`functional-requirements.md` §5) carries the same status pe
   user-entered fx rate + derived base amount), recurrence (lazy materialisation), savings goals,
   deterministic categorisation rules (management + `preview_rules`), accounts, categories, OCR
   field extraction (Android), passphrase/biometric unlock, lock-on-background, SQLCipher at rest,
-  schema migrations.
+  schema migrations, envelope budgeting (FR-3.1; monthly caps per category, `list_envelopes`
+  aggregates `tx_splits` in base currency and classifies under/approaching/over).
 - **Partial:** dedup (matcher written in `rules/dedup.rs`, not wired into import or manual entry);
   performance metrics (web payload size tracked; Android install-size metric pending issue #4).
-- **Specified only (little or no runtime code):** envelope budgeting (FR-3.1; `budgets` table
-  exists, no spent-vs-remaining logic), local reporting/analytics aggregations (FR-3.3), the home
-  dashboard (`get_dashboard`), the import pipeline + review UI (FR-2.2), backup/restore/export
-  (FR-4.x), the income/onboarding profile (`set_onboarding_profile`), and savings-backed allowances
-  (FR-3.4; domain spec `docs/allowances.md` + ADR 0005, no schema or runtime code yet).
+- **Specified only (little or no runtime code):** local reporting/analytics aggregations (FR-3.3),
+  the home dashboard (`get_dashboard`), the import pipeline + review UI (FR-2.2),
+  backup/restore/export (FR-4.x), the income/onboarding profile (`set_onboarding_profile`), and
+  savings-backed allowances (FR-3.4; domain spec `docs/allowances.md` + ADR 0005, no schema or
+  runtime code yet).
 
 ### 11.2 Open product questions (from the 2026-06 financial-domain review)
 Recorded so they are not lost. These are **observations and recommendations, not committed scope**
@@ -417,8 +419,6 @@ Recorded so they are not lost. These are **observations and recommendations, not
   take-home pay or pay cycle, and no "money in vs out" / "left to spend" view. A budget is
   conventionally built on net income (`financial-knowledge.md` §1, §2, §6); without it, 50/30/20,
   zero-based budgeting, and planned-vs-actual variance cannot be computed.
-- **Envelope engine unbuilt (FR-3.1).** The flagship budgeting feature is schema-only; there is no
-  spent-vs-remaining aggregation or over-budget state in code yet.
 - **Allowances specified, not built (FR-3.4).** The imprest allowance model is fully specified
   (`docs/allowances.md`, ADR 0005) but has no schema or runtime code. It depends on a savings
   `Total` / `Available` balance, so it intersects the income / cash-flow-spine gap above; pin down

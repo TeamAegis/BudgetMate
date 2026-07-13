@@ -1,0 +1,48 @@
+<section class="feature-page">
+  <app-fab ariaLabel="Add budget" (action)="addBudget()" />
+
+  @if (error(); as err) {
+    <app-banner>{{ err }}</app-banner>
+  }
+
+  @if (busy() && !loading()) {
+    <div class="updating" role="status" aria-live="polite">
+      <app-spinner [size]="16" label="Updating" />
+      <span>Updating…</span>
+    </div>
+  }
+
+  @if (loading()) {
+    <ul class="rows" aria-busy="true">
+      @for (i of skeletonRows; track i) {
+        <li><app-skeleton variant="block" height="112px" /></li>
+      }
+    </ul>
+  } @else if (envelopes().length === 0 && !error()) {
+    <app-empty-state
+      [fill]="true"
+      image="assets/illustrations/get-started.svg"
+      message="Set a monthly limit for a category and see what's left as you spend."
+      cta="Add your first budget"
+      (action)="addBudget()"
+    />
+  } @else if (envelopes().length > 0) {
+    <ul class="rows">
+      @for (e of envelopes(); track e.id; let i = $index) {
+        <li animate.enter="list-item-enter" [style.animation-delay]="(i < 12 ? i * 40 : 0) + 'ms'">
+          <app-envelope-card
+            [categoryName]="e.categoryName"
+            [capMinor]="e.capMinor"
+            [spentMinor]="e.spentMinor"
+            [remainingMinor]="e.remainingMinor"
+            [currency]="e.currency"
+            [status]="e.status"
+            (open)="openEnvelope(e)"
+          />
+        </li>
+      }
+    </ul>
+  } @else if (error()) {
+    <app-empty-state message="Couldn't load your budgets." cta="Retry" (action)="retry()" />
+  }
+</section>
