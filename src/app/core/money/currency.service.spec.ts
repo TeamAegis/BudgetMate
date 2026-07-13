@@ -41,4 +41,15 @@ describe('CurrencyService', () => {
     // Lookup is case-insensitive (matches how currencies are stored/entered).
     expect(service.fractionDigits('iqd')).toBe(3);
   });
+
+  it('toMajor() scales minor units by the currency digit count (never a hand-rolled /100)', () => {
+    const s = service as any;
+    s.defaultDigits = 2;
+    s.digitsByCode.set('JPY', 0);
+    s.digitsByCode.set('BHD', 3);
+
+    expect(service.toMajor(1_500, 'MUR')).toBe(15);
+    expect(service.toMajor(1_500, 'JPY')).toBe(1_500);
+    expect(service.toMajor(1_234, 'BHD')).toBe(1.234);
+  });
 });

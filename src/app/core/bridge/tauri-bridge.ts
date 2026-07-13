@@ -33,6 +33,8 @@ import type {
   NewGoal,
   UpdateGoal,
   ReceiptExtraction,
+  ReportData,
+  ReportPeriod,
 } from '../models';
 
 /** Whether we are running inside the Tauri runtime (vs. plain browser `ng serve`). */
@@ -224,4 +226,15 @@ export async function pickReceiptImage(): Promise<string | null> {
  */
 export function extractReceipt(imagePath: string): Promise<ReceiptExtraction> {
   return invoke<ReceiptExtraction>('extract_receipt', { imagePath });
+}
+
+// ── Reporting (FR-3.3) ───────────────────────────────────────────────────────────
+
+/**
+ * Spend-by-category + spend-over-time aggregation for `period`, optionally narrowed to one
+ * category. All money conversion (fx), date bucketing, and pending-review exclusion happen in
+ * Rust; this only marshals the call.
+ */
+export function getReport(period: ReportPeriod, categoryId?: number | null): Promise<ReportData> {
+  return invoke<ReportData>('get_report', { period, categoryId: categoryId ?? null });
 }

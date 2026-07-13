@@ -128,6 +128,22 @@
   // ---- Skeleton (loading placeholders) ----
   --c-skeleton: #ececec;           // placeholder base (matches --c-border neutral)
   --c-skeleton-sheen: #f5f5f5;     // pulse highlight
+
+  // ---- Charts (FR-3.3 Analytics: pie spend-by-category, line spend-over-time) ----
+  // Categorical palette for the pie chart's per-category slices; always paired with a legend/label
+  // (never colour alone, design.md a11y). Reuses the brand/semantic hues first, then a few added
+  // hues for variety once a report has more categories than those cover.
+  --chart-cat-1: var(--c-primary);
+  --chart-cat-2: var(--c-info);
+  --chart-cat-3: var(--c-positive);
+  --chart-cat-4: var(--c-warning);
+  --chart-cat-5: #8b5fbf;   // purple - added categorical hue (5th+ category slice)
+  --chart-cat-6: #2ba9a1;   // teal - added categorical hue
+  --chart-cat-7: #d6598f;   // rose - added categorical hue
+  --chart-cat-8: var(--c-text-muted); // "Other" overflow bucket beyond the 7 explicit hues
+  --chart-line: var(--c-primary);     // spend-over-time single-series line/point colour
+  --chart-grid: var(--c-border);      // axis gridlines
+  --chart-height: 240px;              // canvas container height (PieChart / LineChart)
 }
 
 @media (prefers-reduced-motion: reduce) {

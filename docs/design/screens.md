@@ -218,20 +218,25 @@ in the current Figma - design them to this spec.
 
 ## 6. Analytics
 
-### 6.1 Analytics (populated) **[partly NEW]**
+### 6.1 Analytics (populated) **[built]**
 - **Figma:** `132:298` (header shell only - charts not yet designed).
 - **FR:** FR-3.3.
-- **Components:** AppHeader ("Analytics"), pie chart (spend by category), line chart (spend
-  over time), period/category filters, BottomNav. **Charts via bundled Chart.js.**
-- **Data:** aggregations by category and over time.
-- **Commands:** `get_spend_by_category(period)`, `get_spend_over_time(period)` (deferred; the charts
-  arrive with the aggregation commands).
-- **Today:** Analytics is a **polished EmptyState** with plain-language copy and an **"Add an
-  expense"** CTA (-> `/expenses/new`); the charts above are the populated target once the aggregation
-  commands and Chart.js land.
-- **States:** loading, empty (`133:806` "No Data" + illustration + "Add an expense" CTA), populated,
-  error (aggregation failed - plain-language + retry), busy (recomputing on filter/period change, UI
-  stays responsive).
+- **Components:** AppHeader ("Analytics"), `PieChart`/`app-pie-chart` (spend by category),
+  `LineChart`/`app-line-chart` (spend over time), a `SegmentedToggle` period filter (This month /
+  Last 3 months / This year / All time) and a `SelectField` category filter, a total-spend `Card`,
+  BottomNav. **Charts via bundled Chart.js** (`shared/charts/chart-setup.ts` registers only the
+  pie/line controllers used).
+- **Data:** one aggregated `ReportData` (total + by-category + over-time buckets), all computed in
+  Rust (fx conversion, date bucketing, `pending_review` exclusion) - the frontend only formats.
+- **Commands:** `get_report(period, categoryId?)` - one command covers both charts plus the total
+  (frontend rule: keep the command surface small); the category filter's options reuse the existing
+  `list_categories` command.
+- **States:** loading (skeleton placeholders), empty (`133:806` "No Data" + illustration + "Add an
+  expense" CTA - shown whenever the current period/category filter has no spend to chart), populated
+  (charts + total), error (aggregation failed - plain-language banner + retry; a refresh error while
+  data is already on screen is shown as a banner alongside the still-mounted charts, not in place of
+  them), busy (recomputing on filter/period change - the existing charts stay mounted with an inline
+  spinner, UI stays responsive).
 
 ---
 
