@@ -174,11 +174,10 @@ export class TransactionForm implements OnInit {
       }
     });
 
-    // The max-fraction-digits cap depends on the selected currency (explicit `currency` field, or
-    // the chosen account's currency) - revalidate the amount and every split whenever either
-    // changes, so switching to a fewer-decimal currency re-flags an already-typed over-precise value.
+    // The max-fraction-digits cap depends on the selected `currency` - revalidate the amount and
+    // every split whenever it changes, so switching to a fewer-decimal currency re-flags an
+    // already-typed over-precise value.
     this.form.controls.currency.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => this.revalidateAmounts());
-    this.form.controls.accountId.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => this.revalidateAmounts());
 
     // Edit pages expose Delete as a danger icon top-right in the header; Save is the bottom action
     // bar (FormActions) and the back arrow is Cancel. Add pages carry no header action. Cleared on

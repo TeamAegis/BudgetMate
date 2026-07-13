@@ -22,6 +22,24 @@ describe('maxFractionDigits', () => {
     expect(validator(new FormControl('1.5'))).toEqual({ maxFractionDigits: { max: 0 } });
   });
 
+  it('accepts a trailing zero within the cap (value-based, like Rust parse_minor)', () => {
+    const validator = maxFractionDigits(() => 2);
+    expect(validator(new FormControl('1.100'))).toBeNull();
+    expect(validator(new FormControl('1.50'))).toBeNull();
+    expect(validator(new FormControl('1.500'))).toBeNull();
+  });
+
+  it('accepts a whole amount with trailing-zero decimals for a 0-decimal currency (JPY "100.00")', () => {
+    const validator = maxFractionDigits(() => 0);
+    expect(validator(new FormControl('100.00'))).toBeNull();
+  });
+
+  it('ignores a malformed value (that is Validators.pattern(DECIMAL)\'s job)', () => {
+    const validator = maxFractionDigits(() => 2);
+    expect(validator(new FormControl('1.2.3'))).toBeNull();
+    expect(validator(new FormControl('abc'))).toBeNull();
+  });
+
   it('is valid for an empty string (Validators.required owns that case)', () => {
     const validator = maxFractionDigits(() => 2);
     expect(validator(new FormControl(''))).toBeNull();
