@@ -56,6 +56,11 @@ export class Reports implements OnInit {
   protected readonly period = signal<ReportPeriod>('thisMonth');
   protected readonly categoryFilter = signal<number | typeof ALL_CATEGORIES>(ALL_CATEGORIES);
 
+  /** Monotonically increasing request id - guards against a slow, superseded `reload()` resolving
+   *  after a newer one and overwriting `data`/`error` with stale results (a fast filter change
+   *  while an earlier request is still in flight). Only the LATEST request applies its outcome. */
+  private latestRequestId = 0;
+
   // Short labels (design-system SegmentedToggle is a single pill row) - 4 segments must still fit
   // the ~360-412dp Android artboard without wrapping/overflowing.
   protected readonly periodOptions: SegmentOption[] = [
@@ -70,8 +75,23 @@ export class Reports implements OnInit {
     ...this.categories().map((c) => ({ value: c.id, label: c.name })),
   ]);
 
-  /** Empty only when the current filter/period genuinely has no spend to chart. */
-  protected readonly isEmpty = computed(() => (this.data()?.byCategory.length ?? 0) === 0);
+  /**
+   * Distinguishes WHY the report has no categories to chart, so the empty state never tells a
+   * user with real spend that they have none (High-usability fix):
+   * - `'category'`: a category filter is active and it matches nothing for the period - offer to
+   *   clear the filter, not the generic "add an expense" teaching copy.
+   * - `'period'`: all categories, but the selected period has no spend - offer to view all time.
+   * - `'none'`: all categories + all time + genuinely no spend anywhere - the true first-run case,
+   *   which alone shows the teaching illustration + "Add an expense" CTA.
+   * - `null`: there is spend to chart.
+   */
+  protected readonly emptyKind = computed<'category' | 'period' | 'none' | null>(() => {
+    const report = this.data();
+    if (!report || report.byCategory.length > 0) return null;
+    if (this.categoryFilter() !== ALL_CATEGORIES) return 'category';
+    if (this.period() !== 'allTime') return 'period';
+    return 'none';
+  });
 
   protected readonly pieSlices = computed<PieSlice[]>(
     () => this.data()?.byCategory.map((c) => ({ label: c.categoryName, amountMinor: c.amountMinor })) ?? [],
@@ -108,6 +128,7 @@ export class Reports implements OnInit {
       this.error.set('Run the app (npm run tauri dev) to view analytics.');
       return;
     }
+    const requestId = ++this.latestRequestId;
     const firstLoad = this.data() === null;
     if (firstLoad) {
       this.loading.set(true);
@@ -117,12 +138,20 @@ export class Reports implements OnInit {
     this.error.set(null);
     try {
       const categoryId = this.categoryFilter() === ALL_CATEGORIES ? undefined : (this.categoryFilter() as number);
-      this.data.set(await getReport(this.period(), categoryId));
+      const result = await getReport(this.period(), categoryId);
+      // A newer reload (later filter/period change) may have started and already resolved while
+      // this one was in flight - only the LATEST request's outcome may apply (fix for the request
+      // race: a slow earlier response must never overwrite a newer selection's data).
+      if (requestId !== this.latestRequestId) return;
+      this.data.set(result);
     } catch (e) {
+      if (requestId !== this.latestRequestId) return;
       this.error.set(toUserMessage(e));
     } finally {
-      this.loading.set(false);
-      this.refreshing.set(false);
+      if (requestId === this.latestRequestId) {
+        this.loading.set(false);
+        this.refreshing.set(false);
+      }
     }
   }
 
@@ -142,5 +171,17 @@ export class Reports implements OnInit {
 
   protected addExpense(): void {
     void this.router.navigate(['/expenses/new']);
+  }
+
+  /** "Clear filter" action on the category-filtered-empty branch. */
+  protected clearCategoryFilter(): void {
+    this.categoryFilter.set(ALL_CATEGORIES);
+    void this.reload();
+  }
+
+  /** "View all time" action on the period-filtered-empty branch. */
+  protected viewAllTime(): void {
+    this.period.set('allTime');
+    void this.reload();
   }
 }

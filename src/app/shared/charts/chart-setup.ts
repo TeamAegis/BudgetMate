@@ -37,6 +37,13 @@ export function registerCharts(): void {
     Tooltip,
     Title,
   );
+  // Chart text (legend/tooltip/axis) on-system: the app's bundled font stack, not the Chart.js
+  // default sans-serif (design.md - tokens/brand only). Reads the actual `--font-family` stack
+  // (Poppins + fallbacks) rather than hardcoding a second one here.
+  Chart.defaults.font.family = chartColor(
+    '--font-family',
+    "Poppins, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+  );
   registered = true;
 }
 
@@ -58,4 +65,18 @@ export function chartColor(varName: string, fallback = '#000000'): string {
 /** The categorical palette for per-category chart slices (`--chart-cat-1`..`--chart-cat-8`). */
 export function categoricalChartPalette(): string[] {
   return Array.from({ length: 8 }, (_, i) => chartColor(`--chart-cat-${i + 1}`));
+}
+
+/**
+ * Whether the OS/browser requests reduced motion. Chart.js runs its own ~1s canvas animation on
+ * render/update that ignores the CSS `--motion-*` tokens entirely (they only gate CSS/Web
+ * Animations), so a chart would otherwise keep animating under `prefers-reduced-motion: reduce`
+ * (design.md Motion: reduced motion is mandatory). Callers gate Chart.js's own `animation` option
+ * with this. Guards for `matchMedia` being undefined (non-browser/test environments).
+ */
+export function prefersReducedMotion(): boolean {
+  if (typeof matchMedia === 'undefined') {
+    return false;
+  }
+  return matchMedia('(prefers-reduced-motion: reduce)').matches;
 }

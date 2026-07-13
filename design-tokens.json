@@ -32,7 +32,7 @@
   },
   "chart": {
     "categorical": ["#FF7755", "#3A86C8", "#2E9E6B", "#E8A13A", "#8B5FBF", "#2BA9A1", "#D6598F", "#5A5A5A"],
-    "line": "#FF7755",
+    "line": "#D84F2C",
     "grid": "#ECECEC",
     "height": 240
   },

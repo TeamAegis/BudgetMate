@@ -141,7 +141,10 @@
   --chart-cat-6: #2ba9a1;   // teal - added categorical hue
   --chart-cat-7: #d6598f;   // rose - added categorical hue
   --chart-cat-8: var(--c-text-muted); // "Other" overflow bucket beyond the 7 explicit hues
-  --chart-line: var(--c-primary);     // spend-over-time single-series line/point colour
+  // Spend-over-time single-series line/point colour: --c-primary-700, not --c-primary - a thin
+  // stroke/point is small-scale coral (design.md a11y), and --c-primary alone is ~2.6:1 on white,
+  // failing WCAG 2.2 SC 1.4.11 (3:1 non-text contrast).
+  --chart-line: var(--c-primary-700);
   --chart-grid: var(--c-border);      // axis gridlines
   --chart-height: 240px;              // canvas container height (PieChart / LineChart)
 }

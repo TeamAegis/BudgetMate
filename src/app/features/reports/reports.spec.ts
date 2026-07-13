@@ -61,7 +61,75 @@ describe('Reports', () => {
     expect(host.querySelectorAll('app-skeleton').length).toBeGreaterThan(0);
   });
 
-  it('empty state: a report with no categories shows the polished empty state, not the charts', () => {
+  const emptyReport = (period: ReportData['period'] = 'allTime'): ReportData => ({
+    baseCurrency: 'MUR',
+    period,
+    totalSpendMinor: 0,
+    byCategory: [],
+    overTime: [],
+    granularity: 'day',
+  });
+
+  it('true first-run empty state: all categories + all time + no spend shows the teaching illustration + Add an expense CTA', () => {
+    const fixture = createFixture();
+    fixture.detectChanges();
+    const component = fixture.componentInstance as unknown as {
+      loading: { set(v: boolean): void };
+      error: { set(v: string | null): void };
+      data: { set(v: ReportData | null): void };
+      period: { set(v: string): void };
+    };
+    component.loading.set(false);
+    component.error.set(null);
+    component.period.set('allTime');
+    component.data.set(emptyReport('allTime'));
+    fixture.detectChanges();
+
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.querySelector('app-empty-state')).not.toBeNull();
+    expect(host.textContent).toContain('Add an expense');
+    expect(host.querySelector('app-pie-chart')).toBeNull();
+    // Filters stay visible even in the empty state - the user can still switch them.
+    expect(host.querySelector('app-segmented-toggle')).not.toBeNull();
+  });
+
+  it('category-filtered empty state: an active category filter with no spend offers "Clear filter", not the generic CTA', () => {
+    const fixture = createFixture();
+    fixture.detectChanges();
+    const component = fixture.componentInstance as unknown as {
+      loading: { set(v: boolean): void };
+      error: { set(v: string | null): void };
+      data: { set(v: ReportData | null): void };
+      onCategoryChange(v: number | string): void;
+    };
+    component.loading.set(false);
+    component.error.set(null);
+    component.onCategoryChange(3);
+    component.data.set(emptyReport('thisMonth'));
+    fixture.detectChanges();
+
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.textContent).toContain('No spending in this category for the selected period.');
+    expect(host.textContent).toContain('Clear filter');
+    expect(host.textContent).not.toContain('Add an expense');
+    expect(host.querySelector('app-pie-chart')).toBeNull();
+  });
+
+  it('clearCategoryFilter resets the category filter to "all"', () => {
+    const fixture = createFixture();
+    fixture.detectChanges();
+    const component = fixture.componentInstance as unknown as {
+      categoryFilter: { (): unknown };
+      onCategoryChange(v: number | string): void;
+      clearCategoryFilter(): void;
+    };
+    component.onCategoryChange(3);
+    expect(component.categoryFilter()).toBe(3);
+    component.clearCategoryFilter();
+    expect(component.categoryFilter()).toBe('all');
+  });
+
+  it('period-filtered empty state: all categories but a non-allTime period with no spend offers "View all time"', () => {
     const fixture = createFixture();
     fixture.detectChanges();
     const component = fixture.componentInstance as unknown as {
@@ -71,19 +139,27 @@ describe('Reports', () => {
     };
     component.loading.set(false);
     component.error.set(null);
-    component.data.set({
-      baseCurrency: 'MUR',
-      period: 'thisMonth',
-      totalSpendMinor: 0,
-      byCategory: [],
-      overTime: [],
-      granularity: 'day',
-    });
+    // Default period is 'thisMonth' (not allTime), default category filter is 'all'.
+    component.data.set(emptyReport('thisMonth'));
     fixture.detectChanges();
 
     const host = fixture.nativeElement as HTMLElement;
-    expect(host.querySelector('app-empty-state')).not.toBeNull();
+    expect(host.textContent).toContain('No spending recorded for this period.');
+    expect(host.textContent).toContain('View all time');
+    expect(host.textContent).not.toContain('Add an expense');
     expect(host.querySelector('app-pie-chart')).toBeNull();
+  });
+
+  it('viewAllTime sets the period to "allTime"', () => {
+    const fixture = createFixture();
+    fixture.detectChanges();
+    const component = fixture.componentInstance as unknown as {
+      period: { (): string };
+      viewAllTime(): void;
+    };
+    expect(component.period()).toBe('thisMonth');
+    component.viewAllTime();
+    expect(component.period()).toBe('allTime');
   });
 
   it('populated state: a report with spend renders the total, pie chart, and line chart', () => {
@@ -177,7 +253,7 @@ describe('Reports', () => {
       data: { set(v: ReportData | null): void };
       pieSlices: { (): { label: string; amountMinor: number }[] };
       linePoints: { (): { label: string; amountMinor: number }[] };
-      isEmpty: { (): boolean };
+      emptyKind: { (): string | null };
     };
     component.data.set(sampleReport);
 
@@ -189,6 +265,61 @@ describe('Reports', () => {
       { label: '05 Jul', amountMinor: 3_500 },
       { label: '13 Jul', amountMinor: 2_550 },
     ]);
-    expect(component.isEmpty()).toBe(false);
+    expect(component.emptyKind()).toBeNull();
+  });
+
+  it("request race: an earlier, slower reload must not overwrite a later, faster reload's result", async () => {
+    // Drive the REAL private `reload()` (the request-id guard under test) through its actual
+    // bridge call, not a re-implementation of the guard. `getReport`/`isTauri()` cannot be
+    // `spyOn`-ed (named ES exports - see the file doc comment above), but `isTauri()` and the
+    // underlying `invoke()` both key off the plain global `window.__TAURI_INTERNALS__`, so setting
+    // that directly (no `@tauri-apps/api` import - stays clear of the bridge-only ESLint rule)
+    // makes `reload()` take its real bridge-calling path with a fully controllable, out-of-order
+    // resolving `get_report` response.
+    const globalWithInternals = globalThis as { __TAURI_INTERNALS__?: unknown };
+    const priorInternals = globalWithInternals.__TAURI_INTERNALS__;
+
+    const firstReportData: ReportData = { ...sampleReport, totalSpendMinor: 1_111 };
+    const secondReportData: ReportData = { ...sampleReport, totalSpendMinor: 2_222 };
+    const payloads = [firstReportData, secondReportData];
+    const resolvers: Array<() => void> = [];
+    let callCount = 0;
+
+    globalWithInternals.__TAURI_INTERNALS__ = {
+      invoke: (cmd: string): Promise<unknown> => {
+        if (cmd === 'get_report') {
+          const index = callCount++;
+          return new Promise<void>((resolve) => {
+            resolvers[index] = resolve;
+          }).then(() => payloads[index]);
+        }
+        return Promise.resolve(null);
+      },
+    };
+
+    try {
+      const fixture = createFixture();
+      // Deliberately skip fixture.detectChanges() (ngOnInit's own reload) so the two calls below
+      // are the only overlapping requests in flight.
+      const component = fixture.componentInstance as unknown as {
+        data: { (): ReportData | null };
+        reload(): Promise<void>;
+      };
+
+      const first = component.reload(); // request #1 - the SLOW one
+      const second = component.reload(); // request #2 - the FAST one, requested later
+
+      resolvers[1](); // #2 (the later request) resolves FIRST
+      await second;
+      resolvers[0](); // #1 (the earlier request) resolves AFTER - must be ignored as stale
+      await first;
+
+      expect(component.data()?.totalSpendMinor).toBe(
+        2_222,
+        "the later request's data must win even though the earlier request resolved after it",
+      );
+    } finally {
+      globalWithInternals.__TAURI_INTERNALS__ = priorInternals;
+    }
   });
 });

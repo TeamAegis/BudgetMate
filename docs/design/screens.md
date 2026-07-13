@@ -231,12 +231,18 @@ in the current Figma - design them to this spec.
 - **Commands:** `get_report(period, categoryId?)` - one command covers both charts plus the total
   (frontend rule: keep the command surface small); the category filter's options reuse the existing
   `list_categories` command.
-- **States:** loading (skeleton placeholders), empty (`133:806` "No Data" + illustration + "Add an
-  expense" CTA - shown whenever the current period/category filter has no spend to chart), populated
-  (charts + total), error (aggregation failed - plain-language banner + retry; a refresh error while
-  data is already on screen is shown as a banner alongside the still-mounted charts, not in place of
-  them), busy (recomputing on filter/period change - the existing charts stay mounted with an inline
-  spinner, UI stays responsive).
+- **States:** loading (skeleton placeholders); populated (charts + total); error (aggregation failed
+  - plain-language banner + retry; a refresh error while data is already on screen is shown as a
+  banner alongside the still-mounted charts, not in place of them); busy (recomputing on
+  filter/period change - the existing charts stay mounted with an inline spinner, UI stays
+  responsive). **Empty has three distinct cases** (filters stay visible in all three, so the user can
+  also just change them directly), so a user who genuinely has spend is never told they have none:
+  - a category filter is active and matches no spend for the period - plain-language message ("No
+    spending in this category for the selected period.") + a **Clear filter** action;
+  - all categories, but the selected period has no spend - "No spending recorded for this period." +
+    a **View all time** action;
+  - all categories + all time + genuinely no spend anywhere - the true first-run case, shown with the
+    teaching illustration (`133:806`) + "Add an expense" CTA.
 
 ---
 

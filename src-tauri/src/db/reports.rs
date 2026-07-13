@@ -1,22 +1,37 @@
 //! Analytics aggregation query (FR-3.3). Joins `tx_splits -> transactions -> categories` for
-//! EXPENSE splits only, excludes `pending_review` (unconfirmed dedup) rows, converts every split to
-//! base-currency minor units via its parent transaction's `fx_rate`, and hands the resulting rows to
-//! the pure aggregators in `domain::report`. All money conversion and date bucketing happens in
+//! EXPENSE splits only, excludes `pending_review` (unconfirmed dedup) rows, and hands the resulting
+//! rows to the pure aggregators in `domain::report`. All money math and date bucketing happens in
 //! Rust; the SQL only selects and filters rows.
+//!
+//! Fx conversion reconciliation (see `domain::report::allocate_base`): a split's base-currency
+//! amount is NOT independently re-derived from the split's own magnitude and the transaction's
+//! `fx_rate` (that can drift by +/-1 minor unit from the transaction's own stored total via
+//! per-split rounding). Instead, rows are grouped by transaction id in Rust and each transaction's
+//! OWN stored `base_amount_minor` is allocated across its splits' magnitudes via the
+//! largest-remainder method, so the report always reconciles exactly with the ledger. The optional
+//! `category_id` filter is therefore applied AFTER allocation (dropping non-matching rows), not in
+//! the SQL `WHERE` clause, so sibling splits of a filtered-out category still inform the allocation
+//! of the categories that remain.
 
-use std::str::FromStr;
+use std::collections::BTreeMap;
 
 use chrono::NaiveDate;
 use rusqlite::{params, Connection};
-use rust_decimal::Decimal;
 
 use super::DbError;
-use crate::domain::money::base_amount_minor;
 use crate::domain::report::{
-    choose_granularity, spend_by_category, spend_over_time, ReportData, ReportPeriod, SpendRow,
+    allocate_base, choose_granularity, spend_by_category, spend_over_time, ReportData,
+    ReportPeriod, SpendRow,
 };
 
 const ISO_DATE: &str = "%Y-%m-%d";
+
+/// One expense split row as read off the DB, before allocation - grouped by `transaction_id`.
+struct RawSplit {
+    category_id: i64,
+    category_name: String,
+    magnitude_minor: i64,
+}
 
 /// Run the Analytics aggregation for `period` (already resolved to `[start, end)` in `bounds`;
 /// `None` for `AllTime`), optionally narrowed to one `category_id`. Returns the `ReportData` DTO
@@ -36,48 +51,75 @@ pub fn report(
         None => (None, None),
     };
 
-    let sql = "SELECT s.category_id, c.name AS category_name, s.amount_minor, t.fx_rate, t.posted_date
+    // Every EXPENSE split of every transaction in range - the category filter is applied AFTER
+    // grouping/allocation below, not here (see the module doc comment).
+    let sql = "SELECT t.id AS tx_id, t.base_amount_minor, t.posted_date,
+                      s.category_id, c.name AS category_name, s.amount_minor
                FROM tx_splits s
                JOIN transactions t ON t.id = s.transaction_id
                JOIN categories c ON c.id = s.category_id
                WHERE c.kind = 'expense' AND t.pending_review = 0
                  AND (?1 IS NULL OR t.posted_date >= ?1)
                  AND (?2 IS NULL OR t.posted_date < ?2)
-                 AND (?3 IS NULL OR s.category_id = ?3)";
+               ORDER BY t.id";
     let mut stmt = conn.prepare(sql)?;
-    let rows = stmt.query_map(params![start_param, end_param, category_id], |row| {
+    let rows = stmt.query_map(params![start_param, end_param], |row| {
+        let tx_id: i64 = row.get("tx_id")?;
+        let tx_base_amount_minor: i64 = row.get("base_amount_minor")?;
+        let posted_date: String = row.get("posted_date")?;
         let category_id: i64 = row.get("category_id")?;
         let category_name: String = row.get("category_name")?;
         let amount_minor: i64 = row.get("amount_minor")?;
-        let fx_rate: String = row.get("fx_rate")?;
-        let posted_date: String = row.get("posted_date")?;
-        Ok((category_id, category_name, amount_minor, fx_rate, posted_date))
+        Ok((tx_id, tx_base_amount_minor, posted_date, category_id, category_name, amount_minor))
     })?;
 
-    let mut spend_rows = Vec::new();
+    // Group by transaction id: every split of one transaction shares its posted date and its
+    // (signed) base_amount_minor, which allocate_base distributes across the splits' magnitudes.
+    struct TxGroup {
+        base_amount_minor_abs: i64,
+        posted_date: NaiveDate,
+        splits: Vec<RawSplit>,
+    }
+    let mut groups: BTreeMap<i64, TxGroup> = BTreeMap::new();
     for row in rows {
-        let (category_id, category_name, amount_minor, fx_rate, posted_date) = row?;
-        // fx_rate is stored as a decimal string (never a float - see domain::transaction).
-        let rate = Decimal::from_str(fx_rate.trim()).map_err(|_| {
-            DbError::Invalid(format!("invalid fx rate stored on a transaction: {fx_rate}"))
-        })?;
-        // Splits are signed (negative for expense); base_amount_minor preserves the sign, so take
-        // the magnitude as the positive money-out figure the report displays.
-        let base = base_amount_minor(amount_minor, rate).abs();
+        let (tx_id, tx_base_amount_minor, posted_date, category_id, category_name, amount_minor) =
+            row?;
         let date = NaiveDate::parse_from_str(&posted_date, ISO_DATE).map_err(|_| {
             DbError::Invalid(format!("invalid posted date stored on a transaction: {posted_date}"))
         })?;
-        spend_rows.push(SpendRow {
-            category_id,
-            category_name,
-            base_amount_minor: base,
+        let group = groups.entry(tx_id).or_insert_with(|| TxGroup {
+            base_amount_minor_abs: tx_base_amount_minor.abs(),
             posted_date: date,
+            splits: Vec::new(),
         });
+        // Splits are signed (negative for expense); take the magnitude, allocate_base only deals
+        // in non-negative shares.
+        group.splits.push(RawSplit { category_id, category_name, magnitude_minor: amount_minor.abs() });
+    }
+
+    let mut spend_rows = Vec::new();
+    for (_, group) in groups {
+        let TxGroup { base_amount_minor_abs, posted_date, splits } = group;
+        let magnitudes: Vec<i64> = splits.iter().map(|s| s.magnitude_minor).collect();
+        let allocated = allocate_base(base_amount_minor_abs, &magnitudes);
+        for (split, base) in splits.into_iter().zip(allocated) {
+            spend_rows.push(SpendRow {
+                category_id: split.category_id,
+                category_name: split.category_name,
+                base_amount_minor: base,
+                posted_date,
+            });
+        }
+    }
+
+    // Apply the optional category filter AFTER allocation so sibling splits still inform it.
+    if let Some(cat_id) = category_id {
+        spend_rows.retain(|r| r.category_id == cat_id);
     }
 
     let granularity = choose_granularity(bounds);
     let by_category = spend_by_category(&spend_rows);
-    let over_time = spend_over_time(&spend_rows, granularity);
+    let over_time = spend_over_time(&spend_rows, granularity, bounds);
     let total_spend_minor = by_category.iter().map(|c| c.amount_minor).sum();
 
     Ok(ReportData {
@@ -168,6 +210,41 @@ mod tests {
         let data = report(&conn, ReportPeriod::AllTime, None, None, "MUR").unwrap();
         assert_eq!(data.total_spend_minor, 455_000);
         assert_eq!(data.by_category[0].amount_minor, 455_000);
+    }
+
+    #[test]
+    fn split_foreign_currency_transaction_reconciles_exactly_with_the_ledger() {
+        let conn = db();
+        // 2.00 USD split evenly (1.00 + 1.00) across two expense categories at fx 0.335. The
+        // transaction's own base_amount_minor is round(200 * 0.335) = 67 (exact - no rounding).
+        // Independently rounding each 100-minor split (100 * 0.335 = 33.5 -> 34) would sum to 68,
+        // one over the ledger total - the historical per-split rounding drift bug (issue review #2).
+        let tx = transactions::create(
+            &conn,
+            TxInput {
+                account_id: 1,
+                posted_date: "2026-07-05",
+                amount: "2.00",
+                currency: Some("USD"),
+                fx_rate: Some("0.335"),
+                splits: &[
+                    SplitInput { category_id: 1, amount: "1.00" },
+                    SplitInput { category_id: 2, amount: "1.00" },
+                ],
+                payee: None,
+                note: None,
+            },
+            "2026-07-05T00:00:00Z",
+        )
+        .unwrap();
+        assert_eq!(tx.base_amount_minor, -67, "sanity: the transaction's own stored base amount");
+
+        let data = report(&conn, ReportPeriod::AllTime, None, None, "MUR").unwrap();
+        assert_eq!(
+            data.total_spend_minor, 67,
+            "report total must reconcile exactly with the ledger's base_amount_minor, not 68"
+        );
+        assert_eq!(data.by_category.iter().map(|c| c.amount_minor).sum::<i64>(), 67);
     }
 
     #[test]

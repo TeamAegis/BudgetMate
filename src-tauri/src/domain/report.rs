@@ -3,7 +3,7 @@
 //! expense splits only, `pending_review` excluded) and this module only groups/sums/labels them.
 //! Money stays integer minor units throughout; no floats.
 
-use chrono::{Datelike, NaiveDate, Weekday};
+use chrono::{Datelike, Duration, NaiveDate, Weekday};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -190,6 +190,79 @@ pub fn spend_by_category(rows: &[SpendRow]) -> Vec<CategorySpend> {
     out
 }
 
+/// Distribute `parent_base_minor` (a transaction's own stored, already-fx-converted base amount -
+/// always non-negative here, the DB layer passes `abs()`) across `split_magnitudes` (each split's
+/// non-negative magnitude in the transaction's original currency) using the **largest-remainder
+/// method**, so the returned shares always sum EXACTLY to `parent_base_minor`.
+///
+/// This exists because rounding each split's base amount independently (`round(split * fx_rate)`)
+/// can drift by +/-1 minor unit from the transaction's own stored `base_amount_minor` - e.g. a
+/// 200-minor transaction at fx 0.335 has base 67 (200 * 0.335 = 67.0 exactly), but two 100-minor
+/// splits each independently round `100 * 0.335 = 33.5` to 34, summing to 68. Allocating from the
+/// parent's already-correct total, rather than re-deriving each split's own fx-rounded amount,
+/// keeps the report reconciled with the ledger.
+///
+/// Method: each split's exact (fractional) share is `parent_base_minor * magnitude / total`; take
+/// the integer floor of every share, then hand out the leftover (`parent_base_minor` minus the sum
+/// of floors - always `< split_magnitudes.len()` many minor units) one-by-one to the splits with
+/// the largest fractional remainder (ties broken by original index, for determinism). If every
+/// magnitude is zero (defensive - should not happen for a real split set, which requires positive
+/// amounts), the amount is instead spread as evenly as possible across the splits so the sum
+/// invariant still holds.
+///
+/// ```
+/// use app_lib::domain::report::allocate_base;
+///
+/// // The worked example above: reconciles to 67, not 68.
+/// assert_eq!(allocate_base(67, &[100, 100]), vec![34, 33]);
+/// // A single split gets the whole amount.
+/// assert_eq!(allocate_base(455_000, &[10_000]), vec![455_000]);
+/// ```
+pub fn allocate_base(parent_base_minor: i64, split_magnitudes: &[i64]) -> Vec<i64> {
+    let n = split_magnitudes.len();
+    if n == 0 {
+        return Vec::new();
+    }
+    let total: i64 = split_magnitudes.iter().sum();
+    if total == 0 {
+        return allocate_evenly(parent_base_minor, n);
+    }
+
+    let total_i128 = i128::from(total);
+    let parent_i128 = i128::from(parent_base_minor);
+    let mut shares = Vec::with_capacity(n);
+    let mut remainder_order: Vec<(i128, usize)> = Vec::with_capacity(n);
+    for (i, &magnitude) in split_magnitudes.iter().enumerate() {
+        let product = parent_i128 * i128::from(magnitude);
+        let floor = product.div_euclid(total_i128);
+        let remainder = product - floor * total_i128;
+        shares.push(floor as i64);
+        remainder_order.push((remainder, i));
+    }
+
+    let assigned: i64 = shares.iter().sum();
+    let leftover = parent_base_minor - assigned;
+    // Largest remainder first; tie-break by original index so the result is deterministic.
+    remainder_order.sort_by(|a, b| b.0.cmp(&a.0).then(a.1.cmp(&b.1)));
+    for &(_, i) in remainder_order.iter().take(leftover.max(0) as usize) {
+        shares[i] += 1;
+    }
+    shares
+}
+
+/// Spread `total` as evenly as possible across `n` shares (largest-remainder degenerate case: all
+/// weights equal), the leftover going to the first shares in order.
+fn allocate_evenly(total: i64, n: usize) -> Vec<i64> {
+    let n_i64 = n as i64;
+    let base = total.div_euclid(n_i64);
+    let leftover = total.rem_euclid(n_i64);
+    let mut shares = vec![base; n];
+    for share in shares.iter_mut().take(leftover.max(0) as usize) {
+        *share += 1;
+    }
+    shares
+}
+
 /// The first day of `date`'s bucket at `granularity` (day = itself, week = that week's Monday,
 /// month = the 1st of that month).
 fn bucket_start(date: NaiveDate, granularity: Granularity) -> NaiveDate {
@@ -210,14 +283,13 @@ fn bucket_label(start: NaiveDate, granularity: Granularity) -> String {
 
 /// Bucket spend by `granularity` and sum each bucket, in chronological order.
 ///
-/// Design choice (documented, not left implicit): buckets are only emitted for periods that
-/// actually have spend - a day/week/month with zero spend is simply absent rather than emitted as
-/// a zero-amount bucket. This keeps the response compact (an `AllTime` report over years of sparse
-/// data would otherwise carry thousands of empty daily buckets) and the aggregation trivially
-/// deterministic (a `BTreeMap` grouped by bucket start, sorted for free by `NaiveDate: Ord`). The
-/// line chart connects the points it is given, which for a budgeting app (spend is inherently
-/// bursty - rent once a month, groceries a few times a week) reads the same as a filled series
-/// would for the granularities we choose (§`choose_granularity`), without the extra payload.
+/// Design choice (documented, not left implicit): for a BOUNDED period (`bounds` is `Some((start,
+/// end_excl))` - every preset except `AllTime`), every bucket in `[start, end_excl)` is emitted,
+/// including zero-amount ones for a day/week/month with no spend. Without this, two sparse points
+/// far apart in time render as adjacent on the line chart's category x-axis, implying a trend
+/// between them that isn't there - the gap must be explicit. For `AllTime` (`bounds` is `None`,
+/// unbounded span), buckets stay sparse - only periods with spend are emitted - since an unbounded
+/// span could otherwise carry years of empty daily/monthly buckets for a compact payload no benefit.
 ///
 /// ```
 /// use app_lib::domain::report::{spend_over_time, Granularity, SpendRow};
@@ -230,30 +302,68 @@ fn bucket_label(start: NaiveDate, granularity: Granularity) -> String {
 ///     SpendRow { category_id: 2, category_name: "Dining".into(), base_amount_minor: 500, posted_date: d1 },
 ///     SpendRow { category_id: 1, category_name: "Groceries".into(), base_amount_minor: 200, posted_date: d2 },
 /// ];
-/// let buckets = spend_over_time(&rows, Granularity::Day);
-/// assert_eq!(buckets.len(), 2);
+/// // Bounded: every day in range is present, including the zero-spend gap on 2 Jul.
+/// let bounds = Some((d1, NaiveDate::from_ymd_opt(2026, 7, 4).unwrap()));
+/// let buckets = spend_over_time(&rows, Granularity::Day, bounds);
+/// assert_eq!(buckets.len(), 3);
 /// assert_eq!(buckets[0].amount_minor, 1_500);
-/// assert_eq!(buckets[1].amount_minor, 200);
+/// assert_eq!(buckets[1].amount_minor, 0);
+/// assert_eq!(buckets[2].amount_minor, 200);
+///
+/// // AllTime (no bounds): stays sparse, no gap-filling.
+/// let sparse = spend_over_time(&rows, Granularity::Day, None);
+/// assert_eq!(sparse.len(), 2);
 /// ```
-pub fn spend_over_time(rows: &[SpendRow], granularity: Granularity) -> Vec<TimeBucket> {
+pub fn spend_over_time(
+    rows: &[SpendRow],
+    granularity: Granularity,
+    bounds: Option<(NaiveDate, NaiveDate)>,
+) -> Vec<TimeBucket> {
     let mut totals: BTreeMap<NaiveDate, i64> = BTreeMap::new();
     for r in rows {
         let key = bucket_start(r.posted_date, granularity);
         *totals.entry(key).or_insert(0) += r.base_amount_minor;
     }
-    totals
+
+    let starts: Vec<NaiveDate> = match bounds {
+        Some((start, end_excl)) => enumerate_bucket_starts(start, end_excl, granularity),
+        None => totals.keys().copied().collect(),
+    };
+
+    starts
         .into_iter()
-        .map(|(start, amount_minor)| TimeBucket {
+        .map(|start| TimeBucket {
             label: bucket_label(start, granularity),
             start_date: start.format("%Y-%m-%d").to_string(),
-            amount_minor,
+            amount_minor: totals.get(&start).copied().unwrap_or(0),
         })
         .collect()
+}
+
+/// Every bucket start at `granularity` covering `[start, end_excl)`, in chronological order (used
+/// to gap-fill a bounded period - see `spend_over_time`).
+fn enumerate_bucket_starts(
+    start: NaiveDate,
+    end_excl: NaiveDate,
+    granularity: Granularity,
+) -> Vec<NaiveDate> {
+    let mut out = Vec::new();
+    let mut cur = bucket_start(start, granularity);
+    while cur < end_excl {
+        out.push(cur);
+        cur = match granularity {
+            Granularity::Day => cur + Duration::days(1),
+            Granularity::Week => cur + Duration::days(7),
+            Granularity::Month => add_months(cur, 1),
+        };
+    }
+    out
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use proptest::prelude::*;
 
     fn d(y: i32, m: u32, day: u32) -> NaiveDate {
         NaiveDate::from_ymd_opt(y, m, day).unwrap()
@@ -388,6 +498,57 @@ mod tests {
         assert!(spend_by_category(&[]).is_empty());
     }
 
+    // ---- allocate_base ----
+
+    #[test]
+    fn allocate_base_reconciles_the_fx_rounding_drift_example() {
+        // 200 minor @ fx 0.335 -> parent base 67 (exact); two 100-minor splits independently round
+        // 100 * 0.335 = 33.5 to 34 each (sum 68, one over) - allocate_base fixes that to 67.
+        assert_eq!(allocate_base(67, &[100, 100]), vec![34, 33]);
+    }
+
+    #[test]
+    fn allocate_base_single_split_gets_the_whole_amount() {
+        assert_eq!(allocate_base(455_000, &[10_000]), vec![455_000]);
+    }
+
+    #[test]
+    fn allocate_base_proportional_no_remainder() {
+        assert_eq!(allocate_base(300, &[100, 200]), vec![100, 200]);
+    }
+
+    #[test]
+    fn allocate_base_handles_zero_total_magnitude_defensively() {
+        // Should not happen for a real split set (amounts must be positive), but must still sum
+        // exactly rather than panic or divide by zero.
+        assert_eq!(allocate_base(10, &[0, 0, 0]).iter().sum::<i64>(), 10);
+    }
+
+    #[test]
+    fn allocate_base_empty_splits_returns_empty() {
+        assert!(allocate_base(0, &[]).is_empty());
+    }
+
+    #[test]
+    fn allocate_base_zero_parent_yields_all_zero_shares() {
+        assert_eq!(allocate_base(0, &[100, 200, 300]), vec![0, 0, 0]);
+    }
+
+    proptest! {
+        /// The allocated shares always sum EXACTLY to the parent base amount, for any non-negative
+        /// base and any vector of non-negative split magnitudes (matches the property-test style in
+        /// `domain::money`).
+        #[test]
+        fn prop_allocate_base_sums_exactly(
+            base in 0i64..1_000_000_000,
+            magnitudes in prop::collection::vec(0i64..1_000_000, 1..20),
+        ) {
+            let shares = allocate_base(base, &magnitudes);
+            prop_assert_eq!(shares.len(), magnitudes.len());
+            prop_assert_eq!(shares.iter().sum::<i64>(), base);
+        }
+    }
+
     // ---- spend_over_time ----
 
     #[test]
@@ -412,7 +573,7 @@ mod tests {
                 posted_date: d(2026, 7, 3),
             },
         ];
-        let buckets = spend_over_time(&rows, Granularity::Day);
+        let buckets = spend_over_time(&rows, Granularity::Day, None);
         assert_eq!(buckets.len(), 2);
         assert_eq!(buckets[0].start_date, "2026-07-01");
         assert_eq!(buckets[0].amount_minor, 1_500);
@@ -438,7 +599,7 @@ mod tests {
                 posted_date: d(2026, 7, 3),
             },
         ];
-        let buckets = spend_over_time(&rows, Granularity::Week);
+        let buckets = spend_over_time(&rows, Granularity::Week, None);
         assert_eq!(buckets.len(), 1);
         assert_eq!(buckets[0].start_date, "2026-06-29");
         assert_eq!(buckets[0].amount_minor, 1_000);
@@ -461,7 +622,7 @@ mod tests {
                 posted_date: d(2026, 7, 2),
             },
         ];
-        let buckets = spend_over_time(&rows, Granularity::Month);
+        let buckets = spend_over_time(&rows, Granularity::Month, None);
         // Chronological order even though input rows are not.
         assert_eq!(buckets[0].start_date, "2026-07-01");
         assert_eq!(buckets[0].label, "Jul 2026");
@@ -470,8 +631,65 @@ mod tests {
     }
 
     #[test]
-    fn no_gaps_are_filled_for_empty_periods() {
-        // Documented design choice: only buckets with spend are emitted (see spend_over_time docs).
+    fn bounded_period_fills_zero_amount_gaps() {
+        // A BOUNDED period (any preset but AllTime) must emit every bucket in range, including
+        // zero-spend gaps, so a sparse chart doesn't imply a false trend between distant points.
+        let rows = vec![
+            SpendRow {
+                category_id: 1,
+                category_name: "Groceries".into(),
+                base_amount_minor: 100,
+                posted_date: d(2026, 1, 15),
+            },
+            SpendRow {
+                category_id: 1,
+                category_name: "Groceries".into(),
+                base_amount_minor: 100,
+                posted_date: d(2026, 6, 1),
+            },
+        ];
+        let bounds = Some((d(2026, 1, 1), d(2026, 7, 1)));
+        let buckets = spend_over_time(&rows, Granularity::Month, bounds);
+        assert_eq!(buckets.len(), 6, "Jan through Jun, including zero-spend Feb-May");
+        assert_eq!(
+            buckets.iter().map(|b| b.start_date.as_str()).collect::<Vec<_>>(),
+            vec![
+                "2026-01-01",
+                "2026-02-01",
+                "2026-03-01",
+                "2026-04-01",
+                "2026-05-01",
+                "2026-06-01",
+            ]
+        );
+        assert_eq!(buckets[0].amount_minor, 100);
+        assert_eq!(buckets[1].amount_minor, 0, "Feb has no spend");
+        assert_eq!(buckets[2].amount_minor, 0, "Mar has no spend");
+        assert_eq!(buckets[3].amount_minor, 0, "Apr has no spend");
+        assert_eq!(buckets[4].amount_minor, 0, "May has no spend");
+        assert_eq!(buckets[5].amount_minor, 100);
+    }
+
+    #[test]
+    fn bounded_day_granularity_fills_every_day() {
+        let rows = vec![SpendRow {
+            category_id: 1,
+            category_name: "Groceries".into(),
+            base_amount_minor: 500,
+            posted_date: d(2026, 7, 1),
+        }];
+        let bounds = Some((d(2026, 7, 1), d(2026, 7, 4)));
+        let buckets = spend_over_time(&rows, Granularity::Day, bounds);
+        assert_eq!(buckets.len(), 3, "1, 2, 3 Jul");
+        assert_eq!(buckets[0].amount_minor, 500);
+        assert_eq!(buckets[1].amount_minor, 0);
+        assert_eq!(buckets[2].amount_minor, 0);
+    }
+
+    #[test]
+    fn all_time_stays_sparse_no_bounds() {
+        // Documented design choice: AllTime (no bounds) only emits buckets with spend, so an
+        // unbounded span doesn't carry years of empty buckets.
         let rows = vec![
             SpendRow {
                 category_id: 1,
@@ -486,13 +704,21 @@ mod tests {
                 posted_date: d(2026, 6, 1),
             },
         ];
-        let buckets = spend_over_time(&rows, Granularity::Month);
+        let buckets = spend_over_time(&rows, Granularity::Month, None);
         assert_eq!(buckets.len(), 2, "no zero-amount buckets for Feb-May");
     }
 
     #[test]
     fn empty_rows_produce_no_buckets() {
-        assert!(spend_over_time(&[], Granularity::Day).is_empty());
+        assert!(spend_over_time(&[], Granularity::Day, None).is_empty());
+    }
+
+    #[test]
+    fn empty_rows_with_bounds_still_fill_gaps() {
+        let bounds = Some((d(2026, 7, 1), d(2026, 7, 3)));
+        let buckets = spend_over_time(&[], Granularity::Day, bounds);
+        assert_eq!(buckets.len(), 2);
+        assert!(buckets.iter().all(|b| b.amount_minor == 0));
     }
 
     // ---- serde shape ----

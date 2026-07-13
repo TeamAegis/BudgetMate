@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import type { ChartConfiguration, TooltipItem } from 'chart.js';
 import { BaseChartDirective } from 'ng2-charts';
-import { chartColor } from '../../charts/chart-setup';
+import { chartColor, prefersReducedMotion } from '../../charts/chart-setup';
 import { MoneyPipe } from '../../pipes/money.pipe';
 import { CurrencyService } from '../../../core/money/currency.service';
 
@@ -78,15 +78,17 @@ export class LineChart {
     const currency = this.currency();
     const points = this.points();
     const gridColor = chartColor('--chart-grid');
+    const tickColor = chartColor('--c-text-muted');
     return {
       responsive: true,
       maintainAspectRatio: false,
+      animation: prefersReducedMotion() ? false : undefined,
       scales: {
-        x: { grid: { display: false } },
-        y: { grid: { color: gridColor }, beginAtZero: true },
+        x: { grid: { display: false }, ticks: { color: tickColor } },
+        y: { grid: { color: gridColor }, beginAtZero: true, ticks: { color: tickColor } },
       },
       plugins: {
-        legend: { display: true, position: 'bottom', labels: { boxWidth: 12 } },
+        legend: { display: true, position: 'bottom', labels: { boxWidth: 12, color: tickColor } },
         tooltip: {
           callbacks: {
             label: (item: TooltipItem<'line'>) => {
