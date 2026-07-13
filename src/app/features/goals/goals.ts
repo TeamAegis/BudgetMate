@@ -72,8 +72,8 @@ export class Goals implements OnInit {
     void this.router.navigate(['/goals/new']);
   }
 
-  /** Open the edit page, handing the row over via router state (fast path; refresh refetches). */
-  protected editGoal(g: Goal): void {
-    void this.router.navigate(['/goals', g.id, 'edit'], { state: { goal: g } });
+  /** Open the read-only detail page, handing the row over via router state (fast path; refetches). */
+  protected openGoal(g: Goal): void {
+    void this.router.navigate(['/goals', g.id], { state: { goal: g } });
   }
 }

@@ -77,6 +77,15 @@ export const routes: Routes = [
       import('./features/transactions/transaction-form').then((m) => m.TransactionForm),
   },
   {
+    // Read-only detail (issue I5): the list card taps here; Edit -> :id/edit, Delete = header icon.
+    // Declared AFTER expenses/new* so the literal add routes still win over this :id param route.
+    path: 'expenses/:id',
+    canActivate: [unlockGuard],
+    data: { title: 'Transaction', back: true, hideNav: true },
+    loadComponent: () =>
+      import('./features/transactions/transaction-detail').then((m) => m.TransactionDetail),
+  },
+  {
     path: 'goals',
     canActivate: [unlockGuard],
     data: { title: 'Goals' },
@@ -93,6 +102,13 @@ export const routes: Routes = [
     canActivate: [unlockGuard],
     data: { title: 'Edit goal', back: true, hideNav: true },
     loadComponent: () => import('./features/goals/goal-form').then((m) => m.GoalForm),
+  },
+  {
+    // Read-only detail (issue I5); declared after goals/new so the literal add route still wins.
+    path: 'goals/:id',
+    canActivate: [unlockGuard],
+    data: { title: 'Goal', back: true, hideNav: true },
+    loadComponent: () => import('./features/goals/goal-detail').then((m) => m.GoalDetail),
   },
   {
     path: 'analytics',

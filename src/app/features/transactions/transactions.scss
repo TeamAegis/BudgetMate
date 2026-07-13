@@ -39,6 +39,12 @@
   white-space: nowrap;
 }
 
+// Trailing affordance now that the whole row taps through to the detail page (issue I5).
+.chevron {
+  flex: none;
+  color: var(--c-text-muted);
+}
+
 .date-group {
   display: flex;
   flex-direction: column;

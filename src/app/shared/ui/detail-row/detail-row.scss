@@ -1,0 +1,25 @@
+// Read-only label/value row for detail pages (TransactionDetail, GoalDetail). Tokens only.
+:host {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--c-border);
+}
+:host:last-child {
+  border-bottom: none;
+}
+
+.dr-label {
+  flex: none;
+  font-size: var(--t-caption);
+  color: var(--c-text-muted);
+}
+.dr-value {
+  min-width: 0;
+  text-align: right;
+  font-size: var(--t-body);
+  color: var(--c-text);
+  overflow-wrap: anywhere;
+}

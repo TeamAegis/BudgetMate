@@ -1,0 +1,83 @@
+<section class="feature-page detail-page">
+  @if (error(); as err) {
+    <app-banner>{{ err }}</app-banner>
+  }
+
+  @if (loading()) {
+    <div class="detail-skeleton" aria-busy="true">
+      <app-skeleton variant="text" width="40%" />
+      <app-skeleton variant="block" height="88px" />
+      <app-skeleton variant="text" width="70%" />
+      <app-skeleton variant="text" width="55%" />
+    </div>
+  } @else if (notFound()) {
+    <app-empty-state
+      [fill]="true"
+      image="assets/illustrations/get-started.svg"
+      message="This transaction no longer exists."
+      cta="Back to expenses"
+      (action)="backToList()"
+    />
+  } @else if (tx(); as t) {
+    @if (t.pendingReview) {
+      <app-banner>Needs review: this entry was flagged as a possible duplicate.</app-banner>
+    }
+
+    <div class="hero">
+      <span
+        class="amount numeric"
+        [class.income]="t.amountMinor > 0"
+        [class.expense]="t.amountMinor < 0"
+        >{{ { amountMinor: t.amountMinor, currency: t.currency } | money: true }}</span
+      >
+      @if (t.currency !== baseCurrency()) {
+        <small class="base numeric"
+          >≈ {{ { amountMinor: t.baseAmountMinor, currency: baseCurrency() } | money }}</small
+        >
+      }
+    </div>
+
+    <div class="detail-list">
+      <div app-detail-row label="Type" [value]="typeLabel()"></div>
+      <div app-detail-row label="Date" [value]="t.postedDate"></div>
+      <div app-detail-row label="Account" [value]="accountName(t.accountId)"></div>
+
+      @if (t.splits.length <= 1) {
+        <div app-detail-row label="Category" [value]="t.splits[0]?.categoryName ?? '-'"></div>
+      } @else {
+        <div app-detail-row label="Categories">
+          <ul class="splits">
+            @for (s of t.splits; track s.id) {
+              <li>
+                <span class="split-cat">{{ s.categoryName }}</span>
+                <span class="numeric">{{
+                  { amountMinor: s.amountMinor, currency: t.currency } | money
+                }}</span>
+              </li>
+            }
+          </ul>
+        </div>
+      }
+
+      @if (t.payee) {
+        <div app-detail-row label="Payee" [value]="t.payee"></div>
+      }
+      @if (t.note) {
+        <div app-detail-row label="Note" [value]="t.note"></div>
+      }
+    </div>
+
+    <app-form-actions label="Edit" [disabled]="busy()" (save)="edit()" />
+
+    @if (confirmingDelete()) {
+      <app-confirm-dialog
+        title="Delete transaction?"
+        message="This can't be undone."
+        confirmLabel="Delete"
+        [busy]="busy()"
+        (confirm)="deleteConfirmed()"
+        (cancelled)="confirmingDelete.set(false)"
+      />
+    }
+  }
+</section>

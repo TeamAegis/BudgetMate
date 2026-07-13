@@ -1,0 +1,50 @@
+<section class="feature-page detail-page">
+  @if (error(); as err) {
+    <app-banner>{{ err }}</app-banner>
+  }
+
+  @if (loading()) {
+    <div class="detail-skeleton" aria-busy="true">
+      <app-skeleton variant="text" width="45%" />
+      <app-skeleton variant="block" height="84px" />
+      <app-skeleton variant="text" width="60%" />
+    </div>
+  } @else if (notFound()) {
+    <app-empty-state
+      [fill]="true"
+      image="assets/illustrations/get-started.svg"
+      message="This goal no longer exists."
+      cta="Back to goals"
+      (action)="backToList()"
+    />
+  } @else if (goal(); as g) {
+    <app-goal-progress-row
+      [interactive]="false"
+      [name]="g.name"
+      [currentMinor]="g.currentMinor"
+      [targetMinor]="g.targetMinor"
+      [currency]="g.currency"
+      [completed]="g.completed"
+    />
+
+    <div class="detail-list">
+      <div app-detail-row label="Status" [value]="g.completed ? 'Completed' : 'In progress'"></div>
+      @if (g.targetDate) {
+        <div app-detail-row label="Target date" [value]="g.targetDate"></div>
+      }
+    </div>
+
+    <app-form-actions label="Edit" [disabled]="busy()" (save)="edit()" />
+
+    @if (confirmingDelete()) {
+      <app-confirm-dialog
+        title="Delete goal?"
+        message="This can't be undone."
+        confirmLabel="Delete"
+        [busy]="busy()"
+        (confirm)="deleteConfirmed()"
+        (cancelled)="confirmingDelete.set(false)"
+      />
+    }
+  }
+</section>

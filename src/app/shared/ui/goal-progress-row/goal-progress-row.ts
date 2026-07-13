@@ -15,37 +15,61 @@ import { MoneyPipe } from '../../pipes/money.pipe';
  * fill knob + `current / target` amounts. The fill animates from 0 on mount (honours
  * reduced-motion). **Completed** state: full track + trailing check icon + strikethrough title -
  * meaning is conveyed by icon + text, never colour alone (a11y). Display-only: progress is derived
- * from the saved amount, not dragged. Dumb component - the whole row is a button that emits `edit`;
- * the feature opens the edit modal in response.
+ * from the saved amount, not dragged. Dumb component.
+ *
+ * By default the whole row is a button that emits `open`; the feature opens the goal DETAIL page in
+ * response (issue I5). When `interactive` is false (e.g. the goal-detail hero) it renders as a
+ * static, non-interactive row with the same visuals.
  */
 @Component({
   selector: 'app-goal-progress-row',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [MoneyPipe, LucideCheck],
   template: `
-    <button
-      type="button"
-      class="goal-row"
-      (click)="edit.emit()"
-      [attr.aria-label]="name() + (completed() ? ' - completed' : '')"
-    >
-      <div class="head">
-        <span class="name" [class.done]="completed()">{{ name() }}</span>
-        @if (completed()) {
-          <svg lucideCheck [size]="18" class="check" aria-hidden="true"></svg>
-        }
-      </div>
-      <div class="track" [class.done]="completed()">
-        <div class="fill" [style.width.%]="ready() ? percent() : 0">
-          <span class="knob"></span>
+    @if (interactive()) {
+      <button
+        type="button"
+        class="goal-row"
+        (click)="open.emit()"
+        [attr.aria-label]="name() + (completed() ? ' - completed' : '')"
+      >
+        <div class="head">
+          <span class="name" [class.done]="completed()">{{ name() }}</span>
+          @if (completed()) {
+            <svg lucideCheck [size]="18" class="check" aria-hidden="true"></svg>
+          }
+        </div>
+        <div class="track" [class.done]="completed()">
+          <div class="fill" [style.width.%]="ready() ? percent() : 0">
+            <span class="knob"></span>
+          </div>
+        </div>
+        <div class="amounts" [class.done]="completed()">
+          <span class="current">{{ { amountMinor: currentMinor(), currency: currency() } | money }}</span>
+          <span class="sep">/</span>
+          <span class="target">{{ { amountMinor: targetMinor(), currency: currency() } | money }}</span>
+        </div>
+      </button>
+    } @else {
+      <div class="goal-row static">
+        <div class="head">
+          <span class="name" [class.done]="completed()">{{ name() }}</span>
+          @if (completed()) {
+            <svg lucideCheck [size]="18" class="check" aria-hidden="true"></svg>
+          }
+        </div>
+        <div class="track" [class.done]="completed()">
+          <div class="fill" [style.width.%]="ready() ? percent() : 0">
+            <span class="knob"></span>
+          </div>
+        </div>
+        <div class="amounts" [class.done]="completed()">
+          <span class="current">{{ { amountMinor: currentMinor(), currency: currency() } | money }}</span>
+          <span class="sep">/</span>
+          <span class="target">{{ { amountMinor: targetMinor(), currency: currency() } | money }}</span>
         </div>
       </div>
-      <div class="amounts" [class.done]="completed()">
-        <span class="current">{{ { amountMinor: currentMinor(), currency: currency() } | money }}</span>
-        <span class="sep">/</span>
-        <span class="target">{{ { amountMinor: targetMinor(), currency: currency() } | money }}</span>
-      </div>
-    </button>
+    }
   `,
   styleUrl: './goal-progress-row.scss',
 })
@@ -55,9 +79,12 @@ export class GoalProgressRow {
   readonly targetMinor = input.required<number>();
   readonly currency = input.required<string>();
   readonly completed = input(false);
-  readonly edit = output<void>();
+  /** When false, render a static (non-button) row - for the goal-detail hero. */
+  readonly interactive = input(true);
+  /** Emitted when the interactive row is activated; the feature opens the goal detail page. */
+  readonly open = output<void>();
 
-  /** Flips true after first render so the fill transitions from 0 → percent (reduced-motion safe). */
+  /** Flips true after first render so the fill transitions from 0 -> percent (reduced-motion safe). */
   protected readonly ready = signal(false);
 
   /** Fill fraction, clamped to 0-100 (a guard, not money math - the value comes from Rust). */

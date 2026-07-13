@@ -1,11 +1,10 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { LucidePencil } from '@lucide/angular';
+import { LucideChevronRight } from '@lucide/angular';
 import { listTransactions, listAccounts, getSettings, toUserMessage, isTauri } from '../../core/bridge';
 import type { Transaction, Account } from '../../core/models';
 import { MoneyPipe } from '../../shared/pipes/money.pipe';
 import { FabMenu, type FabMenuItem } from '../../shared/ui/fab-menu/fab-menu';
-import { IconButton } from '../../shared/ui/icon-button/icon-button';
 import { Banner } from '../../shared/ui/banner/banner';
 import { EmptyState } from '../../shared/ui/empty-state/empty-state';
 import { ListRow } from '../../shared/ui/list-row/list-row';
@@ -26,22 +25,13 @@ interface DateGroup {
 
 /**
  * Transaction list (FR-1.1). Smart component: reads transactions/accounts through the bridge and
- * renders with shared/ui. Add/Edit are full-screen pages (`expenses/new`, `expenses/:id/edit`) - the
- * row's edit button and the FAB navigate there; this component never owns a form or a modal. All
- * money formatting goes through the `money` pipe (logic stays in Rust).
+ * renders with shared/ui. Tapping a row opens the read-only detail page (`expenses/:id`), where Edit
+ * and Delete live (issue I5); the FAB adds a new entry. This component never owns a form or a modal.
+ * All money formatting goes through the `money` pipe (logic stays in Rust).
  */
 @Component({
   selector: 'app-transactions',
-  imports: [
-    MoneyPipe,
-    LucidePencil,
-    FabMenu,
-    IconButton,
-    Banner,
-    EmptyState,
-    ListRow,
-    Skeleton,
-  ],
+  imports: [MoneyPipe, LucideChevronRight, FabMenu, Banner, EmptyState, ListRow, Skeleton],
   templateUrl: './transactions.html',
   styleUrl: './transactions.scss',
 })
@@ -141,8 +131,8 @@ export class Transactions implements OnInit {
     else this.addTransaction();
   }
 
-  /** Open the edit page, handing the row over via router state (fast path; refresh refetches). */
-  protected editTransaction(t: Transaction): void {
-    void this.router.navigate(['/expenses', t.id, 'edit'], { state: { transaction: t } });
+  /** Open the read-only detail page, handing the row over via router state (fast path; refetches). */
+  protected openTransaction(t: Transaction): void {
+    void this.router.navigate(['/expenses', t.id], { state: { transaction: t } });
   }
 }
