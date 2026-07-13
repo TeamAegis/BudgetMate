@@ -90,7 +90,10 @@ pub fn delete(conn: &Connection, id: i64) -> Result<(), DbError> {
 
 /// Sum one category's expense splits (base currency) posted within `[start_date, end_date]`
 /// (inclusive, ISO `yyyy-mm-dd` strings). Only `categories.kind = 'expense'` splits count -
-/// income/transfer splits never contribute to spend.
+/// income/transfer splits never contribute to spend. Splits whose parent transaction is flagged
+/// `pending_review` (dedup, FR-2.4) are excluded too: a probable duplicate awaiting the user's
+/// confirmation must never inflate envelope spend. Nothing sets that flag yet (dedup wiring is
+/// still ahead), so this filter is currently inert but keeps the read model forward-correct.
 fn spend_for_category(
     conn: &Connection,
     category_id: i64,
@@ -103,6 +106,7 @@ fn spend_for_category(
                JOIN categories c ON c.id = s.category_id
                WHERE s.category_id = ?1
                  AND c.kind = 'expense'
+                 AND t.pending_review = 0
                  AND t.posted_date >= ?2
                  AND t.posted_date <= ?3";
     let mut stmt = conn.prepare(sql)?;
@@ -192,7 +196,9 @@ mod tests {
     // Seeded: account 1 = Cash (MUR); category 1 = Groceries (expense), 2 = Dining (expense),
     // 9 = Salary (income).
 
-    fn expense(conn: &Connection, category_id: i64, amount: &str, date: &str) {
+    /// Insert a single-category expense; returns the new transaction id (used by tests that need
+    /// to target one row, e.g. flipping `pending_review`).
+    fn expense(conn: &Connection, category_id: i64, amount: &str, date: &str) -> i64 {
         create_tx(
             conn,
             TxInput {
@@ -207,7 +213,8 @@ mod tests {
             },
             "2026-06-06T10:00:00Z",
         )
-        .unwrap();
+        .unwrap()
+        .id
     }
 
     #[test]
@@ -328,6 +335,75 @@ mod tests {
         let envelopes = list_envelopes(&conn, "2026-06-01", "2026-06-30", "MUR").unwrap();
         // 100.00 USD @ 45.5 -> base 4550.00 MUR -> 455000 minor.
         assert_eq!(envelopes[0].spent_minor, 455_000);
+    }
+
+    #[test]
+    fn spend_never_counts_a_pending_review_transaction() {
+        let conn = db();
+        create(&conn, 1, 10_000).unwrap(); // Groceries cap 100.00
+        expense(&conn, 1, "20.00", "2026-06-10"); // pending_review sibling (not counted)
+        let counted = expense(&conn, 1, "30.00", "2026-06-12"); // counted normally
+
+        conn.execute(
+            "UPDATE transactions SET pending_review = 1 WHERE id != ?1",
+            params![counted],
+        )
+        .unwrap();
+
+        let envelopes = list_envelopes(&conn, "2026-06-01", "2026-06-30", "MUR").unwrap();
+        assert_eq!(
+            envelopes[0].spent_minor, 3_000,
+            "only the non-pending_review transaction counts toward envelope spend"
+        );
+    }
+
+    /// `spend_from_splits` converts each split to base currency independently and rounds each
+    /// conversion on its own, whereas `transactions.base_amount_minor` rounds ONCE over the whole
+    /// parent amount. For a transaction that is BOTH split across categories AND in a foreign
+    /// currency, those two roundings can legitimately disagree by a minor unit or two - this is
+    /// accepted v1 behaviour (see the doc-comment on `domain::budget::spend_from_splits`), not a
+    /// bug. This test locks in a concrete case so the gap can't silently change size.
+    #[test]
+    fn split_plus_fx_transaction_spend_can_differ_from_the_parents_own_base_amount_by_rounding() {
+        let conn = db();
+        create(&conn, 1, 1_000_000).unwrap(); // Groceries
+        create(&conn, 2, 1_000_000).unwrap(); // Dining
+
+        // $2.00 USD @ 0.005, split evenly $1.00 / $1.00 across the two categories.
+        // Each split converts as round(100 * 0.005) = round(0.5) = 0 (round-half-to-even), so the
+        // two envelopes' combined spend is 0 - but the parent's own base_amount_minor rounds the
+        // whole $2.00 at once: round(200 * 0.005) = round(1.0) = 1. The per-split view (0) and the
+        // parent's single-rounded view (1) disagree by one minor unit.
+        let tx = create_tx(
+            &conn,
+            TxInput {
+                account_id: 1,
+                posted_date: "2026-06-10",
+                amount: "2.00",
+                currency: Some("USD"),
+                fx_rate: Some("0.005"),
+                splits: &[
+                    SplitInput { category_id: 1, amount: "1.00" },
+                    SplitInput { category_id: 2, amount: "1.00" },
+                ],
+                payee: None,
+                note: None,
+            },
+            "2026-06-06T10:00:00Z",
+        )
+        .unwrap();
+        assert_eq!(tx.base_amount_minor, -1, "parent rounds the whole amount once");
+
+        let envelopes = list_envelopes(&conn, "2026-06-01", "2026-06-30", "MUR").unwrap();
+        let groceries = envelopes.iter().find(|e| e.category_name == "Groceries").unwrap();
+        let dining = envelopes.iter().find(|e| e.category_name == "Dining").unwrap();
+        assert_eq!(groceries.spent_minor, 0);
+        assert_eq!(dining.spent_minor, 0);
+        assert_ne!(
+            groceries.spent_minor + dining.spent_minor,
+            tx.base_amount_minor.unsigned_abs() as i64,
+            "documented rounding-allocation gap between per-split spend and the parent's own base_amount_minor"
+        );
     }
 
     #[test]

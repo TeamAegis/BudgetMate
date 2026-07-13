@@ -25,6 +25,19 @@
   text-align: right;
 }
 
+// Plain informational display for the read-only Category field on the edit page. Not an <input>
+// (never disabled/unavailable to assistive tech) - just styled to read as a field so it still looks
+// like part of the form; the value is announced normally by a screen reader and the hint stays
+// associated via the surrounding app-form-field label.
+.category-value {
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  background: var(--c-surface);
+  color: var(--c-text);
+}
+
 .all-budgeted {
   margin: var(--space-6) 0 0;
   color: var(--c-text-muted);

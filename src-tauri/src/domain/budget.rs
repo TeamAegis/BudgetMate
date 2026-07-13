@@ -93,9 +93,18 @@ pub fn envelope_status(cap_minor: i64, spent_minor: i64) -> EnvelopeStatus {
 
 /// Sum a category's expense splits for a period into a positive "money out" total, in base
 /// currency. Each split is `(signed_split_amount_minor, transaction_fx_rate)`; expense splits are
-/// stored negative (`domain::transaction::signed_amount`), so the base conversion is negated. The
-/// per-row conversion is the exact same `base_amount_minor` used for `transactions.base_amount_minor`,
-/// so this can never drift from how the ledger itself computes base amounts.
+/// stored negative (`domain::transaction::signed_amount`), so the base conversion is negated. Each
+/// split is converted with the exact same `base_amount_minor` rounding used for
+/// `transactions.base_amount_minor` - but independently, per split, not by allocating a slice of
+/// the parent's own single rounded base amount. For a transaction that is BOTH split across more
+/// than one category AND in a foreign currency (`fx_rate != 1`), that means the sum of these
+/// per-split conversions can differ from `transactions.base_amount_minor` by a minor unit or two:
+/// the parent rounds once over the whole amount, while this rounds each split separately, so
+/// per-split fractional-cent rounding does not necessarily cancel back to the parent's total. This
+/// bounded rounding-allocation gap is accepted v1 behaviour (the finance-validator role cleared
+/// it, per issue #16 review) - a category's envelope spend is the base-currency value of exactly
+/// its own splits, not a re-derived slice of the parent total. Do not "fix" this by re-deriving
+/// spend from `transactions.base_amount_minor` without re-checking that decision.
 pub fn spend_from_splits(splits: &[(i64, Decimal)]) -> i64 {
     splits
         .iter()

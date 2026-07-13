@@ -17,7 +17,7 @@
     <form class="form-body" [formGroup]="form" (ngSubmit)="save()">
       @if (editing()) {
         <app-form-field label="Category" hint="Not editable - delete and re-add to change the category">
-          <input type="text" [value]="categoryName()" readonly disabled />
+          <p class="category-value">{{ categoryName() }}</p>
         </app-form-field>
       } @else {
         <app-form-field label="Category" [error]="categoryError()">
