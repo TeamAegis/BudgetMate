@@ -6,6 +6,7 @@ pub mod categories;
 pub mod goals;
 pub mod ocr;
 pub mod recurring;
+pub mod report;
 pub mod rules;
 pub mod transactions;
 pub mod vault;

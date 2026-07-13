@@ -1,0 +1,81 @@
+<section class="feature-page">
+  @if (loading()) {
+    <div class="skeletons" aria-busy="true">
+      <app-skeleton variant="block" height="44px" />
+      <app-skeleton variant="block" height="72px" />
+      <app-skeleton variant="block" height="240px" />
+      <app-skeleton variant="block" height="240px" />
+    </div>
+  } @else if (error() && !data()) {
+    <app-banner>{{ error() }}</app-banner>
+    <app-button variant="primary" (click)="retry()">Try again</app-button>
+  } @else if (data(); as report) {
+    @if (error()) {
+      <app-banner tone="warning">{{ error() }}</app-banner>
+    }
+
+    <div class="filters">
+      <app-segmented-toggle
+        ariaLabel="Period"
+        [options]="periodOptions"
+        [value]="period()"
+        (valueChange)="onPeriodChange($event)"
+      />
+      <app-select-field
+        ariaLabel="Category filter"
+        [options]="categoryOptions()"
+        [value]="categoryFilter()"
+        (valueChange)="onCategoryChange($event)"
+      />
+    </div>
+
+    @switch (emptyKind()) {
+      @case ('category') {
+        <app-empty-state
+          [fill]="true"
+          message="No spending in this category for the selected period."
+          cta="Clear filter"
+          (action)="clearCategoryFilter()"
+        />
+      }
+      @case ('period') {
+        <app-empty-state
+          [fill]="true"
+          message="No spending recorded for this period."
+          cta="View all time"
+          (action)="viewAllTime()"
+        />
+      }
+      @case ('none') {
+        <app-empty-state
+          [fill]="true"
+          image="assets/illustrations/analytics.svg"
+          message="No spending to chart yet. Add a few expenses and your spending by category and over time will appear here."
+          cta="Add an expense"
+          (action)="addExpense()"
+        />
+      }
+      @default {
+        <app-card class="total" [attr.aria-busy]="refreshing() || null">
+          <span class="label">Total spend</span>
+          <span class="amount numeric">{{
+            { amountMinor: report.totalSpendMinor, currency: report.baseCurrency } | money
+          }}</span>
+          @if (refreshing()) {
+            <app-spinner [size]="18" label="Updating" />
+          }
+        </app-card>
+
+        <app-card>
+          <h2>Spend by category</h2>
+          <app-pie-chart [slices]="pieSlices()" [currency]="report.baseCurrency" />
+        </app-card>
+
+        <app-card>
+          <h2>Spend over time</h2>
+          <app-line-chart [points]="linePoints()" [currency]="report.baseCurrency" />
+        </app-card>
+      }
+    }
+  }
+</section>

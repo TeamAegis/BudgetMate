@@ -30,6 +30,12 @@
     "shadowPink": "rgba(255,203,203,0.29)",
     "scrim": "rgba(0,0,0,0.40)"
   },
+  "chart": {
+    "categorical": ["#FF7755", "#3A86C8", "#2E9E6B", "#E8A13A", "#8B5FBF", "#2BA9A1", "#D6598F", "#5A5A5A"],
+    "line": "#D84F2C",
+    "grid": "#ECECEC",
+    "height": 240
+  },
   "elevation": {
     "card": "5px 5px 0px 0px rgba(255,203,203,0.29)",
     "float": "0 6px 16px rgba(0,0,0,0.12)"

@@ -31,4 +31,15 @@ export class CurrencyService {
   fractionDigits(currency: string): number {
     return this.digitsByCode.get(currency.toUpperCase()) ?? this.defaultDigits;
   }
+
+  /**
+   * Scale integer minor units to a major-unit number for `currency` (e.g. 1_500 minor -> 15 for a
+   * 2-digit currency). Presentation-only unit scaling - the same divide `MoneyPipe` performs
+   * internally, using the authoritative Rust digit table via `fractionDigits` rather than a
+   * hand-rolled `/100`. Used only to feed a chart axis/plot value, which is then labelled/tooltipped
+   * through the money pipe - never for money arithmetic.
+   */
+  toMajor(amountMinor: number, currency: string): number {
+    return amountMinor / Math.pow(10, this.fractionDigits(currency));
+  }
 }

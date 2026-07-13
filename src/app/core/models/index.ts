@@ -356,6 +356,47 @@ export interface UpdateGoal extends NewGoal {
   id: number;
 }
 
+// ── Reporting (FR-3.3, mirror domain::report) ────────────────────────────────────
+
+/** Analytics period preset (mirrors Rust `ReportPeriod`). Drives the period filter. */
+export type ReportPeriod = 'thisMonth' | 'last3Months' | 'thisYear' | 'allTime';
+
+/** Spend-over-time bucket size (mirrors Rust `Granularity`), chosen by Rust from the period span. */
+export type Granularity = 'day' | 'week' | 'month';
+
+/** Total spend for one expense category over the report period (mirrors Rust `CategorySpend`). */
+export interface CategorySpend {
+  categoryId: number;
+  categoryName: string;
+  amountMinor: number;
+}
+
+/**
+ * Total spend for one time bucket (mirrors Rust `TimeBucket`). `label` is a short Rust-formatted
+ * display string (e.g. "13 Jul", "Wk of 07 Jul", "Jul 2026") - never re-derive date formatting in
+ * TS. `startDate` is the bucket's first day in ISO `YYYY-MM-DD`.
+ */
+export interface TimeBucket {
+  label: string;
+  startDate: string;
+  amountMinor: number;
+}
+
+/**
+ * The Analytics report (mirrors Rust `ReportData`, from `get_report`). `byCategory` feeds the pie
+ * chart, `overTime` the line chart; `totalSpendMinor` is the sum of `byCategory` in
+ * `baseCurrency` (the vault's reporting currency, not necessarily every transaction's own
+ * currency). EXPENSE splits only; income/transfers and `pendingReview` transactions never appear.
+ */
+export interface ReportData {
+  baseCurrency: Iso4217;
+  period: ReportPeriod;
+  totalSpendMinor: number;
+  byCategory: CategorySpend[];
+  overTime: TimeBucket[];
+  granularity: Granularity;
+}
+
 // Errors (IPC rejections) ----------------------------------------------------------
 
 /** Discriminant of an `AppError` (mirrors Rust `error::AppError`, adjacently tagged on `kind`). */
