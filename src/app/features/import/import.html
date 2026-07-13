@@ -90,6 +90,7 @@
           label="Total"
           hint="The final amount you paid, including tax. Verify the currency on the next step."
           [flag]="totalNotDetected() ? 'Not detected - please enter' : null"
+          [error]="totalError()"
         >
           <input type="text" inputmode="decimal" formControlName="total" placeholder="0.00" class="numeric" />
         </app-form-field>

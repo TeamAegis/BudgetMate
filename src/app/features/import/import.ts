@@ -6,6 +6,7 @@ import { LucideScanLine, LucideTriangleAlert } from '@lucide/angular';
 import { extractReceipt, pickReceiptImage, getSettings, isTauri } from '../../core/bridge';
 import { LockService } from '../../core/lock/lock.service';
 import { CurrencyService } from '../../core/money/currency.service';
+import { maxFractionDigits } from '../../core/money/amount-validators';
 import type { TransactionPrefill } from '../../core/models';
 import { MoneyPipe } from '../../shared/pipes/money.pipe';
 import { Button } from '../../shared/ui/button/button';
@@ -79,7 +80,10 @@ export class Import {
   protected readonly form = this.fb.nonNullable.group({
     merchant: this.fb.nonNullable.control(''),
     date: this.fb.nonNullable.control(''),
-    total: this.fb.nonNullable.control('', Validators.pattern(DECIMAL)),
+    total: this.fb.nonNullable.control('', [
+      Validators.pattern(DECIMAL),
+      maxFractionDigits(() => this.fractionDigits(this.baseCurrency())),
+    ]),
   });
 
   // Reactive mirrors of the control values (form.reset(...) emits valueChanges, so the initial
@@ -145,6 +149,9 @@ export class Import {
     try {
       const [result, settings] = await Promise.all([extractReceipt(path), getSettings()]);
       this.baseCurrency.set(settings.baseCurrency);
+      // The max-fraction-digits cap depends on the base currency, only known once settings load -
+      // re-check a preset total against it now that it's authoritative.
+      this.form.controls.total.updateValueAndValidity({ emitEvent: false });
       if (!result.engineAvailable) {
         this.phase.set('unavailable');
         return;
@@ -207,6 +214,16 @@ export class Import {
   /** Minor-unit digits for a currency (Rust's authoritative table, same one the money pipe uses). */
   private fractionDigits(currency: string): number {
     return this.currency.fractionDigits(currency);
+  }
+
+  /** Inline "too many decimal places" message for the total field (base currency; touched + invalid only). */
+  protected totalError(): string | null {
+    const c = this.form.controls.total;
+    if (!c.invalid || !c.touched || !c.hasError('maxFractionDigits')) return null;
+    const cur = this.baseCurrency();
+    const max = this.fractionDigits(cur);
+    if (max === 0) return `Amounts in ${cur} don't use decimal places.`;
+    return `Amounts in ${cur} use at most ${max} decimal place${max === 1 ? '' : 's'}.`;
   }
 
   /** Exact major-unit string for a base-currency minor-unit total (display/edit only - no money math). */

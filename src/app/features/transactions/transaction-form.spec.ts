@@ -91,3 +91,54 @@ describe('TransactionForm - patchForCreate multi-currency prefill', () => {
     expect(component.form.controls.accountId.value).toBe(2);
   });
 });
+
+/**
+ * Regression coverage for issue #86 (client-side amount precision cap). Rust's `parse_minor` already
+ * rejects an over-precise amount on Save (`MoneyParseError::TooPrecise`) - this only checks the
+ * `maxFractionDigits` validator is actually wired to the `amount` control for the selected currency,
+ * catching the mistake before the round trip. Same construction pattern as the suite above (no
+ * `ngOnInit`, so no bridge call happens).
+ */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+describe('TransactionForm - amount precision cap', () => {
+  function createComponent(): any {
+    TestBed.configureTestingModule({
+      imports: [TransactionForm],
+      providers: [
+        provideRouter([]),
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: { paramMap: convertToParamMap({ kind: 'expense', categoryId: '0' }) },
+          },
+        },
+      ],
+    });
+    (TestBed.inject(CurrencyService) as any).digitsByCode.set('JPY', 0);
+    return TestBed.createComponent(TransactionForm).componentInstance;
+  }
+
+  it('flags an amount with more decimal places than MUR (2dp) allows', () => {
+    const component = createComponent();
+    component.form.controls.currency.setValue('MUR');
+    component.form.controls.amount.setValue('1.005');
+
+    expect(component.form.controls.amount.hasError('maxFractionDigits')).toBeTrue();
+  });
+
+  it('flags any decimal at all for a 0-decimal currency (JPY)', () => {
+    const component = createComponent();
+    component.form.controls.currency.setValue('JPY');
+    component.form.controls.amount.setValue('1.5');
+
+    expect(component.form.controls.amount.hasError('maxFractionDigits')).toBeTrue();
+  });
+
+  it('accepts an amount within the currency cap', () => {
+    const component = createComponent();
+    component.form.controls.currency.setValue('MUR');
+    component.form.controls.amount.setValue('1.99');
+
+    expect(component.form.controls.amount.hasError('maxFractionDigits')).toBeFalse();
+  });
+});

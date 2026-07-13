@@ -24,6 +24,7 @@ import type {
 } from '../../core/models';
 import { HeaderActionService } from '../../core/layout/header-action.service';
 import { CurrencyService } from '../../core/money/currency.service';
+import { maxFractionDigits } from '../../core/money/amount-validators';
 import { MoneyPipe } from '../../shared/pipes/money.pipe';
 import { IconButton } from '../../shared/ui/icon-button/icon-button';
 import { Banner } from '../../shared/ui/banner/banner';
@@ -149,7 +150,11 @@ export class TransactionForm implements OnInit {
   protected readonly form = this.fb.group({
     accountId: this.fb.control<number | null>(null, Validators.required),
     postedDate: this.fb.nonNullable.control(this.today(), Validators.required),
-    amount: this.fb.nonNullable.control('', [Validators.required, Validators.pattern(DECIMAL)]),
+    amount: this.fb.nonNullable.control('', [
+      Validators.required,
+      Validators.pattern(DECIMAL),
+      maxFractionDigits(() => this.fractionDigits(this.currentCurrency())),
+    ]),
     currency: this.fb.nonNullable.control('MUR', [
       Validators.required,
       Validators.pattern(/^[A-Za-z]{3}$/),
@@ -168,6 +173,12 @@ export class TransactionForm implements OnInit {
         this.splits.at(0).get('amount')!.setValue(v ?? '', { emitEvent: false });
       }
     });
+
+    // The max-fraction-digits cap depends on the selected currency (explicit `currency` field, or
+    // the chosen account's currency) - revalidate the amount and every split whenever either
+    // changes, so switching to a fewer-decimal currency re-flags an already-typed over-precise value.
+    this.form.controls.currency.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => this.revalidateAmounts());
+    this.form.controls.accountId.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => this.revalidateAmounts());
 
     // Edit pages expose Delete as a danger icon top-right in the header; Save is the bottom action
     // bar (FormActions) and the back arrow is Cancel. Add pages carry no header action. Cleared on
@@ -191,7 +202,9 @@ export class TransactionForm implements OnInit {
   protected amountError(): string | null {
     const c = this.form.controls.amount;
     if (!c.invalid || !c.touched) return null;
-    return c.hasError('required') ? 'Enter an amount.' : 'Amount must be a number greater than 0.';
+    if (c.hasError('required')) return 'Enter an amount.';
+    if (c.hasError('maxFractionDigits')) return this.precisionError();
+    return 'Amount must be a number greater than 0.';
   }
 
   protected currencyError(): string | null {
@@ -203,7 +216,17 @@ export class TransactionForm implements OnInit {
   protected splitAmountError(i: number): string | null {
     const c = this.splits.at(i).get('amount')!;
     if (!c.invalid || !c.touched) return null;
-    return c.hasError('required') ? 'Enter an amount.' : 'Amount must be a number greater than 0.';
+    if (c.hasError('required')) return 'Enter an amount.';
+    if (c.hasError('maxFractionDigits')) return this.precisionError();
+    return 'Amount must be a number greater than 0.';
+  }
+
+  /** Shared "too many decimal places" wording for the currently-selected currency (amount + splits). */
+  private precisionError(): string {
+    const cur = this.currentCurrency();
+    const max = this.fractionDigits(cur);
+    if (max === 0) return `Amounts in ${cur} don't use decimal places.`;
+    return `Amounts in ${cur} use at most ${max} decimal place${max === 1 ? '' : 's'}.`;
   }
 
   async ngOnInit(): Promise<void> {
@@ -255,7 +278,11 @@ export class TransactionForm implements OnInit {
   private newSplitGroup(amount = ''): FormGroup {
     return this.fb.group({
       categoryId: this.fb.control<number | null>(null, Validators.required),
-      amount: this.fb.nonNullable.control(amount, [Validators.required, Validators.pattern(DECIMAL)]),
+      amount: this.fb.nonNullable.control(amount, [
+        Validators.required,
+        Validators.pattern(DECIMAL),
+        maxFractionDigits(() => this.fractionDigits(this.currentCurrency())),
+      ]),
     });
   }
 
@@ -522,6 +549,12 @@ export class TransactionForm implements OnInit {
   /** Minor-unit digits for a currency (Rust's authoritative table, same one the money pipe uses). */
   private fractionDigits(currency: string): number {
     return this.currency.fractionDigits(currency);
+  }
+
+  /** Re-run the amount + per-split max-fraction-digits check after the effective currency changes. */
+  private revalidateAmounts(): void {
+    this.form.controls.amount.updateValueAndValidity({ emitEvent: false });
+    for (const g of this.splits.controls) g.get('amount')!.updateValueAndValidity({ emitEvent: false });
   }
 
   /** Exact integer parse of a major-unit string -> minor units for display math; null if invalid. */
