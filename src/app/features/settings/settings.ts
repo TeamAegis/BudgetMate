@@ -13,6 +13,7 @@ import { LockService } from '../../core/lock/lock.service';
 import { getSettings, setBaseCurrency, isTauri } from '../../core/bridge';
 import { SelectField, type SelectOption } from '../../shared/ui/select-field/select-field';
 import { SettingsRow } from '../../shared/ui/settings-row/settings-row';
+import { PrivacyNote } from '../../shared/ui/privacy-note/privacy-note';
 
 @Component({
   selector: 'app-settings',
@@ -27,6 +28,7 @@ import { SettingsRow } from '../../shared/ui/settings-row/settings-row';
     LucideFunnel,
     SelectField,
     SettingsRow,
+    PrivacyNote,
   ],
   template: `
     <section class="feature-page">
@@ -73,6 +75,8 @@ import { SettingsRow } from '../../shared/ui/settings-row/settings-row';
           </div>
         </li>
       </ul>
+
+      <app-privacy-note />
 
       <h2 class="group-title">Security</h2>
       <ul class="rows">
