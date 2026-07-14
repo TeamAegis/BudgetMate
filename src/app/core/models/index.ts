@@ -453,15 +453,32 @@ export interface ExportSummary {
 // Desktop-first slice (mirrors Export above): the frontend picks a destination via the save dialog
 // (`core/bridge`) and hands the path to `create_backup`; Android's SAF-backed save is a separate
 // change (the backup screen shows an info banner on Android instead of calling this command).
-// Restore (FR-4.3) is out of scope here (issue #21) - there is deliberately no restore DTO yet.
 // The `.vaultbak` FILE FORMAT itself (Rust `backup::VaultBackup`) never crosses IPC, so it has no
-// TS mirror (listed in `DTO_SKIP`, `scripts/guards.mjs`).
+// TS mirror (listed in `DTO_SKIP`, `scripts/guards.mjs`) - its `baseCurrency` field lives only in
+// the file, never in an IPC DTO.
 
 /** Result of a successful encrypted backup (mirrors Rust `commands::backup::BackupSummary`). */
 export interface BackupSummary {
   path: string;
   byteLen: number;
   formatVersion: number;
+}
+
+// ── Restore (FR-4.3, mirrors Rust `commands::backup::RestoreSummary` / `RestoreMode`) ────────────
+// Desktop-first, REPLACE mode only (ADR 0008) - merge and Android's SAF file-pick are a deferred
+// follow-up. The frontend picks the `.vaultbak` file via the open dialog (`core/bridge`) and hands
+// its path + the backup's own passphrase to `restore_backup`.
+
+/** How to reconcile a restore with existing local data. `'merge'` is a deferred follow-up - the UI
+ *  only ever sends `'replace'` (mirrors Rust `commands::backup::RestoreMode`). */
+export type RestoreMode = 'replace';
+
+/** Result of a successful restore (mirrors Rust `commands::backup::RestoreSummary`). */
+export interface RestoreSummary {
+  formatVersion: number;
+  /** The RESTORED backup's own creation timestamp (when the source vault was snapshotted). */
+  createdAt: string;
+  transactionCount: number;
 }
 
 // Errors (IPC rejections) ----------------------------------------------------------

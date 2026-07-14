@@ -58,6 +58,17 @@ impl From<crate::backup::BackupError> for AppError {
     }
 }
 
+impl From<crate::backup::restore::RestoreError> for AppError {
+    fn from(e: crate::backup::restore::RestoreError) -> Self {
+        use crate::backup::restore::RestoreError;
+        match e {
+            RestoreError::Validation(msg) => AppError::Validation(msg),
+            RestoreError::KeyVerificationFailed => AppError::KeyVerificationFailed,
+            RestoreError::Internal(msg) => AppError::Internal(msg),
+        }
+    }
+}
+
 impl From<crate::vault::VaultError> for AppError {
     fn from(e: crate::vault::VaultError) -> Self {
         use crate::vault::VaultError;

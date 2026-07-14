@@ -50,7 +50,7 @@ describe('Backup', () => {
     expect(host.querySelectorAll('app-skeleton').length).toBeGreaterThan(0);
   });
 
-  it('android: the info banner replaces the backup controls', async () => {
+  it('android: the info banner replaces the backup AND restore controls', async () => {
     const restore = withTauriInternals((cmd) => {
       if (cmd === 'get_app_info') {
         return Promise.resolve({ name: 'BudgetMate', version: '0.1.0', platform: 'android' });
@@ -66,6 +66,7 @@ describe('Backup', () => {
       const host = fixture.nativeElement as HTMLElement;
       expect(host.textContent).toContain('Backup is available on the desktop app for now.');
       expect(host.textContent).not.toContain('This backup is encrypted');
+      expect(host.textContent).not.toContain('Restore from backup');
     } finally {
       restore();
     }
@@ -91,6 +92,206 @@ describe('Backup', () => {
       expect(button).not.toBeNull();
       expect(button.disabled).toBeFalse();
       expect(button.textContent).toContain('Create backup');
+    } finally {
+      restore();
+    }
+  });
+
+  it('populated state (desktop): the restore section renders with a disabled Restore button', async () => {
+    const restore = withTauriInternals((cmd) => {
+      if (cmd === 'get_app_info') {
+        return Promise.resolve({ name: 'BudgetMate', version: '0.1.0', platform: 'windows' });
+      }
+      return Promise.resolve(null);
+    });
+    try {
+      const fixture = createFixture();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const host = fixture.nativeElement as HTMLElement;
+      expect(host.textContent).toContain('Restore from backup');
+      const buttons = Array.from(host.querySelectorAll('app-button button')) as HTMLButtonElement[];
+      const restoreButton = buttons.find((b) => b.textContent?.trim() === 'Restore');
+      expect(restoreButton).toBeTruthy();
+      // No file picked and no passphrase entered yet - the Restore button stays disabled.
+      expect(restoreButton?.disabled).toBeTrue();
+    } finally {
+      restore();
+    }
+  });
+
+  it('restore: the Restore button is disabled until BOTH a file and a passphrase are present', () => {
+    const fixture = createFixture();
+    const component = fixture.componentInstance as unknown as {
+      canRestore: { (): boolean };
+      restorePath: { set(v: string | null): void };
+      restorePassphrase: { set(v: string): void };
+    };
+
+    expect(component.canRestore()).toBeFalse();
+    component.restorePath.set('/tmp/backup.vaultbak');
+    expect(component.canRestore()).toBeFalse(); // file only, no passphrase yet.
+    component.restorePassphrase.set('');
+    expect(component.canRestore()).toBeFalse(); // blank passphrase still disables it.
+    component.restorePassphrase.set('correct horse battery staple');
+    expect(component.canRestore()).toBeTrue();
+  });
+
+  it('restore: confirmRestore() opens the confirm dialog WITHOUT calling restore_backup yet', async () => {
+    let restoreBackupCalls = 0;
+    const restore = withTauriInternals((cmd) => {
+      if (cmd === 'restore_backup') {
+        restoreBackupCalls++;
+        return Promise.resolve({ formatVersion: 1, createdAt: '2026-07-14T00:00:00Z', transactionCount: 3 });
+      }
+      return Promise.resolve(null);
+    });
+    try {
+      const fixture = createFixture();
+      const component = fixture.componentInstance as unknown as {
+        restorePath: { set(v: string | null): void };
+        restorePassphrase: { set(v: string): void };
+        confirmingRestore: { (): boolean };
+        confirmRestore(): void;
+      };
+      component.restorePath.set('/tmp/backup.vaultbak');
+      component.restorePassphrase.set('correct horse battery staple');
+
+      component.confirmRestore();
+
+      expect(component.confirmingRestore()).toBeTrue();
+      expect(restoreBackupCalls).toBe(0);
+      fixture.detectChanges();
+      const host = fixture.nativeElement as HTMLElement;
+      expect(host.textContent).toContain('Replace all data?');
+    } finally {
+      restore();
+    }
+  });
+
+  it('restore: cancelling the confirm dialog closes it without calling restore_backup', () => {
+    const fixture = createFixture();
+    const component = fixture.componentInstance as unknown as {
+      restorePath: { set(v: string | null): void };
+      restorePassphrase: { set(v: string): void };
+      confirmingRestore: { (): boolean };
+      confirmRestore(): void;
+      cancelRestore(): void;
+    };
+    component.restorePath.set('/tmp/backup.vaultbak');
+    component.restorePassphrase.set('correct horse battery staple');
+    component.confirmRestore();
+    expect(component.confirmingRestore()).toBeTrue();
+
+    component.cancelRestore();
+
+    expect(component.confirmingRestore()).toBeFalse();
+  });
+
+  it('restore success: restoreConfirmed() calls restore_backup, sets the summary, and reloads', async () => {
+    let restoreBackupArgs: unknown;
+    const restore = withTauriInternals((cmd, args) => {
+      if (cmd === 'restore_backup') {
+        restoreBackupArgs = args;
+        return Promise.resolve({ formatVersion: 1, createdAt: '2026-07-14T00:00:00Z', transactionCount: 5 });
+      }
+      return Promise.resolve(null);
+    });
+    try {
+      const fixture = createFixture();
+      const component = fixture.componentInstance as unknown as {
+        restorePath: { set(v: string | null): void };
+        restorePassphrase: { (): string; set(v: string): void };
+        restoreSummary: { (): { transactionCount: number } | null };
+        restoreError: { (): string | null };
+        restoreConfirmed(): Promise<void>;
+        reload(): void;
+      };
+      const reloadSpy = spyOn(component, 'reload');
+      component.restorePath.set('/tmp/backup.vaultbak');
+      component.restorePassphrase.set('correct horse battery staple');
+
+      await component.restoreConfirmed();
+
+      expect(restoreBackupArgs).toEqual({
+        backupPath: '/tmp/backup.vaultbak',
+        passphrase: 'correct horse battery staple',
+        mode: 'replace',
+      });
+      expect(component.restoreSummary()?.transactionCount).toBe(5);
+      expect(component.restoreError()).toBeNull();
+      expect(reloadSpy).toHaveBeenCalledTimes(1);
+      // The passphrase is cleared after use - never kept around longer than the attempt.
+      expect(component.restorePassphrase()).toBe('');
+    } finally {
+      restore();
+    }
+  });
+
+  it('restore failure: a wrong-passphrase rejection shows an inline error and does NOT reload', async () => {
+    const restore = withTauriInternals((cmd) => {
+      if (cmd === 'restore_backup') {
+        return Promise.reject({ kind: 'keyVerificationFailed' });
+      }
+      return Promise.resolve(null);
+    });
+    try {
+      const fixture = createFixture();
+      const component = fixture.componentInstance as unknown as {
+        restorePath: { set(v: string | null): void };
+        restorePassphrase: { set(v: string): void };
+        restoreSummary: { (): unknown };
+        restoreError: { (): string | null };
+        restoreConfirmed(): Promise<void>;
+        reload(): void;
+      };
+      const reloadSpy = spyOn(component, 'reload');
+      component.restorePath.set('/tmp/backup.vaultbak');
+      component.restorePassphrase.set('wrong-passphrase');
+
+      await component.restoreConfirmed();
+
+      expect(component.restoreError()).toBe('Wrong passphrase, or this backup is corrupt.');
+      expect(component.restoreSummary()).toBeNull();
+      expect(reloadSpy).not.toHaveBeenCalled();
+    } finally {
+      restore();
+    }
+  });
+
+  it('restore double-tap guard: a second restoreConfirmed() call while one is in flight is a no-op', async () => {
+    let restoreBackupCalls = 0;
+    let resolveRestore!: (value: unknown) => void;
+    const restore = withTauriInternals((cmd) => {
+      if (cmd === 'restore_backup') {
+        restoreBackupCalls++;
+        return new Promise((resolve) => {
+          resolveRestore = resolve;
+        });
+      }
+      return Promise.resolve(null);
+    });
+    try {
+      const fixture = createFixture();
+      const component = fixture.componentInstance as unknown as {
+        restorePath: { set(v: string | null): void };
+        restorePassphrase: { set(v: string): void };
+        restoreConfirmed(): Promise<void>;
+        reload(): void;
+      };
+      // Prevent an actual page reload from tearing down the Karma test runner mid-suite.
+      spyOn(component, 'reload');
+      component.restorePath.set('/tmp/backup.vaultbak');
+      component.restorePassphrase.set('correct horse battery staple');
+
+      const first = component.restoreConfirmed();
+      const second = component.restoreConfirmed();
+      resolveRestore({ formatVersion: 1, createdAt: '2026-07-14T00:00:00Z', transactionCount: 0 });
+      await Promise.all([first, second]);
+
+      expect(restoreBackupCalls).toBe(1);
     } finally {
       restore();
     }

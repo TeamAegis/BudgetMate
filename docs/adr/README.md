@@ -35,3 +35,9 @@ Consequences, and Alternatives considered.
   salt/`KdfParams`; the snapshot copies encrypted bytes under the `DbState` mutex (no key access,
   never `VACUUM INTO`/online-backup); desktop-first save mirrors ADR 0006; restore (FR-4.3) is
   out of scope (issue #21).
+- [0008](0008-restore-replace-desktop-first-merge-deferred.md): Restore from backup (FR-4.3),
+  REPLACE mode only. Key re-derived from the envelope's own salt/kdf; the envelope now also carries
+  `baseCurrency` (adopted on restore - `base_amount_minor` is bound to it); crash-safe swap
+  (copy-to-`.prev` + atomic rename + a `restore.pending` marker self-healed on next unlock/restore);
+  biometric forced off; app left locked only if the swap itself fails; Merge mode and Android's
+  SAF file-pick are deferred (issue #21 follow-up).

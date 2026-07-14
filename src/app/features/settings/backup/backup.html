@@ -41,7 +41,66 @@
       <span>{{ busy() ? 'Creating backup...' : 'Create backup' }}</span>
     </app-button>
 
-    <!-- Restore (FR-4.3) is out of scope for this slice - tracked separately as issue #21. A
-         future change extends this screen with a Restore control once that lands. -->
+    <!-- Restore (FR-4.3) - REPLACE mode only (ADR 0008). Merge mode and Android are deferred. -->
+    <app-card class="restore-card">
+      <span class="label">Restore from backup</span>
+      <p class="hint">
+        This replaces everything currently in the app with the contents of a backup file. You'll
+        need the passphrase that was set on that backup - it may be different from your current
+        one.
+      </p>
+
+      @if (restoreError()) {
+        <app-banner>{{ restoreError() }}</app-banner>
+      }
+
+      @if (restoreSummary(); as summary) {
+        <app-banner tone="success">
+          Restored {{ summary.transactionCount }} transaction(s) from your backup.
+        </app-banner>
+      }
+
+      <app-button
+        variant="ghost"
+        [block]="true"
+        [disabled]="restorePickBusy()"
+        (click)="pickRestoreFile()"
+      >
+        <svg icon lucideUpload [size]="18" aria-hidden="true"></svg>
+        <span>{{ restoreFileName() || 'Choose backup file' }}</span>
+      </app-button>
+
+      <app-form-field label="Backup passphrase">
+        <input
+          type="password"
+          [value]="restorePassphrase()"
+          (input)="onRestorePassphraseInput($event)"
+          autocomplete="off"
+          autocapitalize="off"
+          spellcheck="false"
+        />
+      </app-form-field>
+
+      <app-button
+        variant="primary"
+        [block]="true"
+        [disabled]="!canRestore()"
+        (click)="confirmRestore()"
+      >
+        <svg icon lucideRotateCcw [size]="18" aria-hidden="true"></svg>
+        <span>Restore</span>
+      </app-button>
+    </app-card>
+  }
+
+  @if (confirmingRestore()) {
+    <app-confirm-dialog
+      title="Replace all data?"
+      message="This permanently overwrites everything currently in the app with the contents of this backup. This can't be undone."
+      confirmLabel="Replace"
+      [busy]="restoreBusy()"
+      (confirm)="restoreConfirmed()"
+      (cancelled)="cancelRestore()"
+    />
   }
 </section>

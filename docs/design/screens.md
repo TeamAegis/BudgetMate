@@ -342,15 +342,20 @@ in the current Figma - design them to this spec.
 ### 7.5 Backup / Restore
 - **FR:** FR-4.1/4.3.
 - **Components:** BackupRestorePanel - *Create encrypted backup* → save/share;
-  *Restore* → pick `.vaultbak` → passphrase → replace/merge.
+  *Restore* → pick `.vaultbak` → passphrase → replace (merge deferred).
 - **Commands:** `create_backup()` → file via dialog/fs (Android: `tauri-plugin-android-fs`);
-  `restore_backup(path, passphrase, mode)` (ACID).
+  `restore_backup(backupPath, passphrase, mode)` (ACID, crash-safe swap - see ADR 0008).
 - **Status (2026-07-14):** FR-4.1 **implemented desktop-first** (ADR 0007) - `create_backup` copies
   the already-encrypted SQLCipher DB bytes, bundles the non-secret salt/KDF params, and writes a
-  `.vaultbak` envelope via the save dialog + `std::fs::write`; route `settings/backup`. Android's
-  SAF-backed save is deferred (the screen shows an info banner there, mirroring Export/ADR 0006).
-  FR-4.3 restore is still spec only - not implemented (issue #21).
-- **States:** creating, written, restoring, merge/replace choice, wrong-passphrase error.
+  `.vaultbak` envelope via the save dialog + `std::fs::write`; route `settings/backup`. FR-4.3
+  restore is **implemented desktop-first, REPLACE mode only** (ADR 0008) - the same screen picks a
+  `.vaultbak` file via the open dialog, prompts for the backup's own passphrase, confirms via
+  `<app-confirm-dialog>` ("Replace all data?"), then validates + swaps the live database and meta
+  sidecar for the backup's inside a crash-safe copy/rename sequence and reloads the webview on
+  success. Android (both backup save and restore open) and Merge mode are deferred (the screen shows
+  an info banner on Android, mirroring Export/ADR 0006).
+- **States:** creating, written, restoring (busy, confirm-gated), restored (success banner + reload),
+  wrong-passphrase/corrupt-backup error (plain-language, inline).
 
 ---
 
