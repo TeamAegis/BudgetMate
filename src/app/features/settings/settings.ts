@@ -9,6 +9,7 @@ import {
   LucideCoins,
   LucideFunnel,
   LucideDownload,
+  LucideDatabaseBackup,
 } from '@lucide/angular';
 import { LockService } from '../../core/lock/lock.service';
 import { getSettings, setBaseCurrency, isTauri } from '../../core/bridge';
@@ -28,6 +29,7 @@ import { PrivacyNote } from '../../shared/ui/privacy-note/privacy-note';
     LucideCoins,
     LucideFunnel,
     LucideDownload,
+    LucideDatabaseBackup,
     SelectField,
     SettingsRow,
     PrivacyNote,
@@ -67,6 +69,12 @@ import { PrivacyNote } from '../../shared/ui/privacy-note/privacy-note';
         <li>
           <a app-settings-row routerLink="/settings/export" label="Export" hint="Save your transactions as a CSV or Excel file">
             <svg icon lucideDownload [size]="24" aria-hidden="true"></svg>
+            <svg trailing lucideChevronRight [size]="18" aria-hidden="true"></svg>
+          </a>
+        </li>
+        <li>
+          <a app-settings-row routerLink="/settings/backup" label="Backup" hint="Save an encrypted copy of your data">
+            <svg icon lucideDatabaseBackup [size]="24" aria-hidden="true"></svg>
             <svg trailing lucideChevronRight [size]="18" aria-hidden="true"></svg>
           </a>
         </li>

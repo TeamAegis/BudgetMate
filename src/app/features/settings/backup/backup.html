@@ -1,0 +1,47 @@
+<section class="feature-page">
+  @if (loading()) {
+    <div class="skeletons" aria-busy="true">
+      <app-skeleton variant="block" height="60px" />
+      <app-skeleton variant="block" height="88px" />
+      <app-skeleton variant="block" height="48px" />
+    </div>
+  } @else if (isAndroid()) {
+    <app-banner tone="info">Backup is available on the desktop app for now.</app-banner>
+  } @else if (loadError()) {
+    <app-banner>{{ loadError() }}</app-banner>
+    <app-button variant="primary" (click)="retry()">Try again</app-button>
+  } @else {
+    <app-banner tone="info">
+      This backup is encrypted. You can only restore it with your current passphrase, so keep both
+      somewhere safe.
+    </app-banner>
+
+    @if (actionError()) {
+      <app-banner>{{ actionError() }}</app-banner>
+    }
+
+    @if (savedSummary(); as summary) {
+      <app-banner tone="success">Backup saved to {{ savedFileName() }}.</app-banner>
+    }
+
+    <app-card class="info-card">
+      <span class="label">What's saved</span>
+      <p class="hint">
+        All your accounts, transactions, categories, budgets and goals - encrypted, in one file.
+      </p>
+    </app-card>
+
+    <app-button
+      variant="primary"
+      [block]="true"
+      [loading]="busy()"
+      (click)="backup()"
+    >
+      <svg icon lucideDatabaseBackup [size]="18" aria-hidden="true"></svg>
+      <span>{{ busy() ? 'Creating backup...' : 'Create backup' }}</span>
+    </app-button>
+
+    <!-- Restore (FR-4.3) is out of scope for this slice - tracked separately as issue #21. A
+         future change extends this screen with a Restore control once that lands. -->
+  }
+</section>

@@ -326,18 +326,25 @@ file (csv/ofx/qfx) ──pick (dialog)──► read (fs) ──► parse ──
 
 ## 9. Backup, Restore & Export (FR-4.x)
 
-> **Status (2026-07-14):** Export (FR-4.2) is **implemented desktop-first** - `export_transactions`
-> reads the DB, assembles CSV/XLSX bytes, and writes them via the `dialog` save picker + `std::fs`.
-> Android's SAF-backed save (`tauri-plugin-android-fs`) is **deferred** to a separate, device-verified
-> change; the Export screen shows an info banner on Android instead (see ADR 0006). Backup
-> (`create_backup`) and restore (`restore_backup`) remain **specified, not implemented**. The
-> Settings screens for backup/restore are a design spec (`screens.md` §7.5). See §11 "Build status".
+> **Status (2026-07-14):** Export (FR-4.2) and Backup (FR-4.1) are both **implemented
+> desktop-first** - `export_transactions` reads the DB, assembles CSV/XLSX bytes, and writes them
+> via the `dialog` save picker + `std::fs`; `create_backup` copies the already-encrypted SQLCipher DB
+> bytes, bundles them with the non-secret salt/KDF params, and writes a `.vaultbak` JSON envelope the
+> same way (ADR 0007). Android's SAF-backed save (`tauri-plugin-android-fs`) is **deferred** for both
+> to a separate, device-verified change; the Export and Backup screens show an info banner on
+> Android instead (see ADR 0006 / ADR 0007). Restore (`restore_backup`) remains **specified, not
+> implemented** (issue #21). The Settings screen for restore is a design spec (`screens.md` §7.5).
+> See §11 "Build status".
 
-- **Backup (FR-4.1):** produce an encrypted `.vaultbak`. Simplest robust path: the encrypted
-  SQLCipher DB file *is* already encrypted; copy it (or an encrypted JSON dump) to a
-  user-chosen location via the **save dialog**. On Android, `tauri-plugin-android-fs` gives
-  Play-Store-safe SAF pickers + persistable URI permissions; on iOS the fs plugin manages
-  security-scoped resources for picker-selected destinations.
+- **Backup (FR-4.1):** produce an encrypted `.vaultbak` - a JSON envelope bundling the
+  already-encrypted SQLCipher DB bytes (base64) with the non-secret salt/`KdfParams` needed to
+  re-derive the key on restore, written to a user-chosen location via the **save dialog**
+  (`create_backup`, desktop-first; ADR 0007). No key access is needed for the snapshot itself - the
+  DB file is already encrypted; consistency comes from holding the `DbState` mutex and a defensive
+  `PRAGMA wal_checkpoint(TRUNCATE)`, never `VACUUM INTO` or the online-backup API (both would emit a
+  plaintext file unless keyed identically). On Android, `tauri-plugin-android-fs` gives
+  Play-Store-safe SAF pickers + persistable URI permissions (deferred, device-verified follow-up);
+  on iOS the fs plugin manages security-scoped resources for picker-selected destinations.
 - **Restore (FR-4.3):** pick a `.vaultbak`, prompt passphrase, validate, then replace or
   merge inside a transaction.
 - **Export (FR-4.2):** `rust_xlsxwriter` for `.xlsx`, `csv` for CSV; user picks destination via the
@@ -406,15 +413,16 @@ traceability table (`functional-requirements.md` §5) carries the same status pe
   deterministic categorisation rules (management + `preview_rules`), accounts, categories, OCR
   field extraction (Android), passphrase/biometric unlock, lock-on-background, SQLCipher at rest,
   schema migrations, local reporting/analytics aggregations (FR-3.3), the home dashboard
-  (`get_dashboard`), and transaction export to CSV/XLSX (FR-4.2, desktop-first - `export_transactions`
-  + the save dialog; ADR 0006).
+  (`get_dashboard`), transaction export to CSV/XLSX (FR-4.2, desktop-first - `export_transactions`
+  + the save dialog; ADR 0006), and encrypted local backup (FR-4.1, desktop-first -
+  `create_backup` + the save dialog; ADR 0007).
 - **Partial:** dedup (matcher written in `rules/dedup.rs`, not wired into import or manual entry);
-  export (FR-4.2) is desktop-only - the Android SAF-backed save is a separate, device-verified
-  follow-up (ADR 0006); performance metrics (web payload size tracked; Android install-size metric
-  pending issue #4).
+  export (FR-4.2) and backup (FR-4.1) are both desktop-only - the Android SAF-backed save is a
+  separate, device-verified follow-up for each (ADR 0006, ADR 0007); performance metrics (web
+  payload size tracked; Android install-size metric pending issue #4).
 - **Specified only (little or no runtime code):** envelope budgeting (FR-3.1; `budgets` table
-  exists, no spent-vs-remaining logic), the import pipeline + review UI (FR-2.2), backup/restore
-  (FR-4.1/4.3), the income/onboarding profile (`set_onboarding_profile`), and savings-backed
+  exists, no spent-vs-remaining logic), the import pipeline + review UI (FR-2.2), restore (FR-4.3;
+  issue #21), the income/onboarding profile (`set_onboarding_profile`), and savings-backed
   allowances (FR-3.4; domain spec `docs/allowances.md` + ADR 0005, no schema or runtime code yet).
 
 ### 11.2 Open product questions (from the 2026-06 financial-domain review)

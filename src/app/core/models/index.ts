@@ -449,6 +449,21 @@ export interface ExportSummary {
   byteLen: number;
 }
 
+// ── Backup (FR-4.1, mirrors Rust `commands::backup::BackupSummary`) ──────────────────────────────
+// Desktop-first slice (mirrors Export above): the frontend picks a destination via the save dialog
+// (`core/bridge`) and hands the path to `create_backup`; Android's SAF-backed save is a separate
+// change (the backup screen shows an info banner on Android instead of calling this command).
+// Restore (FR-4.3) is out of scope here (issue #21) - there is deliberately no restore DTO yet.
+// The `.vaultbak` FILE FORMAT itself (Rust `backup::VaultBackup`) never crosses IPC, so it has no
+// TS mirror (listed in `DTO_SKIP`, `scripts/guards.mjs`).
+
+/** Result of a successful encrypted backup (mirrors Rust `commands::backup::BackupSummary`). */
+export interface BackupSummary {
+  path: string;
+  byteLen: number;
+  formatVersion: number;
+}
+
 // Errors (IPC rejections) ----------------------------------------------------------
 
 /** Discriminant of an `AppError` (mirrors Rust `error::AppError`, adjacently tagged on `kind`). */

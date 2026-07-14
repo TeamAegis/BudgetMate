@@ -30,3 +30,8 @@ Consequences, and Alternatives considered.
   platform-agnostic CSV/XLSX writers; the save path is desktop-first (dialog `save()` + `std::fs`),
   Android's SAF-backed save (`tauri-plugin-android-fs`) is a separate device-verified change; amounts
   are always exported as strings (never a float) to keep the `no-float-money` guard honest.
+- [0007](0007-encrypted-backup-desktop-first.md): Encrypted local backup (FR-4.1). `.vaultbak` is a
+  JSON envelope bundling the already-encrypted SQLCipher DB bytes (base64) with the non-secret
+  salt/`KdfParams`; the snapshot copies encrypted bytes under the `DbState` mutex (no key access,
+  never `VACUUM INTO`/online-backup); desktop-first save mirrors ADR 0006; restore (FR-4.3) is
+  out of scope (issue #21).
