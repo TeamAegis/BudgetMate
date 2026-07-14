@@ -122,6 +122,39 @@ describe('Backup', () => {
     }
   });
 
+  it('restore: the passphrase field has a show/hide reveal toggle with an accessible name', async () => {
+    const restore = withTauriInternals((cmd) => {
+      if (cmd === 'get_app_info') {
+        return Promise.resolve({ name: 'BudgetMate', version: '0.1.0', platform: 'windows' });
+      }
+      return Promise.resolve(null);
+    });
+    try {
+      const fixture = createFixture();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const host = fixture.nativeElement as HTMLElement;
+      const input = host.querySelector('.restore-card input') as HTMLInputElement;
+      expect(input.type).toBe('password');
+
+      const toggle = host.querySelector('.restore-card button.reveal') as HTMLButtonElement;
+      expect(toggle).toBeTruthy();
+      expect(toggle.textContent).toContain('Show passphrase');
+      expect(toggle.getAttribute('aria-pressed')).toBe('false');
+
+      toggle.click();
+      fixture.detectChanges();
+
+      expect(input.type).toBe('text');
+      expect(toggle.textContent).toContain('Hide passphrase');
+      expect(toggle.getAttribute('aria-pressed')).toBe('true');
+    } finally {
+      restore();
+    }
+  });
+
   it('restore: the Restore button is disabled until BOTH a file and a passphrase are present', () => {
     const fixture = createFixture();
     const component = fixture.componentInstance as unknown as {
@@ -190,12 +223,17 @@ describe('Backup', () => {
     expect(component.confirmingRestore()).toBeFalse();
   });
 
-  it('restore success: restoreConfirmed() calls restore_backup, sets the summary, and reloads', async () => {
+  it('restore success: restoreConfirmed() calls restore_backup, sets the summary, and does NOT auto-reload', async () => {
     let restoreBackupArgs: unknown;
     const restore = withTauriInternals((cmd, args) => {
       if (cmd === 'restore_backup') {
         restoreBackupArgs = args;
-        return Promise.resolve({ formatVersion: 1, createdAt: '2026-07-14T00:00:00Z', transactionCount: 5 });
+        return Promise.resolve({
+          formatVersion: 1,
+          createdAt: '2026-07-14T00:00:00Z',
+          transactionCount: 5,
+          baseCurrency: 'USD',
+        });
       }
       return Promise.resolve(null);
     });
@@ -222,15 +260,70 @@ describe('Backup', () => {
       });
       expect(component.restoreSummary()?.transactionCount).toBe(5);
       expect(component.restoreError()).toBeNull();
-      expect(reloadSpy).toHaveBeenCalledTimes(1);
-      // The passphrase is cleared after use - never kept around longer than the attempt.
+      // The confirmation must be visible/announced before the webview reloads - `reload()` no
+      // longer fires automatically; only the "Reopen app" button (below) calls it.
+      expect(reloadSpy).not.toHaveBeenCalled();
+      // The passphrase is cleared after a SUCCESSFUL use - never kept around longer than needed.
       expect(component.restorePassphrase()).toBe('');
     } finally {
       restore();
     }
   });
 
-  it('restore failure: a wrong-passphrase rejection shows an inline error and does NOT reload', async () => {
+  it('restore success: the success banner (with the adopted base currency) and Reopen button render, and tapping Reopen calls reload()', async () => {
+    const restore = withTauriInternals((cmd) => {
+      if (cmd === 'get_app_info') {
+        return Promise.resolve({ name: 'BudgetMate', version: '0.1.0', platform: 'windows' });
+      }
+      if (cmd === 'restore_backup') {
+        return Promise.resolve({
+          formatVersion: 1,
+          createdAt: '2026-07-14T00:00:00Z',
+          transactionCount: 5,
+          baseCurrency: 'USD',
+        });
+      }
+      return Promise.resolve(null);
+    });
+    try {
+      const fixture = createFixture();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      const component = fixture.componentInstance as unknown as {
+        restorePath: { set(v: string | null): void };
+        restorePassphrase: { set(v: string): void };
+        restoreConfirmed(): Promise<void>;
+        reload(): void;
+      };
+      const reloadSpy = spyOn(component, 'reload');
+      component.restorePath.set('/tmp/backup.vaultbak');
+      component.restorePassphrase.set('correct horse battery staple');
+
+      await component.restoreConfirmed();
+      fixture.detectChanges();
+
+      const host = fixture.nativeElement as HTMLElement;
+      expect(host.textContent).toContain('Restored 5 item(s) from your backup');
+      expect(host.textContent).toContain('USD');
+      // The restore controls are gone - the flow reads as complete.
+      expect(host.textContent).not.toContain('Choose backup file');
+      expect(host.querySelector('app-form-field')).toBeNull();
+
+      const buttons = Array.from(host.querySelectorAll('app-button button')) as HTMLButtonElement[];
+      const reopenButton = buttons.find((b) => b.textContent?.trim() === 'Reopen app');
+      expect(reopenButton).toBeTruthy();
+      expect(reloadSpy).not.toHaveBeenCalled();
+
+      reopenButton?.click();
+
+      expect(reloadSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      restore();
+    }
+  });
+
+  it('restore failure: a wrong-passphrase rejection shows an inline error, does NOT reload, and keeps the entered passphrase', async () => {
     const restore = withTauriInternals((cmd) => {
       if (cmd === 'restore_backup') {
         return Promise.reject({ kind: 'keyVerificationFailed' });
@@ -241,7 +334,7 @@ describe('Backup', () => {
       const fixture = createFixture();
       const component = fixture.componentInstance as unknown as {
         restorePath: { set(v: string | null): void };
-        restorePassphrase: { set(v: string): void };
+        restorePassphrase: { (): string; set(v: string): void };
         restoreSummary: { (): unknown };
         restoreError: { (): string | null };
         restoreConfirmed(): Promise<void>;
@@ -256,6 +349,8 @@ describe('Backup', () => {
       expect(component.restoreError()).toBe('Wrong passphrase, or this backup is corrupt.');
       expect(component.restoreSummary()).toBeNull();
       expect(reloadSpy).not.toHaveBeenCalled();
+      // An error must NOT clear the passphrase - the user can fix a typo without retyping it.
+      expect(component.restorePassphrase()).toBe('wrong-passphrase');
     } finally {
       restore();
     }

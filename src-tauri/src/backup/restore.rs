@@ -19,6 +19,14 @@
 //! the same rollback synchronously and returns the error; because the CURRENT (post-restore) key is
 //! never retained across a failure, the app is left LOCKED - the user's original passphrase still
 //! opens the rolled-back vault.
+//!
+//! The db `rename` in step (d) is the point after which the swap itself can no longer corrupt
+//! anything - past it, the live files are the RESTORED ones. A crash strictly BETWEEN that
+//! successful rename and the cleanup of the marker/`.prev` siblings in step (g) still leaves the
+//! `restore.pending` marker on disk, so `recover_interrupted_restore` will roll the already-
+//! succeeded restore BACK to the pre-restore state on the next launch. That is safe (never a
+//! corrupted or half-swapped vault) but not silently self-correcting forward - the user simply
+//! needs to run the restore again.
 
 use std::path::{Path, PathBuf};
 
@@ -78,6 +86,10 @@ pub struct RestoreOutcome {
     /// The backup envelope's own `createdAt` (when the SOURCE vault was snapshotted).
     pub created_at: String,
     pub transaction_count: i64,
+    /// The ADOPTED base (reporting) currency, trimmed + uppercased (see `validate_envelope`) -
+    /// surfaced to the UI so the restore confirmation can disclose which currency reports now add
+    /// up in (finance review: money-correctness must not be a silent change).
+    pub base_currency: String,
 }
 
 fn restore_tmp_path(dir: &Path) -> PathBuf {
@@ -116,8 +128,12 @@ pub fn recover_interrupted_restore(dir: &Path) -> Result<(), RestoreError> {
     Ok(())
 }
 
-/// Guard the envelope BEFORE any Argon2 derivation or filesystem swap.
-fn validate_envelope(env: &VaultBackup) -> Result<(), RestoreError> {
+/// Guard the envelope BEFORE any Argon2 derivation or filesystem swap. Returns the envelope's
+/// base currency, trimmed + uppercased - the SAME normalisation
+/// `commands::vault::set_base_currency` applies - so an invalid or malformed code can never reach
+/// the new meta (money-correctness: everything downstream, including the UI's adopted-currency
+/// disclosure, treats this as the canonical form).
+fn validate_envelope(env: &VaultBackup) -> Result<String, RestoreError> {
     if env.format_version != super::BACKUP_FORMAT_VERSION {
         return Err(RestoreError::Validation(NEWER_VERSION_MSG.to_string()));
     }
@@ -133,7 +149,11 @@ fn validate_envelope(env: &VaultBackup) -> Result<(), RestoreError> {
     {
         return Err(RestoreError::Validation(CORRUPT_MSG.to_string()));
     }
-    Ok(())
+    let base_currency = env.base_currency.trim().to_uppercase();
+    if !crate::domain::account::is_iso4217(&base_currency) {
+        return Err(RestoreError::Validation(CORRUPT_MSG.to_string()));
+    }
+    Ok(base_currency)
 }
 
 /// Open the validation temp copy with the re-derived key and bring it up to the current schema.
@@ -167,6 +187,7 @@ fn swap_in_restored_copy(
     restore_tmp: &Path,
     key_hex: &str,
     env: &VaultBackup,
+    base_currency: &str,
     now: &str,
 ) -> Result<(rusqlite::Connection, RestoreOutcome), RestoreError> {
     let db_p = vault::db_path(dir);
@@ -190,6 +211,8 @@ fn swap_in_restored_copy(
 
     // (c) New meta: preserve the LOCAL idle timeout, FORCE biometric off (it wraps the OLD key),
     // and ADOPT the backup's base currency (money-correctness - see the module doc in `backup/mod.rs`).
+    // `base_currency` is already the VALIDATED, trimmed+uppercased code from `validate_envelope` -
+    // never the raw envelope string - so a malformed/lowercase code never lands in the new meta.
     let new_meta = VaultMeta {
         meta_version: vault::CURRENT_META_VERSION,
         salt: env.salt.clone(),
@@ -198,7 +221,7 @@ fn swap_in_restored_copy(
         settings: VaultSettings {
             idle_timeout_secs: old_meta.settings.idle_timeout_secs,
             biometric_enabled: false,
-            base_currency: env.base_currency.clone(),
+            base_currency: base_currency.to_string(),
         },
     };
     vault::write_meta(dir, &new_meta)?;
@@ -222,7 +245,14 @@ fn swap_in_restored_copy(
     let _ = std::fs::remove_file(&db_prev);
     let _ = std::fs::remove_file(&meta_prev);
 
-    Ok((conn, RestoreOutcome { created_at: env.created_at.clone(), transaction_count }))
+    Ok((
+        conn,
+        RestoreOutcome {
+            created_at: env.created_at.clone(),
+            transaction_count,
+            base_currency: base_currency.to_string(),
+        },
+    ))
 }
 
 /// Replace-mode restore (Merge is a deferred follow-up - see the module doc). Takes the `DbState`
@@ -242,7 +272,9 @@ pub fn restore_replace(
     let _ = std::fs::remove_file(&restore_tmp);
 
     // Step 1: guard against a newer/unsupported/malicious envelope BEFORE deriving a key from it.
-    validate_envelope(env)?;
+    // Also normalises (trim+uppercase) and validates the ADOPTED base currency up front, so an
+    // invalid code fails here rather than after any filesystem swap.
+    let base_currency = validate_envelope(env)?;
 
     // Step 2: derive the key from the ENVELOPE's OWN salt/kdf (not the local install's) - a
     // restore must open with the SOURCE vault's key.
@@ -266,7 +298,7 @@ pub fn restore_replace(
     *guard = None;
 
     // Step 5: snapshot + swap, with full rollback to the PRE-restore state on any failure.
-    match swap_in_restored_copy(dir, &restore_tmp, &key_hex, env, &now) {
+    match swap_in_restored_copy(dir, &restore_tmp, &key_hex, env, &base_currency, &now) {
         Ok((conn, outcome)) => {
             *guard = Some(conn);
             Ok(outcome)
@@ -384,6 +416,7 @@ mod tests {
         let outcome = restore_replace(&dir, &state, &envelope, "passphrase-one-A").unwrap();
         assert_eq!(outcome.transaction_count, 1);
         assert_eq!(outcome.created_at, "2026-07-14T00:00:00Z");
+        assert_eq!(outcome.base_currency, "USD", "outcome discloses the adopted base currency");
 
         // The state is unlocked with the restored data.
         assert!(state.is_unlocked());
@@ -568,6 +601,53 @@ mod tests {
     }
 
     #[test]
+    fn empty_base_currency_is_rejected() {
+        let dir = temp_dir("empty_currency");
+        let source_dir = temp_dir("empty_currency_source");
+
+        let mut envelope = build_vault_and_envelope(&source_dir, b"passphrase-one-A", "USD");
+        envelope.base_currency = "".to_string();
+
+        let state = install_current_vault(&dir, b"passphrase-two-B", "MUR");
+        let db_before = std::fs::read(vault::db_path(&dir)).unwrap();
+        let meta_before = std::fs::read_to_string(vault::meta_path(&dir)).unwrap();
+
+        let err = restore_replace(&dir, &state, &envelope, "passphrase-one-A").unwrap_err();
+        assert!(matches!(err, RestoreError::Validation(_)));
+
+        // Live data untouched - the invalid currency is rejected before any filesystem swap.
+        assert_eq!(std::fs::read(vault::db_path(&dir)).unwrap(), db_before);
+        assert_eq!(std::fs::read_to_string(vault::meta_path(&dir)).unwrap(), meta_before);
+        assert!(state.is_unlocked());
+
+        let _ = std::fs::remove_dir_all(&dir);
+        let _ = std::fs::remove_dir_all(&source_dir);
+    }
+
+    #[test]
+    fn non_iso4217_base_currency_is_rejected() {
+        let dir = temp_dir("bad_currency_code");
+        let source_dir = temp_dir("bad_currency_code_source");
+
+        let mut envelope = build_vault_and_envelope(&source_dir, b"passphrase-one-A", "USD");
+        envelope.base_currency = "not-a-code".to_string();
+
+        let state = install_current_vault(&dir, b"passphrase-two-B", "MUR");
+        let db_before = std::fs::read(vault::db_path(&dir)).unwrap();
+        let meta_before = std::fs::read_to_string(vault::meta_path(&dir)).unwrap();
+
+        let err = restore_replace(&dir, &state, &envelope, "passphrase-one-A").unwrap_err();
+        assert!(matches!(err, RestoreError::Validation(_)));
+
+        assert_eq!(std::fs::read(vault::db_path(&dir)).unwrap(), db_before);
+        assert_eq!(std::fs::read_to_string(vault::meta_path(&dir)).unwrap(), meta_before);
+        assert!(state.is_unlocked());
+
+        let _ = std::fs::remove_dir_all(&dir);
+        let _ = std::fs::remove_dir_all(&source_dir);
+    }
+
+    #[test]
     fn corrupt_file_is_rejected() {
         // The JSON-parse step lives in `commands::backup::restore_backup` (it owns reading the raw
         // file bytes); here we exercise the equivalent guard for a structurally-invalid envelope
@@ -583,6 +663,56 @@ mod tests {
         assert!(matches!(err, RestoreError::KeyVerificationFailed));
         assert!(state.is_unlocked(), "corrupt db payload fails before the live connection is touched");
 
+        let _ = std::fs::remove_dir_all(&dir);
+        let _ = std::fs::remove_dir_all(&source_dir);
+    }
+
+    #[test]
+    fn swap_failure_after_marker_and_prev_copies_rolls_back_synchronously() {
+        // Deterministic fault injection with no production seam: `vault::write_meta` writes
+        // `<dir>/vault-meta.json.tmp` then renames it over the real meta path. Pre-creating a
+        // DIRECTORY at that exact path makes the inner `std::fs::write` fail, so
+        // `swap_in_restored_copy` returns `Err` at step (c) - AFTER the `restore.pending` marker
+        // and BOTH `.prev` copies already exist, and BEFORE the atomic db rename. This is the one
+        // failure mode the other restore tests never reach: every other induced failure happens
+        // during Step 1-3 validation, before the `DbState` mutex is ever taken.
+        let dir = temp_dir("swap_fail_rollback");
+        let source_dir = temp_dir("swap_fail_rollback_source");
+
+        let envelope = build_vault_and_envelope(&source_dir, b"passphrase-one-A", "USD");
+        let state = install_current_vault(&dir, b"passphrase-two-B", "MUR");
+
+        let db_before = std::fs::read(vault::db_path(&dir)).unwrap();
+        let meta_before = std::fs::read_to_string(vault::meta_path(&dir)).unwrap();
+
+        // Obstruct the meta write: a directory where `write_meta` expects to write its temp file.
+        let meta_tmp_obstruction = dir.join("vault-meta.json.tmp");
+        std::fs::create_dir_all(&meta_tmp_obstruction).unwrap();
+
+        let err = restore_replace(&dir, &state, &envelope, "passphrase-one-A").unwrap_err();
+        assert!(matches!(err, RestoreError::Internal(_)), "write_meta's I/O failure surfaces as Internal");
+
+        // Full rollback: the live db AND meta are byte-identical to the pre-restore snapshot.
+        assert_eq!(std::fs::read(vault::db_path(&dir)).unwrap(), db_before, "db rolled back");
+        assert_eq!(
+            std::fs::read_to_string(vault::meta_path(&dir)).unwrap(),
+            meta_before,
+            "meta rolled back"
+        );
+
+        // The current (post-restore) key was never retained - left LOCKED, even though this
+        // install started unlocked, because the failure happened AFTER the live connection's
+        // mutex was taken and dropped in Step 4.
+        assert!(!state.is_unlocked(), "left locked after a mid-swap failure");
+
+        // No leftover crash-recovery artifacts - `recover_interrupted_restore` cleaned them up as
+        // part of the synchronous rollback.
+        assert!(!db_prev_path(&dir).exists());
+        assert!(!meta_prev_path(&dir).exists());
+        assert!(!marker_path(&dir).exists());
+        assert!(!restore_tmp_path(&dir).exists());
+
+        let _ = std::fs::remove_dir_all(&meta_tmp_obstruction);
         let _ = std::fs::remove_dir_all(&dir);
         let _ = std::fs::remove_dir_all(&source_dir);
     }

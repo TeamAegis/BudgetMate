@@ -110,6 +110,10 @@ pub struct RestoreSummary {
     /// The RESTORED backup's own `createdAt` (when the source vault was snapshotted) - not "now".
     pub created_at: String,
     pub transaction_count: i64,
+    /// The ADOPTED base (reporting) currency, trimmed + uppercased (money-correctness - see
+    /// `backup::restore::validate_envelope`) - surfaced so the UI can disclose which currency
+    /// reports now add up in, rather than leaving that a silent change.
+    pub base_currency: String,
 }
 
 /// Restore the vault from a `.vaultbak` file at `backup_path` (already chosen via
@@ -152,6 +156,7 @@ pub fn restore_backup<R: Runtime>(
         format_version: envelope.format_version,
         created_at: outcome.created_at,
         transaction_count: outcome.transaction_count,
+        base_currency: outcome.base_currency,
     })
 }
 
@@ -247,5 +252,20 @@ mod tests {
         assert!(json.contains("\"byteLen\":4096"));
         assert!(json.contains("\"formatVersion\":1"));
         assert!(json.contains("\"path\":\"/tmp/budgetmate-backup-2026-07-14.vaultbak\""));
+    }
+
+    #[test]
+    fn restore_summary_round_trips_over_serde_camel_case_and_carries_base_currency() {
+        let summary = RestoreSummary {
+            format_version: BACKUP_FORMAT_VERSION,
+            created_at: "2026-07-14T00:00:00Z".to_string(),
+            transaction_count: 42,
+            base_currency: "USD".to_string(),
+        };
+        let json = serde_json::to_string(&summary).unwrap();
+        assert!(json.contains("\"formatVersion\":1"));
+        assert!(json.contains("\"createdAt\":\"2026-07-14T00:00:00Z\""));
+        assert!(json.contains("\"transactionCount\":42"));
+        assert!(json.contains("\"baseCurrency\":\"USD\""));
     }
 }

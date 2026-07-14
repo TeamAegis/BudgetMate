@@ -29,7 +29,12 @@ another one, from inside a running app. Two things make it money- and safety-cri
    `meta.settings.base_currency`, so `create_backup`'s call site needs no change. On restore the new
    meta ADOPTS the backup's `base_currency` rather than keeping the current install's - the
    restored database's `base_amount_minor` values are only meaningful against the currency they were
-   computed in.
+   computed in. The envelope's `base_currency` is untrusted input (an attacker- or hand-edited
+   `.vaultbak` file), so `validate_envelope` trims + uppercases it and rejects anything that fails
+   `domain::account::is_iso4217` - the SAME check `commands::vault::set_base_currency` applies -
+   BEFORE it can be written into the new meta; the normalised code (never the raw envelope string)
+   is what `swap_in_restored_copy` writes and what `RestoreOutcome`/`RestoreSummary` disclose to the
+   UI.
 2. **REPLACE mode only.** `commands::backup::RestoreMode` is a one-variant enum (`Replace`) that the
    command exhaustively matches, so adding `Merge` later forces a deliberate decision here rather
    than silently falling through. Merge needs an ID-remap strategy (category/account/goal ids from
@@ -60,6 +65,12 @@ another one, from inside a running app. Two things make it money- and safety-cri
      user's ORIGINAL passphrase still matches the rolled-back meta, so they unlock normally. A
      failure during the earlier validation-only step leaves the currently-unlocked app untouched
      and still unlocked - nothing was ever touched.
+   - The db `rename` is the point after which the swap can no longer corrupt anything - past it,
+     the live files are the restored ones. A crash strictly between that successful rename and the
+     marker/`.prev` cleanup still leaves the `restore.pending` marker on disk, so
+     `recover_interrupted_restore` will roll an ALREADY-SUCCEEDED restore back to the pre-restore
+     state on the next launch. That is still safe (never a corrupted or half-swapped vault) but not
+     forward-healing - the user just needs to run the restore again.
 5. **`recover_interrupted_restore` self-heals a crash/power-loss mid-swap.** If the process dies
    anywhere from the marker write onward, the `restore.pending` marker plus the `.prev` copies are
    exactly what is needed to roll back to the pre-restore state on the next launch - it is called at

@@ -479,6 +479,9 @@ export interface RestoreSummary {
   /** The RESTORED backup's own creation timestamp (when the source vault was snapshotted). */
   createdAt: string;
   transactionCount: number;
+  /** The ADOPTED base (reporting) currency, trimmed + uppercased Rust-side - every report now
+   *  adds up in this currency, not necessarily the one the app used before the restore. */
+  baseCurrency: string;
 }
 
 // Errors (IPC rejections) ----------------------------------------------------------

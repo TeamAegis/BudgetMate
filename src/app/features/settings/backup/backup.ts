@@ -1,5 +1,11 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, signal } from '@angular/core';
-import { LucideDatabaseBackup, LucideRotateCcw, LucideUpload } from '@lucide/angular';
+import {
+  LucideDatabaseBackup,
+  LucideEye,
+  LucideEyeOff,
+  LucideRotateCcw,
+  LucideUpload,
+} from '@lucide/angular';
 import {
   createBackup,
   getAppInfo,
@@ -37,6 +43,8 @@ import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     LucideDatabaseBackup,
+    LucideEye,
+    LucideEyeOff,
     LucideRotateCcw,
     LucideUpload,
     Banner,
@@ -84,6 +92,10 @@ export class Backup implements OnInit {
 
   protected readonly restorePath = signal<string | null>(null);
   protected readonly restorePassphrase = signal('');
+  /** Show/hide toggle for the passphrase input, mirroring `features/lock/lock.ts`'s `reveal`. The
+   *  passphrase lives only transiently in this signal on a desktop app - same trust boundary as
+   *  the Lock screen's unlock field. */
+  protected readonly restoreReveal = signal(false);
   protected readonly restoreBusy = signal(false);
   /** Guards a double-tap on "Choose backup file" while the open picker is still awaiting - set
    *  synchronously before awaiting `pickBackupFile()`, cleared in `finally`. Exposed (not private)
@@ -100,6 +112,15 @@ export class Backup implements OnInit {
     const path = this.restorePath();
     if (!path) return '';
     return path.split(/[/\\]/).pop() ?? path;
+  });
+
+  /** Plain-language disclosure of the ADOPTED base currency for the success banner - "Rs (MUR)"
+   *  matches the money pipe's display override (`shared/pipes/money.pipe.ts`), any other code is
+   *  shown as-is. Presentation only, not a currency scale/rate table. */
+  protected readonly restoreBaseCurrencyLabel = computed(() => {
+    const code = this.restoreSummary()?.baseCurrency?.toUpperCase();
+    if (!code) return '';
+    return code === 'MUR' ? 'Rs (MUR)' : code;
   });
 
   /** Restore is only offered once a file AND a non-empty passphrase are present, and never while
@@ -193,21 +214,28 @@ export class Backup implements OnInit {
       const path = this.restorePath();
       if (!path) return; // Defensive: the button is disabled without a path.
       const summary = await restoreBackup(path, this.restorePassphrase(), 'replace');
+      // Never keep the backup passphrase in memory longer than the attempt that used it - clear it
+      // on SUCCESS only. On an error (below) it deliberately stays so the user can fix a typo
+      // without retyping the whole secret; it lives only transiently in this signal on a desktop
+      // app, same trust boundary as the Lock screen's unlock field.
+      this.restorePassphrase.set('');
       this.restoreSummary.set(summary);
-      // Rust's `DbState` stays UNLOCKED across a webview reload (it lives in the Rust process, not
-      // the frontend) - reloading re-bootstraps the Angular app so every cached
-      // signal/service (accounts, categories, base currency, dashboard totals, ...) re-fetches
-      // against the RESTORED data instead of stale pre-restore state.
-      this.reload();
+      // Deliberately NOT `this.reload()` here: a destructive action's confirmation must be visible
+      // (and announced to a screen reader via the success `app-banner`'s `role="status"`) before
+      // the webview reloads. `reload()` now fires only when the user taps "Reopen app" below, which
+      // also gives them a moment to read the adopted-base-currency disclosure.
     } catch (e) {
       this.restoreError.set(this.restoreErrorMessage(e));
     } finally {
-      // Never keep the backup passphrase in memory longer than the attempt that used it.
-      this.restorePassphrase.set('');
       this.restoreBusy.set(false);
       this.restoreInFlight.set(false);
       this.confirmingRestore.set(false);
     }
+  }
+
+  /** Toggle the show/hide state of the restore passphrase field. */
+  protected toggleRestoreReveal(): void {
+    this.restoreReveal.set(!this.restoreReveal());
   }
 
   /** `KeyVerificationFailed` is deliberately generic in Rust (no wrong-key-vs-corrupt oracle) -
