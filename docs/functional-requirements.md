@@ -208,7 +208,7 @@ v1 scope as requirements regardless of status; Status only reflects current prog
 | FR-3.3 Local reporting (charts) | §3 Frontend (charts), §4 aggregations | Built |
 | FR-3.4 Savings-backed allowances (envelopes) | §4 Domain & Data Model, `docs/allowances.md`, ADR 0005 | Specified (domain spec + ADR; no schema or runtime code yet) |
 | FR-4.1 Encrypted backup | §9 Backup/Export | Partial (desktop-first, ADR 0007; Android SAF save deferred) |
-| FR-4.3 Restore | §9 Backup/Export | Specified (issue #21) |
+| FR-4.3 Restore | §9 Backup/Export | Partial (Replace implemented desktop-first, ADR 0008; Merge + Android SAF deferred, issue #21) |
 | FR-4.2 Export (CSV/XLSX) | §9 Backup/Export | Partial (desktop-first, ADR 0006; Android SAF save deferred) |
 | FR-5.1/5.2 / NFR-P2/P3 (unlock, lock, encryption, biometric) | §5 Storage & Crypto, §7 Security | Built (Android; iOS deferred) |
 | NFR-P1 Zero-internet | §7 Offline Enforcement | Built |

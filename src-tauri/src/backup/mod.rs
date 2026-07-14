@@ -10,18 +10,26 @@
 //! or `DbState` here - `commands::backup::create_backup` reads the consistent, already-encrypted DB
 //! snapshot under the `DbState` mutex, then calls into this module to build and serialise the
 //! envelope, and writes the bytes with `std::fs::write` to a path chosen via the save dialog.
-//! Restore (FR-4.3) is out of scope for this slice (tracked separately, issue #21); this envelope
-//! shape is designed to be restore-portable (same passphrase + carried salt/kdf re-derive the key
-//! on any device) once that lands.
+//! Restore (FR-4.3, REPLACE mode - see `restore` submodule and
+//! `docs/adr/0008-restore-replace-desktop-first-merge-deferred.md`) reads this same envelope shape:
+//! same passphrase + the carried salt/kdf re-derive the key on any device. **v1 of the envelope also
+//! carries `baseCurrency`** (serde-default MUR for a backup written before this field existed) -
+//! money-correctness: `base_amount_minor` on every restored row was computed against the SOURCE
+//! device's base currency, so a restore must adopt it rather than keep the local install's.
 
 use serde::{Deserialize, Serialize};
 
 use crate::crypto::KdfParams;
 use crate::vault::VaultMeta;
 
-/// Bumped only on a breaking change to the envelope shape; a future restore command (#21) can
-/// branch on it.
+pub mod restore;
+
+/// Bumped only on a breaking change to the envelope shape; the `restore` submodule branches on it.
 pub const BACKUP_FORMAT_VERSION: u32 = 1;
+
+fn default_base_currency() -> String {
+    crate::vault::DEFAULT_BASE_CURRENCY.to_string()
+}
 
 /// The `.vaultbak` container. This is a FILE FORMAT, not an IPC DTO - it never crosses `invoke()`,
 /// so it has no TS mirror (listed in `DTO_SKIP`, `scripts/guards.mjs`).
@@ -40,6 +48,11 @@ pub struct VaultBackup {
     /// The SQLCipher-encrypted `budgetmate.db` bytes, verbatim. Never plaintext.
     #[serde(with = "b64_bytes")]
     pub db: Vec<u8>,
+    /// The source device's base (reporting) currency at backup time - every `base_amount_minor` in
+    /// `db` is denominated in it. `#[serde(default)]` so a backup written before this field existed
+    /// still parses (defaults to MUR, the app default).
+    #[serde(default = "default_base_currency")]
+    pub base_currency: String,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -82,6 +95,7 @@ pub fn build_envelope(db_bytes: Vec<u8>, meta: &VaultMeta, now_iso: &str, app: &
         salt: meta.salt.clone(),
         kdf: meta.kdf.clone(),
         db: db_bytes,
+        base_currency: meta.settings.base_currency.clone(),
     }
 }
 
@@ -107,6 +121,12 @@ mod tests {
         }
     }
 
+    fn meta_with_currency(currency: &str) -> VaultMeta {
+        let mut m = meta();
+        m.settings.base_currency = currency.to_string();
+        m
+    }
+
     #[test]
     fn build_envelope_copies_meta_fields() {
         let m = meta();
@@ -118,6 +138,37 @@ mod tests {
         assert_eq!(env.db, vec![9, 9, 9]);
         assert_eq!(env.created_at, "2026-07-14T00:00:00Z");
         assert_eq!(env.app, "BudgetMate 0.1.0");
+        assert_eq!(env.base_currency, m.settings.base_currency);
+    }
+
+    #[test]
+    fn build_envelope_carries_the_meta_base_currency() {
+        let m = meta_with_currency("USD");
+        let env = build_envelope(vec![1], &m, "2026-07-14T00:00:00Z", "BudgetMate 0.1.0");
+        assert_eq!(env.base_currency, "USD");
+    }
+
+    #[test]
+    fn base_currency_defaults_to_mur_when_absent_from_the_wire() {
+        // A backup written before this field existed still parses (money-correctness fallback).
+        let json = serde_json::json!({
+            "formatVersion": 1,
+            "createdAt": "2026-06-05T00:00:00Z",
+            "app": "BudgetMate 0.1.0",
+            "metaVersion": 1,
+            "salt": "AQIDBAUGBwgJCgsMDQ4PEA==",
+            "kdf": {
+                "algorithm": "argon2id",
+                "version": 19,
+                "m_cost": 19456,
+                "t_cost": 2,
+                "p_cost": 1,
+                "output_len": 32
+            },
+            "db": "AQID"
+        });
+        let env: VaultBackup = serde_json::from_value(json).unwrap();
+        assert_eq!(env.base_currency, "MUR");
     }
 
     #[test]

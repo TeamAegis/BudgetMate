@@ -108,6 +108,10 @@ pub fn unlock<R: Runtime>(
     passphrase: String,
 ) -> Result<AppState, AppError> {
     let dir = app_data_dir(&app)?;
+    // Self-heal a restore (FR-4.3) interrupted mid-swap by a crash/power-loss BEFORE reading meta -
+    // never boot into a silently-empty or half-swapped vault. Cheap no-op when nothing was
+    // interrupted (see `backup::restore::recover_interrupted_restore`).
+    crate::backup::restore::recover_interrupted_restore(&dir)?;
     let meta = match vault::read_meta(&dir) {
         Ok(m) => m,
         Err(vault::VaultError::Io(_)) => return Err(vault::VaultError::NotInitialised.into()),

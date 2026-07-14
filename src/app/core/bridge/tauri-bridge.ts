@@ -39,6 +39,8 @@ import type {
   ExportFormat,
   ExportSummary,
   BackupSummary,
+  RestoreMode,
+  RestoreSummary,
 } from '../models';
 
 /** Whether we are running inside the Tauri runtime (vs. plain browser `ng serve`). */
@@ -291,8 +293,7 @@ export function exportTransactions(format: ExportFormat, destPath: string): Prom
 // `@tauri-apps/plugin-dialog`) and handed to Rust, which copies the already-encrypted SQLCipher DB
 // bytes, bundles them with the non-secret salt/KDF params, and writes the `.vaultbak` envelope with
 // `std::fs::write`. Android's SAF-backed save is a separate, device-verified change; the backup
-// screen detects the platform via `getAppInfo()` and doesn't call these on Android. Restore (FR-4.3)
-// is a separate change (issue #21) - no restore wrapper here yet.
+// screen detects the platform via `getAppInfo()` and doesn't call these on Android.
 
 /**
  * Open the native save picker for a backup destination. Returns the chosen path, or `null` if the
@@ -315,4 +316,39 @@ export async function pickBackupDestination(): Promise<string | null> {
  */
 export function createBackup(destPath: string): Promise<BackupSummary> {
   return invoke<BackupSummary>('create_backup', { destPath });
+}
+
+// ── Restore (FR-4.3) ─────────────────────────────────────────────────────────────
+// Desktop-first, REPLACE mode only (ADR 0008) - Merge mode and Android's SAF file-pick are a
+// deferred follow-up. The frontend picks the `.vaultbak` file via the open dialog (the only place
+// besides `pickReceiptImage`/`pickBackupDestination` that touches `@tauri-apps/plugin-dialog`) and
+// hands its path + the backup's own passphrase to `restore_backup`, which validates, swaps the live
+// database + meta sidecar for the backup's, and reopens it - all inside Rust.
+
+/**
+ * Open the native open picker for a `.vaultbak` file to restore. Returns the chosen path, or
+ * `null` if the user cancelled.
+ */
+export async function pickBackupFile(): Promise<string | null> {
+  const selected = await openDialog({
+    multiple: false,
+    directory: false,
+    filters: [{ name: 'Vault backup', extensions: ['vaultbak'] }],
+  });
+  return typeof selected === 'string' ? selected : null;
+}
+
+/**
+ * Restore the vault from the `.vaultbak` file at `backupPath` (already chosen via
+ * `pickBackupFile`) using the BACKUP's own passphrase (which may differ from the current one).
+ * `mode` defaults to `'replace'` - the only mode implemented so far (merge is deferred). Rust
+ * validates the envelope, swaps the live database + meta sidecar for the backup's inside a
+ * crash-safe copy/rename sequence, and reopens the connection; this only marshals the call.
+ */
+export function restoreBackup(
+  backupPath: string,
+  passphrase: string,
+  mode: RestoreMode = 'replace',
+): Promise<RestoreSummary> {
+  return invoke<RestoreSummary>('restore_backup', { backupPath, passphrase, mode });
 }
