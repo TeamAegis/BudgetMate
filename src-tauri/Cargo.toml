@@ -68,6 +68,7 @@ rust_decimal_macros = "1"
 # Property-based testing for the pure money/invariant logic (.claude/rules/engineering.md).
 # Dev-only: adds no binary size.
 proptest = "1"
+insta = { version = "1.48.0", features = ["yaml"] }
 
 # Size-optimised release profile (architecture.md §10.1 / NFR-Perf1).
 [profile.release]

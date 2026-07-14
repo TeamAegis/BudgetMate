@@ -1,0 +1,49 @@
+<section class="feature-page">
+  @if (loading()) {
+    <div class="skeletons" aria-busy="true">
+      <app-skeleton variant="block" height="60px" />
+      <app-skeleton variant="block" height="44px" />
+      <app-skeleton variant="block" height="48px" />
+    </div>
+  } @else if (isAndroid()) {
+    <app-banner tone="info">Export is available on the desktop app for now.</app-banner>
+  } @else if (error() && !showControls()) {
+    <app-banner>{{ error() }}</app-banner>
+    <app-button variant="primary" (click)="retry()">Try again</app-button>
+  } @else {
+    <app-banner tone="warning">
+      This file is not encrypted. Anyone who opens it can read your transactions. Save it
+      somewhere private.
+    </app-banner>
+
+    @if (error()) {
+      <app-banner>{{ error() }}</app-banner>
+    }
+
+    @if (savedSummary(); as summary) {
+      <app-banner tone="success">
+        Exported {{ summary.rowCount }} transaction{{ summary.rowCount === 1 ? '' : 's' }} to
+        {{ savedFileName() }}.
+      </app-banner>
+    }
+
+    <app-card class="format-card">
+      <span class="label">File format</span>
+      <app-segmented-toggle
+        ariaLabel="Export format"
+        [options]="formatOptions"
+        [value]="format()"
+        (valueChange)="onFormatChange($event)"
+      />
+    </app-card>
+
+    @if (isEmpty()) {
+      <p class="hint">Add a transaction first - there's nothing to export yet.</p>
+    }
+
+    <app-button variant="primary" [block]="true" [loading]="busy()" [disabled]="isEmpty()" (click)="export()">
+      <svg icon lucideDownload [size]="18" aria-hidden="true"></svg>
+      <span>{{ busy() ? 'Generating...' : 'Export' }}</span>
+    </app-button>
+  }
+</section>

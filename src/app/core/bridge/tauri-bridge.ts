@@ -5,7 +5,7 @@
 // All business logic lives in Rust; these wrappers only marshal arguments and return DTOs.
 
 import { invoke } from '@tauri-apps/api/core';
-import { open as openDialog } from '@tauri-apps/plugin-dialog';
+import { open as openDialog, save as saveDialog } from '@tauri-apps/plugin-dialog';
 import type {
   AppInfo,
   AppState,
@@ -36,6 +36,8 @@ import type {
   ReportData,
   ReportPeriod,
   DashboardData,
+  ExportFormat,
+  ExportSummary,
 } from '../models';
 
 /** Whether we are running inside the Tauri runtime (vs. plain browser `ng serve`). */
@@ -249,4 +251,36 @@ export function getReport(period: ReportPeriod, categoryId?: number | null): Pro
  */
 export function getDashboard(): Promise<DashboardData> {
   return invoke<DashboardData>('get_dashboard');
+}
+
+// ── Export (FR-4.2) ──────────────────────────────────────────────────────────────
+// Desktop-first: the save destination is picked here (the only place that touches
+// `@tauri-apps/plugin-dialog`) and handed to Rust, which reads the DB, builds the file bytes, and
+// writes them with `std::fs::write`. Android's SAF-backed save is a separate, device-verified
+// change; the export screen detects the platform via `getAppInfo()` and doesn't call these on
+// Android.
+
+const EXPORT_EXTENSION: Record<'csv' | 'xlsx', string> = { csv: 'csv', xlsx: 'xlsx' };
+
+/**
+ * Open the native save picker for an export destination (CSV/XLSX only - JSON is never offered).
+ * Returns the chosen path, or `null` if the user cancelled.
+ */
+export async function pickExportDestination(format: 'csv' | 'xlsx'): Promise<string | null> {
+  const ext = EXPORT_EXTENSION[format];
+  const today = new Date().toISOString().slice(0, 10);
+  const selected = await saveDialog({
+    defaultPath: `budgetmate-export-${today}.${ext}`,
+    filters: [{ name: ext.toUpperCase(), extensions: [ext] }],
+  });
+  return selected ?? null;
+}
+
+/**
+ * Export every transaction to `format` at `destPath` (already chosen via `pickExportDestination`).
+ * Rust reads the DB, assembles the rows, renders the file, and writes it; this only marshals the
+ * call. Desktop-first (see the export ADR) - never called on Android.
+ */
+export function exportTransactions(format: ExportFormat, destPath: string): Promise<ExportSummary> {
+  return invoke<ExportSummary>('export_transactions', { format, destPath });
 }
