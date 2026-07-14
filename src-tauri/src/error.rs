@@ -37,6 +37,19 @@ impl From<crate::db::DbError> for AppError {
     }
 }
 
+impl From<crate::export::ExportError> for AppError {
+    fn from(e: crate::export::ExportError) -> Self {
+        use crate::export::ExportError;
+        let msg = e.to_string();
+        match e {
+            // The UI never offers JSON (screens.md §7.4); a stray call is a caller mistake.
+            ExportError::Unsupported => AppError::Validation(msg),
+            // A writer failure (disk-full-at-buffer-time, encoding issue) is unexpected/internal.
+            ExportError::Csv(_) | ExportError::Xlsx(_) => AppError::Internal(msg),
+        }
+    }
+}
+
 impl From<crate::vault::VaultError> for AppError {
     fn from(e: crate::vault::VaultError) -> Self {
         use crate::vault::VaultError;

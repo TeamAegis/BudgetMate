@@ -433,6 +433,22 @@ export interface DashboardData {
   isEmpty: boolean;
 }
 
+// ── Export (FR-4.2, mirrors Rust `export::ExportFormat` / `commands::export::ExportSummary`) ────
+// Desktop-first slice: the frontend picks a destination via the save dialog (`core/bridge`) and
+// hands the path to `export_transactions`; Android's SAF-backed save is a separate change (the
+// export screen shows an info banner on Android instead of calling this command).
+
+/** Which file format to export to. The UI only ever offers `'csv'` / `'xlsx'`. */
+export type ExportFormat = 'csv' | 'xlsx' | 'json';
+
+/** Result of a successful export (mirrors Rust `ExportSummary`). */
+export interface ExportSummary {
+  path: string;
+  format: ExportFormat;
+  rowCount: number;
+  byteLen: number;
+}
+
 // Errors (IPC rejections) ----------------------------------------------------------
 
 /** Discriminant of an `AppError` (mirrors Rust `error::AppError`, adjacently tagged on `kind`). */

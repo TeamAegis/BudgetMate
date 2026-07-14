@@ -90,6 +90,7 @@ pub fn run() {
             commands::ocr::extract_receipt,
             commands::report::get_report,
             commands::dashboard::get_dashboard,
+            commands::export::export_transactions,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

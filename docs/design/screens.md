@@ -324,11 +324,20 @@ in the current Figma - design them to this spec.
 
 ### 7.4 Export
 - **FR:** FR-4.2.
-- **Components:** format choice (CSV/XLSX), range, *Export* → system save dialog.
-- **Commands:** `export_transactions(format, range)` (`rust_xlsxwriter`/csv) + dialog/fs.
-- **Status (2026-06):** spec - `export_transactions` is not implemented (export crates selected,
-  no command yet). FR-4.2.
-- **States:** generating, saved, error. Plaintext-export warning shown.
+- **Components:** `SegmentedToggle` format choice (CSV / Excel), *Export* `Button` -> system save
+  dialog. No date-range picker in this slice (every transaction is exported); a range filter is a
+  future addition, not a gap in this change.
+- **Commands:** `export_transactions(format, destPath)` (`rust_xlsxwriter`/`csv`, one row per
+  category split) + the `dialog` plugin's save picker (`core/bridge::pickExportDestination`).
+- **Status (2026-07-14):** **implemented, desktop-first** (ADR 0006) -
+  `src/app/features/settings/export/export.ts`, route `settings/export`. Android's SAF-backed save
+  (`tauri-plugin-android-fs`) is **deferred** - on Android the screen shows an
+  `app-banner tone="info"` ("Export is available on the desktop app for now") instead of the
+  format/Export controls, detected via `getAppInfo()`.
+- **States:** loading, empty (no transactions - Export disabled + hint), populated (format toggle +
+  Export), busy ("Generating..." + spinner in the Export button, UI stays responsive), saved
+  (success banner naming the row count + destination filename), error (plain-language banner +
+  retry). The plaintext-export warning banner is persistent whenever the controls are shown.
 
 ### 7.5 Backup / Restore
 - **FR:** FR-4.1/4.3.

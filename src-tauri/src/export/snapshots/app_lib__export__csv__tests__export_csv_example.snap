@@ -1,0 +1,7 @@
+---
+source: src/export/csv.rs
+expression: text
+---
+Date,Account,Payee,Category,Kind,Amount,Currency,Base amount,Base currency,Note
+2026-06-06,Cash,Market,Groceries,Expense,-30.00,MUR,-30.00,MUR,weekly shop
+2026-06-10,Cash,,Salary,Income,2000.00,MUR,2000.00,MUR,

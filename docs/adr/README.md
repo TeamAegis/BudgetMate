@@ -26,3 +26,7 @@ Consequences, and Alternatives considered.
   allowances use the imprest set-to-target top-up (carryover, no stacking), three balances
   (`Available = Total - Reserved`), an all-or-nothing savings gate on increases, and calendar-aligned
   lazy refresh. Distinct from goals (FR-3.2) and category caps (FR-3.1). Full spec: `docs/allowances.md`.
+- [0006](0006-export-desktop-first-android-saf-deferred.md): Transaction export (FR-4.2). Pure,
+  platform-agnostic CSV/XLSX writers; the save path is desktop-first (dialog `save()` + `std::fs`),
+  Android's SAF-backed save (`tauri-plugin-android-fs`) is a separate device-verified change; amounts
+  are always exported as strings (never a float) to keep the `no-float-money` guard honest.

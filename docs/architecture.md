@@ -326,10 +326,12 @@ file (csv/ofx/qfx) ──pick (dialog)──► read (fs) ──► parse ──
 
 ## 9. Backup, Restore & Export (FR-4.x)
 
-> **Status (2026-06-25):** this section describes the intended approach. The export crates are
-> selected, but backup, restore, and export are **specified, not implemented** (no `create_backup`,
-> `restore_backup`, or `export_transactions` command exists yet). The Settings screens for them are
-> a design spec (`screens.md` §7.4 / §7.5). See §11 "Build status".
+> **Status (2026-07-14):** Export (FR-4.2) is **implemented desktop-first** - `export_transactions`
+> reads the DB, assembles CSV/XLSX bytes, and writes them via the `dialog` save picker + `std::fs`.
+> Android's SAF-backed save (`tauri-plugin-android-fs`) is **deferred** to a separate, device-verified
+> change; the Export screen shows an info banner on Android instead (see ADR 0006). Backup
+> (`create_backup`) and restore (`restore_backup`) remain **specified, not implemented**. The
+> Settings screens for backup/restore are a design spec (`screens.md` §7.5). See §11 "Build status".
 
 - **Backup (FR-4.1):** produce an encrypted `.vaultbak`. Simplest robust path: the encrypted
   SQLCipher DB file *is* already encrypted; copy it (or an encrypted JSON dump) to a
@@ -338,8 +340,11 @@ file (csv/ofx/qfx) ──pick (dialog)──► read (fs) ──► parse ──
   security-scoped resources for picker-selected destinations.
 - **Restore (FR-4.3):** pick a `.vaultbak`, prompt passphrase, validate, then replace or
   merge inside a transaction.
-- **Export (FR-4.2):** `rust_xlsxwriter` for `.xlsx`, `csv` for CSV; user picks destination.
-  Export is plaintext by design (it's for external use) and the UI warns accordingly.
+- **Export (FR-4.2):** `rust_xlsxwriter` for `.xlsx`, `csv` for CSV; user picks destination via the
+  save dialog and Rust writes the bytes with `std::fs::write` (desktop-first; Android SAF deferred -
+  ADR 0006). Export is plaintext by design (it's for external use) and the UI warns accordingly.
+  Amounts are written as decimal STRINGS (`domain::money::minor_to_major_string`), never a float, so
+  the `no-float-money` guard holds for the export path too.
 
 ---
 
@@ -400,14 +405,17 @@ traceability table (`functional-requirements.md` §5) carries the same status pe
   user-entered fx rate + derived base amount), recurrence (lazy materialisation), savings goals,
   deterministic categorisation rules (management + `preview_rules`), accounts, categories, OCR
   field extraction (Android), passphrase/biometric unlock, lock-on-background, SQLCipher at rest,
-  schema migrations.
+  schema migrations, local reporting/analytics aggregations (FR-3.3), the home dashboard
+  (`get_dashboard`), and transaction export to CSV/XLSX (FR-4.2, desktop-first - `export_transactions`
+  + the save dialog; ADR 0006).
 - **Partial:** dedup (matcher written in `rules/dedup.rs`, not wired into import or manual entry);
-  performance metrics (web payload size tracked; Android install-size metric pending issue #4).
+  export (FR-4.2) is desktop-only - the Android SAF-backed save is a separate, device-verified
+  follow-up (ADR 0006); performance metrics (web payload size tracked; Android install-size metric
+  pending issue #4).
 - **Specified only (little or no runtime code):** envelope budgeting (FR-3.1; `budgets` table
-  exists, no spent-vs-remaining logic), local reporting/analytics aggregations (FR-3.3), the home
-  dashboard (`get_dashboard`), the import pipeline + review UI (FR-2.2), backup/restore/export
-  (FR-4.x), the income/onboarding profile (`set_onboarding_profile`), and savings-backed allowances
-  (FR-3.4; domain spec `docs/allowances.md` + ADR 0005, no schema or runtime code yet).
+  exists, no spent-vs-remaining logic), the import pipeline + review UI (FR-2.2), backup/restore
+  (FR-4.1/4.3), the income/onboarding profile (`set_onboarding_profile`), and savings-backed
+  allowances (FR-3.4; domain spec `docs/allowances.md` + ADR 0005, no schema or runtime code yet).
 
 ### 11.2 Open product questions (from the 2026-06 financial-domain review)
 Recorded so they are not lost. These are **observations and recommendations, not committed scope**
