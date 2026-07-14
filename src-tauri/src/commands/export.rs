@@ -42,7 +42,6 @@ pub async fn export_transactions<R: Runtime>(
     dest_path: String,
 ) -> Result<ExportSummary, AppError> {
     let dir = app_data_dir(&app)?;
-    let base_currency = vault::read_meta(&dir).map(|m| m.settings).unwrap_or_default().base_currency;
 
     // Read everything needed inside a scope so the Mutex guard drops before the blocking render +
     // write below - never hold a std::sync::Mutex guard across an await.
@@ -59,6 +58,9 @@ pub async fn export_transactions<R: Runtime>(
 
     let path = dest_path.clone();
     let (bytes, row_count) = tauri::async_runtime::spawn_blocking(move || {
+        // `vault::read_meta` does blocking file I/O - keep it inside spawn_blocking with the
+        // render/write below, never directly in the async command body.
+        let base_currency = vault::read_meta(&dir).map(|m| m.settings).unwrap_or_default().base_currency;
         let rows = export::build_rows(&txs, &account_name, &category_kind, &base_currency);
         let row_count = rows.len() as u32;
         let bytes = export::write_bytes(format, &rows)?;

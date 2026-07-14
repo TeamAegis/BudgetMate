@@ -7,8 +7,8 @@
     </div>
   } @else if (isAndroid()) {
     <app-banner tone="info">Export is available on the desktop app for now.</app-banner>
-  } @else if (error() && !showControls()) {
-    <app-banner>{{ error() }}</app-banner>
+  } @else if (loadError()) {
+    <app-banner>{{ loadError() }}</app-banner>
     <app-button variant="primary" (click)="retry()">Try again</app-button>
   } @else {
     <app-banner tone="warning">
@@ -16,8 +16,8 @@
       somewhere private.
     </app-banner>
 
-    @if (error()) {
-      <app-banner>{{ error() }}</app-banner>
+    @if (actionError()) {
+      <app-banner>{{ actionError() }}</app-banner>
     }
 
     @if (savedSummary(); as summary) {
@@ -30,18 +30,31 @@
     <app-card class="format-card">
       <span class="label">File format</span>
       <app-segmented-toggle
-        ariaLabel="Export format"
+        ariaLabel="File format"
         [options]="formatOptions"
         [value]="format()"
         (valueChange)="onFormatChange($event)"
       />
     </app-card>
 
+    <p class="hint">
+      Amounts are saved as text, so a spreadsheet may need "Convert to Number" before totals (SUM)
+      work. The Base amount and Base currency columns show the value converted to your main
+      currency - useful if you record expenses in more than one currency.
+    </p>
+
     @if (isEmpty()) {
-      <p class="hint">Add a transaction first - there's nothing to export yet.</p>
+      <p class="hint" id="export-empty-hint">Add a transaction first - there's nothing to export yet.</p>
     }
 
-    <app-button variant="primary" [block]="true" [loading]="busy()" [disabled]="isEmpty()" (click)="export()">
+    <app-button
+      variant="primary"
+      [block]="true"
+      [loading]="busy()"
+      [disabled]="isEmpty()"
+      [describedBy]="isEmpty() ? 'export-empty-hint' : null"
+      (click)="export()"
+    >
       <svg icon lucideDownload [size]="18" aria-hidden="true"></svg>
       <span>{{ busy() ? 'Generating...' : 'Export' }}</span>
     </app-button>

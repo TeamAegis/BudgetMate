@@ -143,7 +143,7 @@ describe('Export', () => {
       const fixture = createFixture();
       const component = fixture.componentInstance as unknown as {
         busy: { (): boolean };
-        error: { (): string | null };
+        actionError: { (): string | null };
         savedSummary: { (): unknown };
         export(): Promise<void>;
       };
@@ -151,8 +151,39 @@ describe('Export', () => {
       await component.export();
 
       expect(component.busy()).toBeFalse();
-      expect(component.error()).toBeNull();
+      expect(component.actionError()).toBeNull();
       expect(component.savedSummary()).toBeNull();
+    } finally {
+      restore();
+    }
+  });
+
+  it('double-tap guard: a second export() call while the save picker is still open is a no-op', async () => {
+    let saveCallCount = 0;
+    let resolveSave!: (value: unknown) => void;
+    const restore = withTauriInternals((cmd) => {
+      if (cmd === 'plugin:dialog|save') {
+        saveCallCount++;
+        return new Promise((resolve) => {
+          resolveSave = resolve;
+        });
+      }
+      return Promise.resolve(null);
+    });
+    try {
+      const fixture = createFixture();
+      const component = fixture.componentInstance as unknown as {
+        export(): Promise<void>;
+      };
+
+      // Fire two fast taps before the picker resolves - the second call must not open a second
+      // save dialog (the in-flight guard is set synchronously, before awaiting the picker).
+      const first = component.export();
+      const second = component.export();
+      resolveSave('/tmp/out.csv');
+      await Promise.all([first, second]);
+
+      expect(saveCallCount).toBe(1);
     } finally {
       restore();
     }
@@ -219,8 +250,12 @@ describe('Export', () => {
     }
   });
 
-  it('error state: a rejected export shows the plain-language error banner', async () => {
+  it('action error: a rejected export shows an inline error banner WITHOUT hiding the warning or controls', async () => {
     const restore = withTauriInternals((cmd) => {
+      if (cmd === 'get_app_info') {
+        return Promise.resolve({ name: 'BudgetMate', version: '0.1.0', platform: 'windows' });
+      }
+      if (cmd === 'list_transactions') return Promise.resolve([{ id: 1 }]);
       if (cmd === 'plugin:dialog|save') return Promise.resolve('/tmp/out.csv');
       if (cmd === 'export_transactions') {
         return Promise.reject({ kind: 'internal', message: 'disk write failed' });
@@ -230,17 +265,52 @@ describe('Export', () => {
     try {
       const fixture = createFixture();
       fixture.detectChanges();
+      await fixture.whenStable(); // let ngOnInit settle to the populated state first
+      fixture.detectChanges();
       const component = fixture.componentInstance as unknown as {
-        error: { (): string | null };
+        actionError: { (): string | null };
         export(): Promise<void>;
       };
 
       await component.export();
-
-      expect(component.error()).not.toBeNull();
       fixture.detectChanges();
+
+      expect(component.actionError()).not.toBeNull();
       const host = fixture.nativeElement as HTMLElement;
-      expect(host.querySelectorAll('app-banner').length).toBeGreaterThan(0);
+      // The action failure must NOT route into the blocking "Try again" view: the plaintext
+      // warning and the format controls stay in the DOM, and an inline error banner appears
+      // alongside them (not instead of them).
+      expect(host.textContent).toContain('not encrypted');
+      expect(host.querySelector('app-segmented-toggle')).not.toBeNull();
+      expect(host.textContent).not.toContain('Try again');
+      // "disk write failed" doesn't match a known heuristic in `toUserMessage`, so it maps to the
+      // generic plain-language fallback - still shown inline, not swallowed.
+      expect(host.textContent).toContain('Something went wrong');
+    } finally {
+      restore();
+    }
+  });
+
+  it('load error: a rejected initial load shows the blocking Try-again view, not the populated controls', async () => {
+    const restore = withTauriInternals((cmd) => {
+      if (cmd === 'get_app_info') {
+        return Promise.reject({ kind: 'internal', message: 'could not read app info' });
+      }
+      return Promise.resolve(null);
+    });
+    try {
+      const fixture = createFixture();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const host = fixture.nativeElement as HTMLElement;
+      expect(host.textContent).toContain('Something went wrong');
+      expect(host.textContent).toContain('Try again');
+      // The blocking view replaces the populated state entirely: no format controls, no
+      // plaintext-not-encrypted warning.
+      expect(host.querySelector('app-segmented-toggle')).toBeNull();
+      expect(host.textContent).not.toContain('not encrypted');
     } finally {
       restore();
     }

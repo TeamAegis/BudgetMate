@@ -23,4 +23,19 @@ describe('Button', () => {
     expect(fixture.nativeElement.querySelector('app-spinner')).toBeNull();
     expect(btn.disabled).toBe(false);
   });
+
+  it('omits aria-describedby by default', () => {
+    const fixture = TestBed.createComponent(Button);
+    fixture.detectChanges();
+    const btn = fixture.nativeElement.querySelector('button');
+    expect(btn.hasAttribute('aria-describedby')).toBe(false);
+  });
+
+  it('forwards describedBy as aria-describedby when set', () => {
+    const fixture = TestBed.createComponent(Button);
+    fixture.componentRef.setInput('describedBy', 'some-hint-id');
+    fixture.detectChanges();
+    const btn = fixture.nativeElement.querySelector('button');
+    expect(btn.getAttribute('aria-describedby')).toBe('some-hint-id');
+  });
 });

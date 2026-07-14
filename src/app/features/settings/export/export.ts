@@ -34,24 +34,34 @@ type OfferedFormat = 'csv' | 'xlsx';
 })
 export class Export implements OnInit {
   protected readonly loading = signal(true);
-  protected readonly error = signal<string | null>(null);
+  /** Set ONLY by a failed initial load (`ngOnInit`'s `getAppInfo`/`listTransactions`). Drives the
+   *  blocking full-page "Try again" branch, which is appropriate there because nothing loaded. */
+  protected readonly loadError = signal<string | null>(null);
+  /** Set ONLY by a failed export action (`export()`). Shown as an inline banner INSIDE the
+   *  populated state so a failed export never hides the format controls or the plaintext-warning
+   *  banner, and never discards the format the user already picked. */
+  protected readonly actionError = signal<string | null>(null);
   protected readonly isAndroid = signal(false);
   /** `null` while unknown (still loading); otherwise the number of transactions available. */
   protected readonly transactionCount = signal<number | null>(null);
 
   protected readonly format = signal<OfferedFormat>('csv');
   protected readonly busy = signal(false);
+  /** Guards against a double-tap opening two save dialogs / firing two exports: set synchronously
+   *  at the start of `export()`, before awaiting the picker, and cleared in `finally`. */
+  private readonly inFlight = signal(false);
   protected readonly savedSummary = signal<ExportSummary | null>(null);
 
   protected readonly isEmpty = computed(() => this.transactionCount() === 0);
   /** The controls (format + Export) render once we know the platform isn't Android and the initial
-   *  transaction count came back without error. */
+   *  load succeeded. Does NOT depend on `actionError` - an export-action failure must not tear down
+   *  the controls or the plaintext warning. */
   protected readonly showControls = computed(
-    () => !this.loading() && !this.isAndroid() && this.error() === null,
+    () => !this.loading() && !this.isAndroid() && this.loadError() === null,
   );
 
   protected readonly formatOptions: SegmentOption[] = [
-    { value: 'csv', label: 'CSV' },
+    { value: 'csv', label: 'CSV (spreadsheet file)' },
     { value: 'xlsx', label: 'Excel (.xlsx)' },
   ];
 
@@ -66,7 +76,7 @@ export class Export implements OnInit {
   async ngOnInit(): Promise<void> {
     if (!isTauri()) {
       this.loading.set(false);
-      this.error.set('Run the app (npm run tauri dev) to export transactions.');
+      this.loadError.set('Run the app (npm run tauri dev) to export transactions.');
       return;
     }
     try {
@@ -78,7 +88,7 @@ export class Export implements OnInit {
       const txs = await listTransactions();
       this.transactionCount.set(txs.length);
     } catch (e) {
-      this.error.set(toUserMessage(e));
+      this.loadError.set(toUserMessage(e));
     } finally {
       this.loading.set(false);
     }
@@ -89,8 +99,9 @@ export class Export implements OnInit {
   }
 
   protected async export(): Promise<void> {
-    if (this.busy() || this.isEmpty()) return;
-    this.error.set(null);
+    if (this.inFlight() || this.isEmpty()) return;
+    this.inFlight.set(true);
+    this.actionError.set(null);
     this.savedSummary.set(null);
     try {
       const destPath = await pickExportDestination(this.format());
@@ -99,14 +110,15 @@ export class Export implements OnInit {
       const summary = await exportTransactions(this.format(), destPath);
       this.savedSummary.set(summary);
     } catch (e) {
-      this.error.set(toUserMessage(e));
+      this.actionError.set(toUserMessage(e));
     } finally {
       this.busy.set(false);
+      this.inFlight.set(false);
     }
   }
 
   protected retry(): void {
-    this.error.set(null);
+    this.loadError.set(null);
     this.loading.set(true);
     void this.ngOnInit();
   }

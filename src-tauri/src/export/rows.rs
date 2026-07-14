@@ -5,12 +5,10 @@
 //! returns an `ExportSummary`), so it carries no `serde`/camelCase requirement.
 
 use std::collections::HashMap;
-use std::str::FromStr;
-
-use rust_decimal::Decimal;
 
 use crate::domain::category::CategoryKind;
-use crate::domain::money::{base_amount_minor, minor_to_major_string};
+use crate::domain::money::minor_to_major_string;
+use crate::domain::report::allocate_base;
 use crate::domain::transaction::Transaction;
 
 /// One line of the export - one row per category split. All amount fields are STRINGS (never
@@ -28,8 +26,9 @@ pub struct ExportRow {
     /// Split-signed major-unit amount in the transaction's own currency.
     pub amount: String,
     pub currency: String,
-    /// The same split amount converted to the base (reporting) currency via the transaction's own
-    /// `fx_rate` ("1" for a same-currency entry).
+    /// This split's share of the transaction's OWN stored `base_amount_minor`, allocated across the
+    /// transaction's splits by magnitude (see `domain::report::allocate_base`) so the exported base
+    /// amounts always reconcile exactly with the ledger, even for a fractional-fx split transaction.
     pub base_amount: String,
     pub base_currency: String,
     pub note: String,
@@ -48,8 +47,10 @@ fn kind_label(kind: CategoryKind) -> &'static str {
 /// caller from `db::accounts::list` / `db::categories::list` (`TxSplit` only denormalises the
 /// category NAME, not its kind, so the command passes both maps in - this is a deliberate
 /// adaptation of the original one-map signature; see the export ADR). `base_ccy` labels the base
-/// column; the per-split base amount itself is derived from the transaction's own `fx_rate`, so it
-/// stays correct even for a transaction recorded before a later base-currency change.
+/// column; each split's base amount is this transaction's OWN stored `base_amount_minor` allocated
+/// across its splits' magnitudes (`domain::report::allocate_base` - the same reconciliation the
+/// Analytics module uses), NOT independently re-derived from the split amount and `fx_rate` - that
+/// would drift by +/-1 minor unit from the ledger for a fractional-fx split transaction.
 pub fn build_rows(
     txs: &[Transaction],
     account_name: &HashMap<i64, String>,
@@ -59,14 +60,16 @@ pub fn build_rows(
     let mut rows = Vec::new();
     for tx in txs {
         let account = account_name.get(&tx.account_id).cloned().unwrap_or_default();
-        // fx_rate is validated (positive decimal) on every write; default to identity defensively.
-        let fx_rate = Decimal::from_str(&tx.fx_rate).unwrap_or(Decimal::ONE);
-        for split in &tx.splits {
+        let magnitudes: Vec<i64> = tx.splits.iter().map(|s| s.amount_minor.abs()).collect();
+        let base_shares = allocate_base(tx.base_amount_minor.abs(), &magnitudes);
+        for (split, base_share) in tx.splits.iter().zip(base_shares) {
             let kind = category_kind
                 .get(&split.category_id)
                 .copied()
                 .unwrap_or(CategoryKind::Expense);
-            let base_minor = base_amount_minor(split.amount_minor, fx_rate);
+            // Re-apply this split's own sign so a mixed-sign split set (rare) still exports
+            // correctly-signed base amounts.
+            let base_minor = base_share * split.amount_minor.signum();
             rows.push(ExportRow {
                 date: tx.posted_date.clone(),
                 account: account.clone(),
@@ -86,18 +89,28 @@ pub fn build_rows(
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
+    use rust_decimal::Decimal;
+
     use super::*;
+    use crate::domain::money::base_amount_minor;
     use crate::domain::transaction::TxSplit;
 
-    fn tx(id: i64, splits: Vec<TxSplit>) -> Transaction {
+    /// `base_amount_minor` is derived from `fx_rate` exactly as the DB layer would on write
+    /// (`domain::money::base_amount_minor`), so the stored base total is consistent with the rate a
+    /// test sets - never the raw split sum (that was the pre-fix bug this module now avoids).
+    fn tx(id: i64, fx_rate: &str, splits: Vec<TxSplit>) -> Transaction {
+        let sum_minor: i64 = splits.iter().map(|s| s.amount_minor).sum();
+        let rate = Decimal::from_str(fx_rate).unwrap_or(Decimal::ONE);
         Transaction {
             id,
             account_id: 1,
             posted_date: "2026-06-06".into(),
-            amount_minor: splits.iter().map(|s| s.amount_minor).sum(),
+            amount_minor: sum_minor,
             currency: "MUR".into(),
-            fx_rate: "1".into(),
-            base_amount_minor: splits.iter().map(|s| s.amount_minor).sum(),
+            fx_rate: fx_rate.into(),
+            base_amount_minor: base_amount_minor(sum_minor, rate),
             payee: Some("Market".into()),
             note: Some("weekly shop".into()),
             source: "manual".into(),
@@ -123,6 +136,7 @@ mod tests {
         let (accounts, categories) = maps();
         let txs = [tx(
             1,
+            "1",
             vec![TxSplit { id: 1, category_id: 1, category_name: "Groceries".into(), amount_minor: -1_500 }],
         )];
         let rows = build_rows(&txs, &accounts, &categories, "MUR");
@@ -145,6 +159,7 @@ mod tests {
         let (accounts, categories) = maps();
         let txs = [tx(
             2,
+            "1",
             vec![
                 TxSplit { id: 1, category_id: 1, category_name: "Groceries".into(), amount_minor: -3_000 },
                 TxSplit { id: 2, category_id: 2, category_name: "Dining".into(), amount_minor: -2_000 },
@@ -163,10 +178,10 @@ mod tests {
         let (accounts, categories) = maps();
         let mut income = tx(
             3,
+            "45.5",
             vec![TxSplit { id: 3, category_id: 9, category_name: "Salary".into(), amount_minor: 10_000 }],
         );
         income.currency = "USD".into();
-        income.fx_rate = "45.5".into();
         let txs = [income];
         let rows = build_rows(&txs, &accounts, &categories, "MUR");
         assert_eq!(rows.len(), 1);
@@ -183,6 +198,7 @@ mod tests {
         let accounts = HashMap::new(); // account id 1 not in the map
         let mut t = tx(
             4,
+            "1",
             vec![TxSplit { id: 4, category_id: 1, category_name: "Groceries".into(), amount_minor: -500 }],
         );
         t.note = None;
@@ -193,11 +209,38 @@ mod tests {
     }
 
     #[test]
+    fn build_rows_reconciles_fractional_fx_split_transaction_without_drift() {
+        // Mirrors `allocate_base`'s own doc example: 200 minor @ fx 0.335 -> stored base 67
+        // (exact). Two 100-minor splits would each independently round `100 * 0.335 = 33.5` to 34,
+        // summing to 68 - one over the ledger total. Allocating from the transaction's own stored
+        // base reconciles to 67: "0.34" + "0.33", never "0.34" + "0.34".
+        let (accounts, categories) = maps();
+        let txs = [tx(
+            5,
+            "0.335",
+            vec![
+                TxSplit { id: 5, category_id: 1, category_name: "Groceries".into(), amount_minor: 100 },
+                TxSplit { id: 6, category_id: 2, category_name: "Dining".into(), amount_minor: 100 },
+            ],
+        )];
+        assert_eq!(txs[0].base_amount_minor, 67, "sanity: the transaction's own stored base amount");
+
+        let rows = build_rows(&txs, &accounts, &categories, "MUR");
+        assert_eq!(rows.len(), 2);
+        assert_eq!(rows[0].base_amount, "0.34");
+        assert_eq!(rows[1].base_amount, "0.33");
+
+        let base_minor_sum = 34i64 + 33i64;
+        assert_eq!(base_minor_sum, 67, "must reconcile to the parent's stored base, not 68");
+    }
+
+    #[test]
     fn build_rows_snapshot() {
         let (accounts, categories) = maps();
         let txs = [
             tx(
                 1,
+                "1",
                 vec![
                     TxSplit { id: 1, category_id: 1, category_name: "Groceries".into(), amount_minor: -3_000 },
                     TxSplit { id: 2, category_id: 2, category_name: "Dining".into(), amount_minor: -2_000 },
@@ -205,6 +248,7 @@ mod tests {
             ),
             tx(
                 2,
+                "1",
                 vec![TxSplit { id: 3, category_id: 9, category_name: "Salary".into(), amount_minor: 200_000 }],
             ),
         ];
