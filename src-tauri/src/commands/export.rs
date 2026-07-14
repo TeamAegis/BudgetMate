@@ -44,8 +44,14 @@ pub async fn export_transactions<R: Runtime>(
     let dir = app_data_dir(&app)?;
 
     // Read everything needed inside a scope so the Mutex guard drops before the blocking render +
-    // write below - never hold a std::sync::Mutex guard across an await.
-    let (txs, account_name, category_kind) = {
+    // write below - never hold a std::sync::Mutex guard across an await. `base_currency` is read
+    // here too (rather than inside spawn_blocking below) so it comes from the SAME guarded scope
+    // as the DB read: a concurrent `restore_backup` writes the new meta AND swaps the DB file
+    // while holding this same DbState mutex (ADR 0008 point 4 / issue #116), so reading meta
+    // under the guard guarantees a consistent (meta, DB) pair - never a stale label paired with
+    // freshly-restored rows (or vice versa). `vault::read_meta` is blocking file I/O, but that is
+    // fine here since it runs before the `spawn_blocking(...).await` below, not across it.
+    let (txs, account_name, category_kind, base_currency) = {
         let guard = state.guard()?;
         let conn = guard.as_ref().ok_or(AppError::Locked)?;
         let txs = db::transactions::list(conn)?;
@@ -53,14 +59,12 @@ pub async fn export_transactions<R: Runtime>(
             db::accounts::list(conn, true)?.into_iter().map(|a| (a.id, a.name)).collect();
         let category_kind: HashMap<i64, _> =
             db::categories::list(conn, true)?.into_iter().map(|c| (c.id, c.kind)).collect();
-        (txs, account_name, category_kind)
+        let base_currency = vault::read_meta(&dir).map(|m| m.settings).unwrap_or_default().base_currency;
+        (txs, account_name, category_kind, base_currency)
     };
 
     let path = dest_path.clone();
     let (bytes, row_count) = tauri::async_runtime::spawn_blocking(move || {
-        // `vault::read_meta` does blocking file I/O - keep it inside spawn_blocking with the
-        // render/write below, never directly in the async command body.
-        let base_currency = vault::read_meta(&dir).map(|m| m.settings).unwrap_or_default().base_currency;
         let rows = export::build_rows(&txs, &account_name, &category_kind, &base_currency);
         let row_count = rows.len() as u32;
         let bytes = export::write_bytes(format, &rows)?;

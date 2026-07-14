@@ -19,7 +19,14 @@ pub fn get_dashboard<R: Runtime>(
     state: State<'_, DbState>,
 ) -> Result<DashboardData, AppError> {
     let dir = app_data_dir(&app)?;
-    let base_currency = vault::read_meta(&dir).map(|m| m.settings).unwrap_or_default().base_currency;
     let today = chrono::Utc::now().date_naive();
-    state.with(|conn| crate::db::dashboard::dashboard(conn, &base_currency, today))
+    // Read the base-currency label inside the same DbState guard as the DB query. A concurrent
+    // `restore_backup` writes the new meta AND swaps the DB file while holding this same mutex
+    // (see ADR 0008 point 4 / issue #116), so reading meta under the guard guarantees a
+    // consistent (meta, DB) pair - fully pre-restore or fully post-restore, never a stale label
+    // paired with freshly-restored rows (or vice versa).
+    state.with(|conn| {
+        let base_currency = vault::read_meta(&dir).map(|m| m.settings).unwrap_or_default().base_currency;
+        crate::db::dashboard::dashboard(conn, &base_currency, today)
+    })
 }
