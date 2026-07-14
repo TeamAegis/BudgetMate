@@ -52,6 +52,13 @@ getrandom = "0.3"
 csv = "1"
 rust_xlsxwriter = "0.95"
 
+# Encrypted backup (FR-4.1): base64-encode the envelope's binary fields (already-encrypted DB
+# bytes + salt) so a multi-MB `.vaultbak` doesn't bloat ~3-4x under serde_json's default numeric-
+# array encoding. Already resolved transitively (argon2's dependency tree) at 0.22.1, so this
+# promotes an existing lock entry to a direct dep rather than adding new supply-chain surface
+# (dependency-audit skill: MIT/Apache-2.0, no build script, negligible size).
+base64 = "0.22"
+
 # Receipt field extraction + date handling (deterministic, no ML).
 regex = "1"
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }

@@ -38,6 +38,7 @@ import type {
   DashboardData,
   ExportFormat,
   ExportSummary,
+  BackupSummary,
 } from '../models';
 
 /** Whether we are running inside the Tauri runtime (vs. plain browser `ng serve`). */
@@ -283,4 +284,35 @@ export async function pickExportDestination(format: 'csv' | 'xlsx'): Promise<str
  */
 export function exportTransactions(format: ExportFormat, destPath: string): Promise<ExportSummary> {
   return invoke<ExportSummary>('export_transactions', { format, destPath });
+}
+
+// ── Backup (FR-4.1) ───────────────────────────────────────────────────────────────
+// Desktop-first: the save destination is picked here (the only place that touches
+// `@tauri-apps/plugin-dialog`) and handed to Rust, which copies the already-encrypted SQLCipher DB
+// bytes, bundles them with the non-secret salt/KDF params, and writes the `.vaultbak` envelope with
+// `std::fs::write`. Android's SAF-backed save is a separate, device-verified change; the backup
+// screen detects the platform via `getAppInfo()` and doesn't call these on Android. Restore (FR-4.3)
+// is a separate change (issue #21) - no restore wrapper here yet.
+
+/**
+ * Open the native save picker for a backup destination. Returns the chosen path, or `null` if the
+ * user cancelled.
+ */
+export async function pickBackupDestination(): Promise<string | null> {
+  const today = new Date().toISOString().slice(0, 10);
+  const selected = await saveDialog({
+    defaultPath: `budgetmate-backup-${today}.vaultbak`,
+    filters: [{ name: 'Vault backup', extensions: ['vaultbak'] }],
+  });
+  return selected ?? null;
+}
+
+/**
+ * Write an encrypted `.vaultbak` snapshot at `destPath` (already chosen via
+ * `pickBackupDestination`). Rust copies the already-encrypted DB bytes, bundles the non-secret
+ * salt/KDF params, and writes the file; this only marshals the call. Desktop-first (see the backup
+ * ADR) - never called on Android.
+ */
+export function createBackup(destPath: string): Promise<BackupSummary> {
+  return invoke<BackupSummary>('create_backup', { destPath });
 }

@@ -50,6 +50,14 @@ impl From<crate::export::ExportError> for AppError {
     }
 }
 
+impl From<crate::backup::BackupError> for AppError {
+    fn from(e: crate::backup::BackupError) -> Self {
+        // Only ever a serialisation failure building the envelope - unexpected/internal, and the
+        // message never contains salt/kdf/key/passphrase/db bytes (see `backup::BackupError`).
+        AppError::Internal(e.to_string())
+    }
+}
+
 impl From<crate::vault::VaultError> for AppError {
     fn from(e: crate::vault::VaultError) -> Self {
         use crate::vault::VaultError;

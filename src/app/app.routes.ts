@@ -200,6 +200,12 @@ export const routes: Routes = [
     data: { title: 'Export', back: true, hideNav: true },
     loadComponent: () => import('./features/settings/export/export').then((m) => m.Export),
   },
+  {
+    path: 'settings/backup',
+    canActivate: [unlockGuard],
+    data: { title: 'Backup', back: true, hideNav: true },
+    loadComponent: () => import('./features/settings/backup/backup').then((m) => m.Backup),
+  },
   // Nested actions (not in the bottom nav).
   {
     path: 'budgets',

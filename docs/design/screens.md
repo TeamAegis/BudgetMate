@@ -345,8 +345,11 @@ in the current Figma - design them to this spec.
   *Restore* → pick `.vaultbak` → passphrase → replace/merge.
 - **Commands:** `create_backup()` → file via dialog/fs (Android: `tauri-plugin-android-fs`);
   `restore_backup(path, passphrase, mode)` (ACID).
-- **Status (2026-06):** spec - neither `create_backup` nor `restore_backup` is implemented yet
-  (FR-4.1 / FR-4.3).
+- **Status (2026-07-14):** FR-4.1 **implemented desktop-first** (ADR 0007) - `create_backup` copies
+  the already-encrypted SQLCipher DB bytes, bundles the non-secret salt/KDF params, and writes a
+  `.vaultbak` envelope via the save dialog + `std::fs::write`; route `settings/backup`. Android's
+  SAF-backed save is deferred (the screen shows an info banner there, mirroring Export/ADR 0006).
+  FR-4.3 restore is still spec only - not implemented (issue #21).
 - **States:** creating, written, restoring, merge/replace choice, wrong-passphrase error.
 
 ---

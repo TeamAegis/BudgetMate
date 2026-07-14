@@ -1,6 +1,7 @@
 //! BudgetMate Rust core entry point. Registers plugins, opens the encrypted DB into managed
 //! state, and exposes the command surface. All business logic lives in the modules below.
 
+pub mod backup;
 pub mod commands;
 pub mod crypto;
 pub mod db;
@@ -91,6 +92,7 @@ pub fn run() {
             commands::report::get_report,
             commands::dashboard::get_dashboard,
             commands::export::export_transactions,
+            commands::backup::create_backup,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
