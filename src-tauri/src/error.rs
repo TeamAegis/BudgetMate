@@ -69,6 +69,15 @@ impl From<crate::backup::restore::RestoreError> for AppError {
     }
 }
 
+impl From<crate::import::ofx::OfxError> for AppError {
+    fn from(e: crate::import::ofx::OfxError) -> Self {
+        // Every variant (not OFX at all, too large, no resolvable currency, too many rows) is a
+        // user-fixable "pick a different/valid file" condition, never a hint about the file's
+        // financial contents - safe to surface to the user as-is.
+        AppError::Validation(e.to_string())
+    }
+}
+
 impl From<crate::vault::VaultError> for AppError {
     fn from(e: crate::vault::VaultError) -> Self {
         use crate::vault::VaultError;
