@@ -26,3 +26,18 @@ Consequences, and Alternatives considered.
   allowances use the imprest set-to-target top-up (carryover, no stacking), three balances
   (`Available = Total - Reserved`), an all-or-nothing savings gate on increases, and calendar-aligned
   lazy refresh. Distinct from goals (FR-3.2) and category caps (FR-3.1). Full spec: `docs/allowances.md`.
+- [0006](0006-export-desktop-first-android-saf-deferred.md): Transaction export (FR-4.2). Pure,
+  platform-agnostic CSV/XLSX writers; the save path is desktop-first (dialog `save()` + `std::fs`),
+  Android's SAF-backed save (`tauri-plugin-android-fs`) is a separate device-verified change; amounts
+  are always exported as strings (never a float) to keep the `no-float-money` guard honest.
+- [0007](0007-encrypted-backup-desktop-first.md): Encrypted local backup (FR-4.1). `.vaultbak` is a
+  JSON envelope bundling the already-encrypted SQLCipher DB bytes (base64) with the non-secret
+  salt/`KdfParams`; the snapshot copies encrypted bytes under the `DbState` mutex (no key access,
+  never `VACUUM INTO`/online-backup); desktop-first save mirrors ADR 0006; restore (FR-4.3) is
+  out of scope (issue #21).
+- [0008](0008-restore-replace-desktop-first-merge-deferred.md): Restore from backup (FR-4.3),
+  REPLACE mode only. Key re-derived from the envelope's own salt/kdf; the envelope now also carries
+  `baseCurrency` (adopted on restore - `base_amount_minor` is bound to it); crash-safe swap
+  (copy-to-`.prev` + atomic rename + a `restore.pending` marker self-healed on next unlock/restore);
+  biometric forced off; app left locked only if the swap itself fails; Merge mode and Android's
+  SAF file-pick are deferred (issue #21 follow-up).

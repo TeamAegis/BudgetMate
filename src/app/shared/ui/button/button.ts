@@ -29,6 +29,7 @@ import { Spinner } from '../spinner/spinner';
       [class.danger]="variant() === 'danger'"
       [disabled]="isDisabled()"
       [attr.aria-busy]="loading() || null"
+      [attr.aria-describedby]="describedBy()"
     >
       @if (loading()) {
         <app-spinner [size]="18" />
@@ -48,6 +49,9 @@ export class Button {
   readonly loading = input(false);
   /** Full-width: host becomes block and the button fills it (e.g. the lock-screen actions). */
   readonly block = input(false);
+  /** Optional id of an element (e.g. a hint) that explains this button's state - forwarded verbatim
+   *  as `aria-describedby`; `undefined`/`null` omits the attribute entirely. */
+  readonly describedBy = input<string | null | undefined>(undefined);
 
   protected readonly isDisabled = computed(() => this.disabled() || this.loading());
 }

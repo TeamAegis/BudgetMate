@@ -194,6 +194,18 @@ export const routes: Routes = [
     data: { title: 'Edit rule', back: true, hideNav: true },
     loadComponent: () => import('./features/rules/rule-form').then((m) => m.RuleForm),
   },
+  {
+    path: 'settings/export',
+    canActivate: [unlockGuard],
+    data: { title: 'Export', back: true, hideNav: true },
+    loadComponent: () => import('./features/settings/export/export').then((m) => m.Export),
+  },
+  {
+    path: 'settings/backup',
+    canActivate: [unlockGuard],
+    data: { title: 'Backup', back: true, hideNav: true },
+    loadComponent: () => import('./features/settings/backup/backup').then((m) => m.Backup),
+  },
   // Nested actions (not in the bottom nav).
   {
     path: 'budgets',

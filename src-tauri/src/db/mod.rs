@@ -8,8 +8,10 @@ use std::path::Path;
 pub mod accounts;
 pub mod budgets;
 pub mod categories;
+pub mod dashboard;
 pub mod goals;
 pub mod recurring;
+pub mod reports;
 pub mod rules;
 pub mod transactions;
 
@@ -31,6 +33,13 @@ const MIGRATIONS: &[(i64, &str)] = &[
     (3, include_str!("migrations/0003_goals.sql")),
     (4, include_str!("migrations/0004_budgets.sql")),
 ];
+
+/// Highest schema version this build knows how to migrate to. Used by restore (FR-4.3) to reject a
+/// backup whose embedded database is already at a schema version newer than this build understands
+/// (an older app must never silently truncate/ignore a newer schema).
+pub fn latest_migration_version() -> i64 {
+    MIGRATIONS.last().map(|(v, _)| *v).unwrap_or(0)
+}
 
 /// Open the encrypted DB: set the raw key, then verify with a cheap read. A failed verify means
 /// a wrong key or corruption. `key_hex` is the lowercase 64-char hex of the 32-byte key.

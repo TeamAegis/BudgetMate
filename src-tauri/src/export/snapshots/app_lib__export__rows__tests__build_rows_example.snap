@@ -1,0 +1,42 @@
+---
+source: src/export/rows.rs
+expression: rows
+---
+[
+    ExportRow {
+        date: "2026-06-06",
+        account: "Cash",
+        payee: "Market",
+        category: "Groceries",
+        kind: "Expense",
+        amount: "-30.00",
+        currency: "MUR",
+        base_amount: "-30.00",
+        base_currency: "MUR",
+        note: "weekly shop",
+    },
+    ExportRow {
+        date: "2026-06-06",
+        account: "Cash",
+        payee: "Market",
+        category: "Dining",
+        kind: "Expense",
+        amount: "-20.00",
+        currency: "MUR",
+        base_amount: "-20.00",
+        base_currency: "MUR",
+        note: "weekly shop",
+    },
+    ExportRow {
+        date: "2026-06-06",
+        account: "Cash",
+        payee: "Market",
+        category: "Salary",
+        kind: "Income",
+        amount: "2000.00",
+        currency: "MUR",
+        base_amount: "2000.00",
+        base_currency: "MUR",
+        note: "weekly shop",
+    },
+]

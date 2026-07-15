@@ -22,6 +22,9 @@ git switch -c <type>/<issue#>-<slug>
 - **type** ∈ `feat` | `fix` | `chore` | `docs` | `refactor` (matches Conventional Commits).
 - Include the GitHub issue number when there is one. Examples: `feat/6-manual-entry`,
   `fix/14-rule-ordering`, `chore/git-github-skills`.
+- **Exception - the unattended auto-implementer routine** names its branch `issue/<issue-number>`
+  (for example `issue/19`) instead, off freshly pulled `origin/main`, and resolves any merge conflict
+  on the branch before merging. See CLAUDE.md "Scheduled auto-implementer routine".
 
 ## Commit (Conventional Commits + required trailer)
 - **Pause for review before every commit.** Never run `git commit` unprompted. First show the

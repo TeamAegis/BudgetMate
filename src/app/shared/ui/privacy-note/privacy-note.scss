@@ -1,0 +1,22 @@
+:host {
+  display: block;
+}
+
+.privacy-note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--c-surface);
+  color: var(--c-text-muted);
+  font-size: var(--t-caption);
+  line-height: var(--lh-body);
+}
+.privacy-note .icon {
+  flex: none;
+}
+.privacy-note .msg {
+  flex: 1;
+}

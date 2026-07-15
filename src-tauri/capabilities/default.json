@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Minimal grants for the main window. App-defined commands (get_app_info, db_health, extract_receipt) need no permission. The OCR plugin command and the file-open dialog (for picking a receipt image, FR-2.1) are granted. Remaining fs/biometric grants are added per-feature when the frontend actually calls them (new-feature skill) - keep this list minimal.",
+  "description": "Minimal grants for the main window. App-defined commands (get_app_info, db_health, extract_receipt, export_transactions, create_backup, restore_backup) need no permission. The OCR plugin command, the file-open dialog (for picking a receipt image, FR-2.1, and a .vaultbak file to restore, FR-4.3 replace-mode, desktop-first), and the file-save dialog (for picking an export or encrypted-backup destination, FR-4.2/FR-4.1, desktop-first) are granted. Remaining fs/biometric grants are added per-feature when the frontend actually calls them (new-feature skill) - keep this list minimal.",
   "windows": ["main"],
-  "permissions": ["core:default", "ocr:default", "dialog:allow-open"]
+  "permissions": ["core:default", "ocr:default", "dialog:allow-open", "dialog:allow-save"]
 }

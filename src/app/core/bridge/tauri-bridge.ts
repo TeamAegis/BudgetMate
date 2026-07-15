@@ -5,7 +5,7 @@
 // All business logic lives in Rust; these wrappers only marshal arguments and return DTOs.
 
 import { invoke } from '@tauri-apps/api/core';
-import { open as openDialog } from '@tauri-apps/plugin-dialog';
+import { open as openDialog, save as saveDialog } from '@tauri-apps/plugin-dialog';
 import type {
   AppInfo,
   AppState,
@@ -37,6 +37,14 @@ import type {
   UpdateBudget,
   EnvelopeSummary,
   ReceiptExtraction,
+  ReportData,
+  ReportPeriod,
+  DashboardData,
+  ExportFormat,
+  ExportSummary,
+  BackupSummary,
+  RestoreMode,
+  RestoreSummary,
 } from '../models';
 
 /** Whether we are running inside the Tauri runtime (vs. plain browser `ng serve`). */
@@ -250,4 +258,123 @@ export async function pickReceiptImage(): Promise<string | null> {
  */
 export function extractReceipt(imagePath: string): Promise<ReceiptExtraction> {
   return invoke<ReceiptExtraction>('extract_receipt', { imagePath });
+}
+
+// ── Reporting (FR-3.3) ───────────────────────────────────────────────────────────
+
+/**
+ * Spend-by-category + spend-over-time aggregation for `period`, optionally narrowed to one
+ * category. All money conversion (fx), date bucketing, and pending-review exclusion happen in
+ * Rust; this only marshals the call.
+ */
+export function getReport(period: ReportPeriod, categoryId?: number | null): Promise<ReportData> {
+  return invoke<ReportData>('get_report', { period, categoryId: categoryId ?? null });
+}
+
+// ── Home dashboard (issue #50) ───────────────────────────────────────────────────
+
+/**
+ * The Home dashboard aggregate: total/usable balance, the goals-reserved figure, this-month
+ * spend, the trailing 6-month balance trend, and a goals preview. All money math (fx-aware
+ * summing, goal netting, month bucketing) happens in Rust; this only marshals the call.
+ */
+export function getDashboard(): Promise<DashboardData> {
+  return invoke<DashboardData>('get_dashboard');
+}
+
+// ── Export (FR-4.2) ──────────────────────────────────────────────────────────────
+// Desktop-first: the save destination is picked here (the only place that touches
+// `@tauri-apps/plugin-dialog`) and handed to Rust, which reads the DB, builds the file bytes, and
+// writes them with `std::fs::write`. Android's SAF-backed save is a separate, device-verified
+// change; the export screen detects the platform via `getAppInfo()` and doesn't call these on
+// Android.
+
+const EXPORT_EXTENSION: Record<'csv' | 'xlsx', string> = { csv: 'csv', xlsx: 'xlsx' };
+
+/**
+ * Open the native save picker for an export destination (CSV/XLSX only - JSON is never offered).
+ * Returns the chosen path, or `null` if the user cancelled.
+ */
+export async function pickExportDestination(format: 'csv' | 'xlsx'): Promise<string | null> {
+  const ext = EXPORT_EXTENSION[format];
+  const today = new Date().toISOString().slice(0, 10);
+  const selected = await saveDialog({
+    defaultPath: `budgetmate-export-${today}.${ext}`,
+    filters: [{ name: ext.toUpperCase(), extensions: [ext] }],
+  });
+  return selected ?? null;
+}
+
+/**
+ * Export every transaction to `format` at `destPath` (already chosen via `pickExportDestination`).
+ * Rust reads the DB, assembles the rows, renders the file, and writes it; this only marshals the
+ * call. Desktop-first (see the export ADR) - never called on Android.
+ */
+export function exportTransactions(format: ExportFormat, destPath: string): Promise<ExportSummary> {
+  return invoke<ExportSummary>('export_transactions', { format, destPath });
+}
+
+// ── Backup (FR-4.1) ───────────────────────────────────────────────────────────────
+// Desktop-first: the save destination is picked here (the only place that touches
+// `@tauri-apps/plugin-dialog`) and handed to Rust, which copies the already-encrypted SQLCipher DB
+// bytes, bundles them with the non-secret salt/KDF params, and writes the `.vaultbak` envelope with
+// `std::fs::write`. Android's SAF-backed save is a separate, device-verified change; the backup
+// screen detects the platform via `getAppInfo()` and doesn't call these on Android.
+
+/**
+ * Open the native save picker for a backup destination. Returns the chosen path, or `null` if the
+ * user cancelled.
+ */
+export async function pickBackupDestination(): Promise<string | null> {
+  const today = new Date().toISOString().slice(0, 10);
+  const selected = await saveDialog({
+    defaultPath: `budgetmate-backup-${today}.vaultbak`,
+    filters: [{ name: 'Vault backup', extensions: ['vaultbak'] }],
+  });
+  return selected ?? null;
+}
+
+/**
+ * Write an encrypted `.vaultbak` snapshot at `destPath` (already chosen via
+ * `pickBackupDestination`). Rust copies the already-encrypted DB bytes, bundles the non-secret
+ * salt/KDF params, and writes the file; this only marshals the call. Desktop-first (see the backup
+ * ADR) - never called on Android.
+ */
+export function createBackup(destPath: string): Promise<BackupSummary> {
+  return invoke<BackupSummary>('create_backup', { destPath });
+}
+
+// ── Restore (FR-4.3) ─────────────────────────────────────────────────────────────
+// Desktop-first, REPLACE mode only (ADR 0008) - Merge mode and Android's SAF file-pick are a
+// deferred follow-up. The frontend picks the `.vaultbak` file via the open dialog (the only place
+// besides `pickReceiptImage`/`pickBackupDestination` that touches `@tauri-apps/plugin-dialog`) and
+// hands its path + the backup's own passphrase to `restore_backup`, which validates, swaps the live
+// database + meta sidecar for the backup's, and reopens it - all inside Rust.
+
+/**
+ * Open the native open picker for a `.vaultbak` file to restore. Returns the chosen path, or
+ * `null` if the user cancelled.
+ */
+export async function pickBackupFile(): Promise<string | null> {
+  const selected = await openDialog({
+    multiple: false,
+    directory: false,
+    filters: [{ name: 'Vault backup', extensions: ['vaultbak'] }],
+  });
+  return typeof selected === 'string' ? selected : null;
+}
+
+/**
+ * Restore the vault from the `.vaultbak` file at `backupPath` (already chosen via
+ * `pickBackupFile`) using the BACKUP's own passphrase (which may differ from the current one).
+ * `mode` defaults to `'replace'` - the only mode implemented so far (merge is deferred). Rust
+ * validates the envelope, swaps the live database + meta sidecar for the backup's inside a
+ * crash-safe copy/rename sequence, and reopens the connection; this only marshals the call.
+ */
+export function restoreBackup(
+  backupPath: string,
+  passphrase: string,
+  mode: RestoreMode = 'replace',
+): Promise<RestoreSummary> {
+  return invoke<RestoreSummary>('restore_backup', { backupPath, passphrase, mode });
 }

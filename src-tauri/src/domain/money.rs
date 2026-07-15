@@ -119,6 +119,18 @@ impl CurrencyMinorUnits {
     }
 }
 
+/// Format integer minor units as a fixed-decimal major-unit STRING for `currency` (FR-4.2 export):
+/// e.g. `(-1_500, "MUR") -> "-15.00"`, `(1_500, "JPY") -> "1500"` (0-decimal currency),
+/// `(1_234, "BHD") -> "1.234"` (3-decimal currency). Sign preserved, no grouping, no currency
+/// symbol - callers add those if needed. Built with `rust_decimal::Decimal::set_scale`, which
+/// reinterprets the same integer mantissa at a different decimal scale (no float, no rounding):
+/// never use this to introduce an f32/f64 anywhere in the money path.
+pub fn minor_to_major_string(amount_minor: i64, currency: &str) -> String {
+    let mut value = Decimal::from(amount_minor);
+    value.set_scale(minor_unit_digits(currency)).expect("minor-unit digit count fits Decimal scale");
+    value.to_string()
+}
+
 /// Parse a user-entered major-unit amount (e.g. "15.00") into integer minor units for `currency`.
 /// Rejects malformed input or finer precision than the currency allows. Sign is preserved; callers
 /// validate the magnitude separately.
@@ -155,6 +167,37 @@ mod tests {
         assert!(splits_sum_to_parent(1_000, &[1_000]));
         assert!(!splits_sum_to_parent(1_000, &[600, 401]));
         assert!(!splits_sum_to_parent(1_000, &[600]));
+    }
+
+    #[test]
+    fn minor_to_major_string_formats_by_currency_scale() {
+        assert_eq!(minor_to_major_string(1_500, "MUR"), "15.00");
+        assert_eq!(minor_to_major_string(-1_500, "MUR"), "-15.00");
+        assert_eq!(minor_to_major_string(0, "MUR"), "0.00");
+        assert_eq!(minor_to_major_string(99, "USD"), "0.99");
+        // Zero-decimal currency: no decimal point at all.
+        assert_eq!(minor_to_major_string(1_500, "JPY"), "1500");
+        assert_eq!(minor_to_major_string(-1_500, "JPY"), "-1500");
+        // Three-decimal currency.
+        assert_eq!(minor_to_major_string(1_234, "BHD"), "1.234");
+    }
+
+    #[test]
+    fn minor_to_major_string_snapshot() {
+        insta::assert_snapshot!(
+            "minor_to_major_string_examples",
+            [
+                minor_to_major_string(150_000, "MUR"),
+                minor_to_major_string(-150_000, "MUR"),
+                minor_to_major_string(999, "USD"),
+                minor_to_major_string(-999, "USD"),
+                minor_to_major_string(500, "JPY"),
+                minor_to_major_string(-500, "JPY"),
+                minor_to_major_string(1_234, "BHD"),
+                minor_to_major_string(-1_234, "BHD"),
+            ]
+            .join("\n")
+        );
     }
 
     #[test]

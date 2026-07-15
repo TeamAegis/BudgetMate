@@ -69,30 +69,44 @@ in the current Figma - design them to this spec.
 - **Figma:** `124:224` (Mobile Home). Tokens validated from this node.
 - **FR:** FR-3.x preview, entry points to FR-1.x/2.x.
 - **Components:** AppHeader (brand + settings icon `124:297`); **BalanceCard** (`app-balance-card`,
-  `124:302`) as the balance/summary **hero** - coral-40 fill + offset pink shadow, showing an honest
-  count-based caption (e.g. activity/goal counts) until the deferred `get_dashboard` total exists,
-  then the money figure; a grid of **labelled** quick-action tiles (**ActionTile**, old-MCB-Juice
+  `124:302`) as the balance/summary **hero** - coral-40 fill + offset pink shadow, showing the live
+  total balance from `get_dashboard()`; a "ready to spend" secondary line (total minus what is set
+  aside for ongoing base-currency goals, phrased gently, never alarm-red, even when over-committed);
+  a this-month-spend figure; a grid of **labelled** quick-action tiles (**ActionTile**, old-MCB-Juice
   layout: hero on top, then the tile grid) - *Add expense* (-> `/expenses/new`), *Scan receipt*
-  (-> `/import`), *Add goal* (-> `/goals/new`); labelled tiles only, never icon-only; a live
-  **Recent activity** list and a **goals preview** (display-only, from existing `listTransactions` /
-  `listGoals`); BottomNav (`124:355`). Recent-activity rows reuse TransactionListItem with the
-  leading **monogram avatar** (income uses the positive tint paired with the signed amount, never
-  colour alone). TrendChart (`130:7`, rebuild in Chart.js) returns with `get_dashboard`.
-- **Data:** recent transactions and goals preview today (display-only); current/usable balance and
-  balance-trend series deferred to `get_dashboard`.
-- **Commands:** `listTransactions` / `listGoals` (display-only) today; `get_dashboard()` →
-  `{ balance, usable, trend[], goals[] }` deferred.
-- **Status (2026-06):** the hero shows an honest count-based caption (no fabricated Rs 0 total);
-  `get_dashboard` is not implemented yet, so the balance/trend totals are deferred to the reporting
-  aggregations (FR-3.3). Recent activity and goals preview are live from the existing list commands.
-- **States:** loading (progressive), empty (`133:641` - "No goals? Create one!"), populated.
+  (-> `/import`), *Add goal* (-> `/goals/new`); labelled tiles only, never icon-only; a lazily-loaded
+  (`@defer (on viewport)`) trailing 6-month TOTAL-balance **TrendChart** (Chart.js, skipped entirely
+  for an all-zero first run); a live **Recent activity** list and a **goals preview** (from
+  `get_dashboard()` and `listTransactions`). Recent-activity rows reuse the monogram-avatar list row
+  (income uses the positive tint paired with the signed amount, never colour alone) and show the
+  base-currency equivalent for a foreign-currency transaction, same as the Expenses list. BottomNav
+  (`124:355`).
+- **Data:** `get_dashboard()` aggregates, as of today, total balance, usable ("ready to spend")
+  balance, this-month spend, a trailing 6-month total-balance trend, and a top-3 ongoing-goals
+  preview; recent transactions come from `listTransactions`. A confirmed transaction dated in the
+  future is not counted until its date arrives, so the hero total and the trend's current-month
+  point always agree. Non-archived accounts (and ongoing goals) in a currency other than the base
+  currency cannot be honestly converted from an opening balance/reservation and are excluded from
+  the totals; an info banner names the excluded count and links to Manage accounts.
+- **Commands:** `get_dashboard()` -> `DashboardData` (total/usable balance, goals-reserved,
+  this-month spend, balance trend, goals preview, excluded-account/goal counts, `isEmpty`);
+  `listTransactions` for Recent activity.
+- **Status:** implemented (issue #50). `get_dashboard` is live; the reporting aggregations (FR-3.3)
+  remain the source for the Analytics screen's own spend breakdowns.
+- **States:** loading (skeleton placeholders), teaching-empty (illustration + "Add an expense" CTA,
+  shown only when there are no confirmed transactions, a zero total, no ongoing goals, and no
+  foreign-currency account), populated, busy (a background refresh keeps the dashboard mounted with
+  a spinner on the spend figure), error (banner, shown alongside a still-mounted dashboard on a
+  refresh failure).
 
 ### 3.2 Dashboard (empty)
 - **Figma:** `133:641`.
-- **Components:** BalanceCard hero with its empty caption, ActionTile grid, EmptyState patterns for
-  the empty Recent activity / goals preview.
-- **Commands:** `listTransactions` / `listGoals` return empty; `get_dashboard()` (deferred) would
-  return zeros/empty.
+- **Components:** BalanceCard hero replaced by EmptyState (illustration + "Add an expense" CTA); the
+  Recent activity and Goals sections keep their header + a one-line teaching prompt instead of
+  vanishing.
+- **Commands:** `get_dashboard()` reports `isEmpty: true` (no confirmed transactions, a zero total
+  balance, no ongoing goals, and no non-archived foreign-currency account); `listTransactions`
+  returns empty.
 
 ---
 
@@ -218,20 +232,31 @@ in the current Figma - design them to this spec.
 
 ## 6. Analytics
 
-### 6.1 Analytics (populated) **[partly NEW]**
+### 6.1 Analytics (populated) **[built]**
 - **Figma:** `132:298` (header shell only - charts not yet designed).
 - **FR:** FR-3.3.
-- **Components:** AppHeader ("Analytics"), pie chart (spend by category), line chart (spend
-  over time), period/category filters, BottomNav. **Charts via bundled Chart.js.**
-- **Data:** aggregations by category and over time.
-- **Commands:** `get_spend_by_category(period)`, `get_spend_over_time(period)` (deferred; the charts
-  arrive with the aggregation commands).
-- **Today:** Analytics is a **polished EmptyState** with plain-language copy and an **"Add an
-  expense"** CTA (-> `/expenses/new`); the charts above are the populated target once the aggregation
-  commands and Chart.js land.
-- **States:** loading, empty (`133:806` "No Data" + illustration + "Add an expense" CTA), populated,
-  error (aggregation failed - plain-language + retry), busy (recomputing on filter/period change, UI
-  stays responsive).
+- **Components:** AppHeader ("Analytics"), `PieChart`/`app-pie-chart` (spend by category),
+  `LineChart`/`app-line-chart` (spend over time), a `SegmentedToggle` period filter (This month /
+  Last 3 months / This year / All time) and a `SelectField` category filter, a total-spend `Card`,
+  BottomNav. **Charts via bundled Chart.js** (`shared/charts/chart-setup.ts` registers only the
+  pie/line controllers used).
+- **Data:** one aggregated `ReportData` (total + by-category + over-time buckets), all computed in
+  Rust (fx conversion, date bucketing, `pending_review` exclusion) - the frontend only formats.
+- **Commands:** `get_report(period, categoryId?)` - one command covers both charts plus the total
+  (frontend rule: keep the command surface small); the category filter's options reuse the existing
+  `list_categories` command.
+- **States:** loading (skeleton placeholders); populated (charts + total); error (aggregation failed
+  - plain-language banner + retry; a refresh error while data is already on screen is shown as a
+  banner alongside the still-mounted charts, not in place of them); busy (recomputing on
+  filter/period change - the existing charts stay mounted with an inline spinner, UI stays
+  responsive). **Empty has three distinct cases** (filters stay visible in all three, so the user can
+  also just change them directly), so a user who genuinely has spend is never told they have none:
+  - a category filter is active and matches no spend for the period - plain-language message ("No
+    spending in this category for the selected period.") + a **Clear filter** action;
+  - all categories, but the selected period has no spend - "No spending recorded for this period." +
+    a **View all time** action;
+  - all categories + all time + genuinely no spend anywhere - the true first-run case, shown with the
+    teaching illustration (`133:806`) + "Add an expense" CTA.
 
 ---
 
@@ -305,21 +330,38 @@ in the current Figma - design them to this spec.
 
 ### 7.4 Export
 - **FR:** FR-4.2.
-- **Components:** format choice (CSV/XLSX), range, *Export* → system save dialog.
-- **Commands:** `export_transactions(format, range)` (`rust_xlsxwriter`/csv) + dialog/fs.
-- **Status (2026-06):** spec - `export_transactions` is not implemented (export crates selected,
-  no command yet). FR-4.2.
-- **States:** generating, saved, error. Plaintext-export warning shown.
+- **Components:** `SegmentedToggle` format choice (CSV / Excel), *Export* `Button` -> system save
+  dialog. No date-range picker in this slice (every transaction is exported); a range filter is a
+  future addition, not a gap in this change.
+- **Commands:** `export_transactions(format, destPath)` (`rust_xlsxwriter`/`csv`, one row per
+  category split) + the `dialog` plugin's save picker (`core/bridge::pickExportDestination`).
+- **Status (2026-07-14):** **implemented, desktop-first** (ADR 0006) -
+  `src/app/features/settings/export/export.ts`, route `settings/export`. Android's SAF-backed save
+  (`tauri-plugin-android-fs`) is **deferred** - on Android the screen shows an
+  `app-banner tone="info"` ("Export is available on the desktop app for now") instead of the
+  format/Export controls, detected via `getAppInfo()`.
+- **States:** loading, empty (no transactions - Export disabled + hint), populated (format toggle +
+  Export), busy ("Generating..." + spinner in the Export button, UI stays responsive), saved
+  (success banner naming the row count + destination filename), error (plain-language banner +
+  retry). The plaintext-export warning banner is persistent whenever the controls are shown.
 
 ### 7.5 Backup / Restore
 - **FR:** FR-4.1/4.3.
 - **Components:** BackupRestorePanel - *Create encrypted backup* → save/share;
-  *Restore* → pick `.vaultbak` → passphrase → replace/merge.
+  *Restore* → pick `.vaultbak` → passphrase → replace (merge deferred).
 - **Commands:** `create_backup()` → file via dialog/fs (Android: `tauri-plugin-android-fs`);
-  `restore_backup(path, passphrase, mode)` (ACID).
-- **Status (2026-06):** spec - neither `create_backup` nor `restore_backup` is implemented yet
-  (FR-4.1 / FR-4.3).
-- **States:** creating, written, restoring, merge/replace choice, wrong-passphrase error.
+  `restore_backup(backupPath, passphrase, mode)` (ACID, crash-safe swap - see ADR 0008).
+- **Status (2026-07-14):** FR-4.1 **implemented desktop-first** (ADR 0007) - `create_backup` copies
+  the already-encrypted SQLCipher DB bytes, bundles the non-secret salt/KDF params, and writes a
+  `.vaultbak` envelope via the save dialog + `std::fs::write`; route `settings/backup`. FR-4.3
+  restore is **implemented desktop-first, REPLACE mode only** (ADR 0008) - the same screen picks a
+  `.vaultbak` file via the open dialog, prompts for the backup's own passphrase, confirms via
+  `<app-confirm-dialog>` ("Replace all data?"), then validates + swaps the live database and meta
+  sidecar for the backup's inside a crash-safe copy/rename sequence and reloads the webview on
+  success. Android (both backup save and restore open) and Merge mode are deferred (the screen shows
+  an info banner on Android, mirroring Export/ADR 0006).
+- **States:** creating, written, restoring (busy, confirm-gated), restored (success banner + reload),
+  wrong-passphrase/corrupt-backup error (plain-language, inline).
 
 ---
 

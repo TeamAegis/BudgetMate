@@ -1,0 +1,12 @@
+---
+source: src/domain/money.rs
+expression: "[minor_to_major_string(150_000, \"MUR\"),\nminor_to_major_string(-150_000, \"MUR\"), minor_to_major_string(999, \"USD\"),\nminor_to_major_string(-999, \"USD\"), minor_to_major_string(500, \"JPY\"),\nminor_to_major_string(-500, \"JPY\"), minor_to_major_string(1_234, \"BHD\"),\nminor_to_major_string(-1_234, \"BHD\"),].join(\"\\n\")"
+---
+1500.00
+-1500.00
+9.99
+-9.99
+500
+-500
+1.234
+-1.234

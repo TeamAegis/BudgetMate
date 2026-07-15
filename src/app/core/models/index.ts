@@ -407,6 +407,134 @@ export interface UpdateBudget {
   cap: string;
 }
 
+// ── Reporting (FR-3.3, mirror domain::report) ────────────────────────────────────
+
+/** Analytics period preset (mirrors Rust `ReportPeriod`). Drives the period filter. */
+export type ReportPeriod = 'thisMonth' | 'last3Months' | 'thisYear' | 'allTime';
+
+/** Spend-over-time bucket size (mirrors Rust `Granularity`), chosen by Rust from the period span. */
+export type Granularity = 'day' | 'week' | 'month';
+
+/** Total spend for one expense category over the report period (mirrors Rust `CategorySpend`). */
+export interface CategorySpend {
+  categoryId: number;
+  categoryName: string;
+  amountMinor: number;
+}
+
+/**
+ * Total spend for one time bucket (mirrors Rust `TimeBucket`). `label` is a short Rust-formatted
+ * display string (e.g. "13 Jul", "Wk of 07 Jul", "Jul 2026") - never re-derive date formatting in
+ * TS. `startDate` is the bucket's first day in ISO `YYYY-MM-DD`.
+ */
+export interface TimeBucket {
+  label: string;
+  startDate: string;
+  amountMinor: number;
+}
+
+/**
+ * The Analytics report (mirrors Rust `ReportData`, from `get_report`). `byCategory` feeds the pie
+ * chart, `overTime` the line chart; `totalSpendMinor` is the sum of `byCategory` in
+ * `baseCurrency` (the vault's reporting currency, not necessarily every transaction's own
+ * currency). EXPENSE splits only; income/transfers and `pendingReview` transactions never appear.
+ */
+export interface ReportData {
+  baseCurrency: Iso4217;
+  period: ReportPeriod;
+  totalSpendMinor: number;
+  byCategory: CategorySpend[];
+  overTime: TimeBucket[];
+  granularity: Granularity;
+}
+
+// ── Home dashboard (issue #50, mirror domain::dashboard) ─────────────────────────
+
+/**
+ * One point on the trailing balance-trend chart (mirrors Rust `BalancePoint`): a short
+ * Rust-formatted month label (e.g. "Jul") and the TOTAL balance (never usable balance - goals have
+ * no history table, so only total balance is exactly reconstructable) as of that month's end.
+ */
+export interface BalancePoint {
+  label: string;
+  amountMinor: number;
+}
+
+/**
+ * The Home dashboard aggregate (mirrors Rust `DashboardData`, from `get_dashboard`). All money is
+ * integer minor units in `baseCurrency`. `usableBalanceMinor` MAY be negative (over-committed to
+ * goals) - never clamp it. `excludedAccounts`/`excludedGoals` count non-archived accounts / ongoing
+ * goals in a currency other than `baseCurrency` (their openings/reservations can't be honestly
+ * converted, so they are left out of the totals) - the UI shows a caveat note when either is > 0.
+ */
+export interface DashboardData {
+  baseCurrency: Iso4217;
+  totalBalanceMinor: number;
+  usableBalanceMinor: number;
+  /** The amount netted out of totalBalanceMinor to reach usableBalanceMinor ("set aside for goals"). */
+  goalsReservedMinor: number;
+  thisMonthSpendMinor: number;
+  /** Trailing 6 months, oldest first, last point = the current month. */
+  balanceTrend: BalancePoint[];
+  /** Top few ongoing goals for the Home preview. */
+  goals: Goal[];
+  excludedAccounts: number;
+  excludedGoals: number;
+  /** True when there is nothing to show yet - drives the Home teaching-empty state. */
+  isEmpty: boolean;
+}
+
+// ── Export (FR-4.2, mirrors Rust `export::ExportFormat` / `commands::export::ExportSummary`) ────
+// Desktop-first slice: the frontend picks a destination via the save dialog (`core/bridge`) and
+// hands the path to `export_transactions`; Android's SAF-backed save is a separate change (the
+// export screen shows an info banner on Android instead of calling this command).
+
+/** Which file format to export to. The UI only ever offers `'csv'` / `'xlsx'`. */
+export type ExportFormat = 'csv' | 'xlsx' | 'json';
+
+/** Result of a successful export (mirrors Rust `ExportSummary`). */
+export interface ExportSummary {
+  path: string;
+  format: ExportFormat;
+  rowCount: number;
+  byteLen: number;
+}
+
+// ── Backup (FR-4.1, mirrors Rust `commands::backup::BackupSummary`) ──────────────────────────────
+// Desktop-first slice (mirrors Export above): the frontend picks a destination via the save dialog
+// (`core/bridge`) and hands the path to `create_backup`; Android's SAF-backed save is a separate
+// change (the backup screen shows an info banner on Android instead of calling this command).
+// The `.vaultbak` FILE FORMAT itself (Rust `backup::VaultBackup`) never crosses IPC, so it has no
+// TS mirror (listed in `DTO_SKIP`, `scripts/guards.mjs`) - its `baseCurrency` field lives only in
+// the file, never in an IPC DTO.
+
+/** Result of a successful encrypted backup (mirrors Rust `commands::backup::BackupSummary`). */
+export interface BackupSummary {
+  path: string;
+  byteLen: number;
+  formatVersion: number;
+}
+
+// ── Restore (FR-4.3, mirrors Rust `commands::backup::RestoreSummary` / `RestoreMode`) ────────────
+// Desktop-first, REPLACE mode only (ADR 0008) - merge and Android's SAF file-pick are a deferred
+// follow-up. The frontend picks the `.vaultbak` file via the open dialog (`core/bridge`) and hands
+// its path + the backup's own passphrase to `restore_backup`.
+
+/** How to reconcile a restore with existing local data. `'merge'` is a deferred follow-up - the UI
+ *  only ever sends `'replace'` (mirrors Rust `commands::backup::RestoreMode`). */
+export type RestoreMode = 'replace';
+
+/** Result of a successful restore (mirrors Rust `commands::backup::RestoreSummary`). */
+export interface RestoreSummary {
+  formatVersion: number;
+  /** The RESTORED backup's own creation timestamp (when the source vault was snapshotted). */
+  createdAt: string;
+  transactionCount: number;
+  /** The ADOPTED base (reporting) currency, trimmed + uppercased Rust-side - every report now
+   *  adds up in this currency, not necessarily the one the app used before the restore. */
+  baseCurrency: string;
+}
+
 // Errors (IPC rejections) ----------------------------------------------------------
 
 /** Discriminant of an `AppError` (mirrors Rust `error::AppError`, adjacently tagged on `kind`). */
