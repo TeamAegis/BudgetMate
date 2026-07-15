@@ -214,6 +214,18 @@ export const routes: Routes = [
     loadComponent: () => import('./features/budgets/budgets').then((m) => m.Budgets),
   },
   {
+    path: 'budgets/new',
+    canActivate: [unlockGuard],
+    data: { title: 'Add budget', back: true, hideNav: true },
+    loadComponent: () => import('./features/budgets/budget-form').then((m) => m.BudgetForm),
+  },
+  {
+    path: 'budgets/:id/edit',
+    canActivate: [unlockGuard],
+    data: { title: 'Edit budget', back: true, hideNav: true },
+    loadComponent: () => import('./features/budgets/budget-form').then((m) => m.BudgetForm),
+  },
+  {
     path: 'import',
     canActivate: [unlockGuard],
     data: { title: 'Import', back: true },

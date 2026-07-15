@@ -8,6 +8,7 @@ import {
   LucideRepeat,
   LucideCoins,
   LucideFunnel,
+  LucidePiggyBank,
   LucideDownload,
   LucideDatabaseBackup,
 } from '@lucide/angular';
@@ -28,6 +29,7 @@ import { PrivacyNote } from '../../shared/ui/privacy-note/privacy-note';
     LucideRepeat,
     LucideCoins,
     LucideFunnel,
+    LucidePiggyBank,
     LucideDownload,
     LucideDatabaseBackup,
     SelectField,
@@ -47,6 +49,12 @@ import { PrivacyNote } from '../../shared/ui/privacy-note/privacy-note';
         <li>
           <a app-settings-row routerLink="/settings/categories" label="Categories" hint="Group your spending and income">
             <svg icon lucideTags [size]="24" aria-hidden="true"></svg>
+            <svg trailing lucideChevronRight [size]="18" aria-hidden="true"></svg>
+          </a>
+        </li>
+        <li>
+          <a app-settings-row routerLink="/budgets" label="Budgets / Envelopes" hint="Set a monthly limit per category">
+            <svg icon lucidePiggyBank [size]="24" aria-hidden="true"></svg>
             <svg trailing lucideChevronRight [size]="18" aria-hidden="true"></svg>
           </a>
         </li>

@@ -3,6 +3,7 @@
 
 pub mod accounts;
 pub mod backup;
+pub mod budgets;
 pub mod categories;
 pub mod dashboard;
 pub mod export;

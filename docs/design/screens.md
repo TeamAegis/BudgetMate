@@ -301,15 +301,21 @@ in the current Figma - design them to this spec.
 - **States:** loading · empty (default set seeded on first run) · populated · error · busy.
 
 ### 7.2 Budgets / Envelopes
-- **FR:** FR-3.1.
-- **Components:** EnvelopeCard ×N (category cap, spent/remaining bar, warning/over states).
-- **Commands:** `list_envelopes()`, `save_envelope(dto)` (deferred; the EnvelopeCard grid is the
-  populated target once they land).
-- **Today:** Budgets is a **polished EmptyState** with plain-language copy (a "monthly limit for a
-  category" framing, not the raw "envelope" term); the EnvelopeCard states below are the populated
-  target once the envelope command and spent-vs-remaining logic land.
-- **States:** loading, empty (polished, no caps set + CTA), populated - under / approaching (warning)
-  / over (danger), error (load/save failed - plain-language + retry), busy (saving a cap).
+- **FR:** FR-3.1 (implemented, 2026-07).
+- **Components:** EnvelopeCard ×N (category cap, spent/remaining bar, three states). Add/edit is a
+  full-screen page pair (`budgets/new`, `budgets/:id/edit`, §8.0 pattern) - category + period are set
+  once at creation (not editable after); the edit page's header danger icon (`trash`) deletes the
+  budget via ConfirmDialog.
+- **Commands:** `list_envelopes()` (the current month's cap/spend/status per budgeted category -
+  Rust aggregates `tx_splits` for `categories.kind = 'expense'` within the month, converts to base
+  currency the same way `transactions.base_amount_minor` does, and classifies the status),
+  `get_budget(id)`, `create_budget(dto)`, `update_budget(dto)`, `delete_budget(id)`.
+- **States:** loading (skeleton), empty (polished, no caps set + "Add your first budget" CTA),
+  populated - EnvelopeCard grid: **under** (`--c-positive`), **approaching** (`--c-warning`, >= 80% of
+  cap, icon + "Rs X left"), **over** (`--c-danger`, icon + "Rs Y over" - phrased as information, not
+  punitively), error (load failed - plain-language + retry), busy (a background reload, e.g. after
+  Retry, keeps the existing cards visible with a small non-blocking "Updating…" indicator rather than
+  a full-page skeleton).
 
 ### 7.3 Rules (if-then)
 - **FR:** FR-2.3.

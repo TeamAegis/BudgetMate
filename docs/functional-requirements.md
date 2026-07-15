@@ -203,7 +203,7 @@ v1 scope as requirements regardless of status; Status only reflects current prog
 | FR-2.2 Import (CSV/OFX/QFX) | §8 Import Pipeline | Specified |
 | FR-2.3 Rule engine | §8 Rule Engine | Built (rule management + preview); applied-at-import pending with FR-2.2 |
 | FR-2.4 Dedup | §8 Dedup | Partial (logic written, not yet wired into import or manual entry) |
-| FR-3.1 Envelope budgeting | §3 Frontend, §4 aggregations | Specified (schema only; no spent-vs-remaining logic yet) |
+| FR-3.1 Envelope budgeting | §3 Frontend, §4 aggregations | Built |
 | FR-3.2 Savings goals | §3 Frontend, §4 | Built |
 | FR-3.3 Local reporting (charts) | §3 Frontend (charts), §4 aggregations | Built |
 | FR-3.4 Savings-backed allowances (envelopes) | §4 Domain & Data Model, `docs/allowances.md`, ADR 0005 | Specified (domain spec + ADR; no schema or runtime code yet) |
