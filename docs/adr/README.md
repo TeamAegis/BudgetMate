@@ -41,3 +41,8 @@ Consequences, and Alternatives considered.
   (copy-to-`.prev` + atomic rename + a `restore.pending` marker self-healed on next unlock/restore);
   biometric forced off; app left locked only if the swap itself fails; Merge mode and Android's
   SAF file-pick are deferred (issue #21 follow-up).
+- [0009](0009-hand-rolled-ofx-parser.md): OFX/QFX import parser (FR-2.2). A hand-rolled, lenient
+  tag scanner in `import/ofx.rs` handles OFX 1.x SGML, OFX 2.x XML, and QFX in one pass (no new
+  XML/SGML dependency); amounts route through `domain::money::parse_minor`, currency is never
+  guessed, and malformed rows are reported as `RowError`s, never dropped. Command/DB wiring is a
+  separate change (issue #12).

@@ -1,0 +1,35 @@
+---
+source: src/import/ofx.rs
+expression: parsed
+---
+ParsedImport {
+    transactions: [
+        StagedTx {
+            posted_date: "2026-06-01",
+            amount_minor: -45000,
+            currency: "MUR",
+            payee: Some(
+                "AT&T Wireless",
+            ),
+            note: Some(
+                "Monthly bill",
+            ),
+            source_ref: Some(
+                "2026060100123",
+            ),
+        },
+        StagedTx {
+            posted_date: "2026-06-05",
+            amount_minor: 200000,
+            currency: "MUR",
+            payee: Some(
+                "Salary",
+            ),
+            note: None,
+            source_ref: Some(
+                "2026060500456",
+            ),
+        },
+    ],
+    row_errors: [],
+}
