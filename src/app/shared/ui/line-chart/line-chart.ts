@@ -16,14 +16,16 @@ export interface LinePoint {
  * presentational: the parent supplies pre-bucketed points (Rust owns the date bucketing and
  * labels); this component only renders them. The single series carries an accessible
  * `seriesLabel` (Chart.js dataset label, read by the legend/tooltip) so the line's meaning is
- * never colour-alone; a visually-hidden list mirrors the same label/amount pairs for screen
- * readers. Amounts are scaled/labelled via `CurrencyService`/`MoneyPipe`, never a hand-rolled
- * `/100`. The caller must have run `registerCharts()` once (`shared/charts/chart-setup.ts`).
+ * never colour-alone; the canvas `aria-label` carries the same label/amount pairs for screen
+ * readers. Do NOT reintroduce a `visually-hidden` DOM list here - the release Android System
+ * WebView has rendered such nodes visibly (ux-blueprint.md §7 WebView caveat). Amounts are
+ * scaled/labelled via `CurrencyService`/`MoneyPipe`, never a hand-rolled `/100`. The caller
+ * must have run `registerCharts()` once (`shared/charts/chart-setup.ts`).
  */
 @Component({
   selector: 'app-line-chart',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [BaseChartDirective, MoneyPipe],
+  imports: [BaseChartDirective],
   providers: [MoneyPipe],
   template: `
     <div class="chart-wrap">
@@ -33,14 +35,9 @@ export interface LinePoint {
         [data]="chartData()"
         [options]="chartOptions()"
         role="img"
-        [attr.aria-label]="ariaLabel()"
+        [attr.aria-label]="canvasAriaLabel()"
       ></canvas>
     </div>
-    <ul class="visually-hidden">
-      @for (p of points(); track p.label) {
-        <li>{{ p.label }}: {{ { amountMinor: p.amountMinor, currency: currency() } | money }}</li>
-      }
-    </ul>
   `,
   styleUrl: './line-chart.scss',
 })
@@ -54,6 +51,16 @@ export class LineChart {
   readonly seriesLabel = input('Spend');
   /** Accessible name for the chart region (e.g. "Spend over time"). */
   readonly ariaLabel = input('Spend over time');
+
+  /** The canvas' full accessible name: region name + every label/amount pair. This replaces the
+   *  old visually-hidden `<ul>` (which the release Android WebView rendered visibly). */
+  protected readonly canvasAriaLabel = computed<string>(() => {
+    const currency = this.currency();
+    const parts = this.points().map(
+      (p) => `${p.label} ${this.money.transform({ amountMinor: p.amountMinor, currency })}`,
+    );
+    return parts.length ? `${this.ariaLabel()}: ${parts.join(', ')}` : this.ariaLabel();
+  });
 
   protected readonly chartData = computed<ChartConfiguration<'line'>['data']>(() => {
     const points = this.points();

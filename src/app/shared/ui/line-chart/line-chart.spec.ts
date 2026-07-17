@@ -10,7 +10,7 @@ describe('LineChart', () => {
     TestBed.configureTestingModule({ imports: [LineChart] });
   });
 
-  it('renders a canvas and a visually-hidden label/amount list for the series', () => {
+  it('renders a canvas whose aria-label carries every label/amount pair (no hidden DOM list)', () => {
     const fixture = TestBed.createComponent(LineChart);
     fixture.componentRef.setInput('points', [
       { label: '05 Jul', amountMinor: 3_000 },
@@ -20,10 +20,14 @@ describe('LineChart', () => {
     fixture.detectChanges();
 
     const host = fixture.nativeElement as HTMLElement;
-    expect(host.querySelector('canvas')).not.toBeNull();
-    const items = Array.from(host.querySelectorAll('.visually-hidden li')).map((li) => li.textContent);
-    expect(items.some((t) => t?.includes('05 Jul'))).toBe(true);
-    expect(items.some((t) => t?.includes('13 Jul'))).toBe(true);
+    const canvas = host.querySelector('canvas');
+    expect(canvas).not.toBeNull();
+    const label = canvas?.getAttribute('aria-label') ?? '';
+    expect(label).toContain('05 Jul');
+    expect(label).toContain('13 Jul');
+    // The old visually-hidden list rendered VISIBLY on the release Android WebView - it must not
+    // come back (ux-blueprint.md section 7 WebView caveat).
+    expect(host.querySelector('.visually-hidden')).toBeNull();
   });
 
   it('renders nothing catastrophic for an empty point list', () => {
@@ -32,6 +36,7 @@ describe('LineChart', () => {
     fixture.componentRef.setInput('currency', 'MUR');
     expect(() => fixture.detectChanges()).not.toThrow();
     const host = fixture.nativeElement as HTMLElement;
-    expect(host.querySelectorAll('.visually-hidden li').length).toBe(0);
+    // Falls back to the plain region name when there is no data.
+    expect(host.querySelector('canvas')?.getAttribute('aria-label')).toBe('Spend over time');
   });
 });

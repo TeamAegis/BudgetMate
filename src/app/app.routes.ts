@@ -210,7 +210,8 @@ export const routes: Routes = [
   {
     path: 'budgets',
     canActivate: [unlockGuard],
-    data: { title: 'Budgets / Envelopes', back: true },
+    // One-line header title (the Settings row carries the fuller "Budgets / Envelopes" wording).
+    data: { title: 'Budgets', back: true },
     loadComponent: () => import('./features/budgets/budgets').then((m) => m.Budgets),
   },
   {
@@ -235,7 +236,8 @@ export const routes: Routes = [
     // Bank-file import wizard (FR-2.2). CSV is wired; OFX/QFX are issue #13.
     path: 'import/file',
     canActivate: [unlockGuard],
-    data: { title: 'Import transactions', back: true },
+    // One-line header title (was "Import transactions", which wrapped at 360px).
+    data: { title: 'Import file', back: true },
     loadComponent: () => import('./features/import/import-file').then((m) => m.ImportFile),
   },
   { path: '**', redirectTo: 'home' },

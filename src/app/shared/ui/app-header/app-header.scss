@@ -15,17 +15,23 @@
   // Brand wordmark (Home). Fills the row so the trailing icon stays right-aligned.
   .brand {
     flex: 1;
+    min-width: 0; // let the flex child shrink so the ellipsis below can engage
     font-family: var(--font-family);
     font-size: var(--t-wordmark);
     font-weight: var(--fw-bold);
     letter-spacing: 0.15em;
     color: var(--c-primary-700); // accessible coral for the wordmark
 
-    // Titled variant (sub-screens): the screen name, not the brand.
+    // Titled variant (sub-screens): the screen name, not the brand. Always ONE line - a long
+    // title ellipsises rather than wrapping and knocking the back arrow out of alignment
+    // (route titles are chosen to fit 360px; this is the safety net).
     &.titled {
       font-size: var(--t-screen-title);
       letter-spacing: normal;
       color: var(--c-text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
   }
 
