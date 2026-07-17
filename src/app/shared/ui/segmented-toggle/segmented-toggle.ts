@@ -18,12 +18,24 @@ export interface SegmentOption {
  * a11y: a `radiogroup` of `radio`s. Selection state is conveyed by both background fill AND
  * `aria-checked` (never colour alone). Left/Right arrows move selection (wrapping); only the
  * active segment is in the tab order (roving tabindex), matching the ARIA radio pattern.
+ *
+ * `disabled` (default false) makes the whole group non-interactive - e.g. while an in-flight
+ * operation elsewhere on the page depends on the current value staying put (the import wizard's
+ * idle-step preview read, design review of issue #13). Each button gets `[disabled]` (removing it
+ * from the tab order and blocking click/keyboard activation) and the group carries
+ * `aria-disabled="true"`; the visual dimming uses `--opacity-disabled` only, never a hardcoded value.
  */
 @Component({
   selector: 'app-segmented-toggle',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="seg" role="radiogroup" [attr.aria-label]="ariaLabel()">
+    <div
+      class="seg"
+      [class.disabled]="disabled()"
+      role="radiogroup"
+      [attr.aria-label]="ariaLabel()"
+      [attr.aria-disabled]="disabled() ? true : null"
+    >
       @for (opt of options(); track opt.value) {
         <button
           type="button"
@@ -32,6 +44,7 @@ export interface SegmentOption {
           [class.active]="opt.value === value()"
           [attr.aria-checked]="opt.value === value()"
           [tabindex]="opt.value === value() ? 0 : -1"
+          [disabled]="disabled()"
           (click)="select(opt.value)"
           (keydown)="onKeydown($event)"
         >
@@ -47,6 +60,8 @@ export class SegmentedToggle {
   readonly value = model.required<string>();
   /** Accessible group name (e.g. "Goal status", "Period"). */
   readonly ariaLabel = input.required<string>();
+  /** Makes the whole group non-interactive (see class doc). */
+  readonly disabled = input(false);
 
   /** Index of the currently selected option (for arrow-key movement). */
   private readonly activeIndex = computed(() =>
@@ -54,10 +69,12 @@ export class SegmentedToggle {
   );
 
   protected select(value: string): void {
+    if (this.disabled()) return;
     this.value.set(value);
   }
 
   protected onKeydown(event: KeyboardEvent): void {
+    if (this.disabled()) return;
     const opts = this.options();
     if (opts.length === 0) return;
     let next: number | null = null;

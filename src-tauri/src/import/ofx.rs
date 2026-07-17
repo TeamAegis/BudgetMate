@@ -41,7 +41,7 @@ use thiserror::Error;
 
 use crate::domain::money::{parse_minor, MoneyParseError};
 
-use super::{ParsedImport, RowError, StagedTx};
+use super::{ParsedImport, RowError, StagedRow, StagedTx};
 
 /// Hard cap on input size in bytes, rejected before any scanning. An offline app has no
 /// server-side upload limit to lean on, so it must reject a pathological file itself. 32 MiB is
@@ -96,7 +96,9 @@ pub enum OfxError {
 /// assert_eq!(parsed.transactions.len(), 1);
 /// assert!(parsed.row_errors.is_empty());
 ///
-/// let tx = &parsed.transactions[0];
+/// let row = &parsed.transactions[0];
+/// assert_eq!(row.row, 0);
+/// let tx = &row.staged;
 /// assert_eq!(tx.amount_minor, -45_000);
 /// assert_eq!(tx.currency, "MUR");
 /// assert_eq!(tx.posted_date, "2026-06-01");
@@ -132,7 +134,7 @@ pub fn parse_ofx(bytes: &[u8]) -> Result<ParsedImport, OfxError> {
     for statement in statements {
         for content in statement.blocks {
             match parse_stmttrn(content, statement.currency.as_deref(), index) {
-                Ok(tx) => transactions.push(tx),
+                Ok(tx) => transactions.push(StagedRow { row: index, staged: tx }),
                 Err(err) => row_errors.push(err),
             }
             index += 1;
@@ -456,7 +458,7 @@ mod tests {
         assert!(parsed.row_errors.is_empty(), "{:?}", parsed.row_errors);
         assert_eq!(parsed.transactions.len(), 2);
 
-        let first = &parsed.transactions[0];
+        let first = &parsed.transactions[0].staged;
         assert_eq!(first.amount_minor, -45_000);
         assert_eq!(first.currency, "MUR");
         // Time + tz suffix is ignored; only the yyyymmdd digits are used.
@@ -465,7 +467,7 @@ mod tests {
         assert_eq!(first.note.as_deref(), Some("Monthly bill"));
         assert_eq!(first.source_ref.as_deref(), Some("2026060100123"));
 
-        let second = &parsed.transactions[1];
+        let second = &parsed.transactions[1].staged;
         assert_eq!(second.amount_minor, 200_000);
         assert_eq!(second.posted_date, "2026-06-05");
         assert_eq!(second.note, None);
@@ -485,7 +487,7 @@ mod tests {
         assert!(parsed.row_errors.is_empty(), "{:?}", parsed.row_errors);
         assert_eq!(parsed.transactions.len(), 1);
 
-        let tx = &parsed.transactions[0];
+        let tx = &parsed.transactions[0].staged;
         assert_eq!(tx.amount_minor, -12_550);
         assert_eq!(tx.currency, "MUR");
         assert_eq!(tx.posted_date, "2026-06-03");
@@ -508,7 +510,7 @@ mod tests {
         assert!(parsed.row_errors.is_empty(), "{:?}", parsed.row_errors);
         assert_eq!(parsed.transactions.len(), 1);
 
-        let tx = &parsed.transactions[0];
+        let tx = &parsed.transactions[0].staged;
         assert_eq!(tx.amount_minor, -1_999);
         assert_eq!(tx.currency, "USD");
         assert_eq!(tx.payee.as_deref(), Some("Streaming Co"));
@@ -525,7 +527,7 @@ mod tests {
 
         let parsed = parse_ofx(ofx.as_bytes()).unwrap();
         assert_eq!(parsed.transactions.len(), 1);
-        assert_eq!(parsed.transactions[0].amount_minor, -7_500);
+        assert_eq!(parsed.transactions[0].staged.amount_minor, -7_500);
     }
 
     // ---- Multiple STMTTRN blocks (already covered above, explicit count check) --------------
@@ -587,7 +589,7 @@ mod tests {
         let parsed = parse_ofx(ofx.as_bytes()).unwrap();
         assert!(parsed.row_errors.is_empty(), "{:?}", parsed.row_errors);
         assert_eq!(parsed.transactions.len(), 1);
-        assert_eq!(parsed.transactions[0].payee.as_deref(), Some(value.as_str()));
+        assert_eq!(parsed.transactions[0].staged.payee.as_deref(), Some(value.as_str()));
     }
 
     use proptest::prelude::*;
@@ -618,8 +620,8 @@ mod tests {
 
         let parsed = parse_ofx(ofx.as_bytes()).unwrap();
         assert!(parsed.row_errors.is_empty(), "{:?}", parsed.row_errors);
-        assert_eq!(parsed.transactions[0].currency, "USD");
-        assert_eq!(parsed.transactions[1].currency, "MUR");
+        assert_eq!(parsed.transactions[0].staged.currency, "USD");
+        assert_eq!(parsed.transactions[1].staged.currency, "MUR");
     }
 
     #[test]
@@ -659,12 +661,12 @@ mod tests {
         let parsed = parse_ofx(ofx.as_bytes()).unwrap();
         assert!(parsed.row_errors.is_empty(), "{:?}", parsed.row_errors);
         assert_eq!(parsed.transactions.len(), 2);
-        assert_eq!(parsed.transactions[0].currency, "MUR");
-        assert_eq!(parsed.transactions[1].currency, "USD");
+        assert_eq!(parsed.transactions[0].staged.currency, "MUR");
+        assert_eq!(parsed.transactions[1].staged.currency, "USD");
         // The running RowError/transaction index stays a single 0-based ordinal across the whole
         // file, in document order, regardless of which statement a transaction came from.
-        assert_eq!(parsed.transactions[0].source_ref.as_deref(), Some("BANK-1"));
-        assert_eq!(parsed.transactions[1].source_ref.as_deref(), Some("CARD-1"));
+        assert_eq!(parsed.transactions[0].staged.source_ref.as_deref(), Some("BANK-1"));
+        assert_eq!(parsed.transactions[1].staged.source_ref.as_deref(), Some("CARD-1"));
     }
 
     #[test]
@@ -680,9 +682,9 @@ mod tests {
 
         let parsed = parse_ofx(ofx.as_bytes()).unwrap();
         assert!(parsed.row_errors.is_empty(), "{:?}", parsed.row_errors);
-        assert_eq!(parsed.transactions[0].currency, "MUR");
+        assert_eq!(parsed.transactions[0].staged.currency, "MUR");
         // Overrides the CCSTMTRS's own USD CURDEF, not the first statement's MUR.
-        assert_eq!(parsed.transactions[1].currency, "EUR");
+        assert_eq!(parsed.transactions[1].staged.currency, "EUR");
     }
 
     #[test]
@@ -701,7 +703,7 @@ mod tests {
 
         let parsed = parse_ofx(ofx.as_bytes()).unwrap();
         assert_eq!(parsed.transactions.len(), 1);
-        assert_eq!(parsed.transactions[0].currency, "MUR");
+        assert_eq!(parsed.transactions[0].staged.currency, "MUR");
         assert_eq!(parsed.row_errors.len(), 1);
         assert_eq!(parsed.row_errors[0].source_ref.as_deref(), Some("CARD-1"));
         // Global index continues across statements: this is the second tx in the file.
@@ -750,8 +752,8 @@ mod tests {
 
         let parsed = parse_ofx(ofx.as_bytes()).unwrap();
         assert_eq!(parsed.transactions.len(), 1);
-        assert_eq!(parsed.transactions[0].source_ref, None);
-        assert_eq!(parsed.transactions[0].payee.as_deref(), Some("Cash withdrawal"));
+        assert_eq!(parsed.transactions[0].staged.source_ref, None);
+        assert_eq!(parsed.transactions[0].staged.payee.as_deref(), Some("Cash withdrawal"));
     }
 
     #[test]
@@ -787,7 +789,7 @@ mod tests {
 
         let parsed = parse_ofx(ofx.as_bytes()).unwrap();
         assert!(parsed.row_errors.is_empty(), "{:?}", parsed.row_errors);
-        assert_eq!(parsed.transactions[0].amount_minor, 5_000);
+        assert_eq!(parsed.transactions[0].staged.amount_minor, 5_000);
     }
 
     #[test]
@@ -801,8 +803,8 @@ mod tests {
 
         let parsed = parse_ofx(ofx.as_bytes()).unwrap();
         assert!(parsed.row_errors.is_empty(), "{:?}", parsed.row_errors);
-        assert_eq!(parsed.transactions[0].amount_minor, -450);
-        assert_eq!(parsed.transactions[0].currency, "JPY");
+        assert_eq!(parsed.transactions[0].staged.amount_minor, -450);
+        assert_eq!(parsed.transactions[0].staged.currency, "JPY");
     }
 
     #[test]
@@ -815,8 +817,8 @@ mod tests {
 
         let parsed = parse_ofx(ofx.as_bytes()).unwrap();
         assert!(parsed.row_errors.is_empty(), "{:?}", parsed.row_errors);
-        assert_eq!(parsed.transactions[0].amount_minor, -1_234);
-        assert_eq!(parsed.transactions[0].currency, "BHD");
+        assert_eq!(parsed.transactions[0].staged.amount_minor, -1_234);
+        assert_eq!(parsed.transactions[0].staged.currency, "BHD");
     }
 
     // ---- File-level structural failures --------------------------------------------------------
@@ -869,7 +871,7 @@ mod tests {
             let parsed = parse_ofx(ofx.as_bytes()).unwrap();
             prop_assert_eq!(parsed.row_errors.len(), 0);
             prop_assert_eq!(parsed.transactions.len(), 1);
-            prop_assert_eq!(parsed.transactions[0].amount_minor, minor);
+            prop_assert_eq!(parsed.transactions[0].staged.amount_minor, minor);
         }
     }
 }

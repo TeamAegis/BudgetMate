@@ -24,7 +24,18 @@
             ariaLabel="Account"
             [options]="accountOptions()"
             [value]="accountId()"
+            [disabled]="busy()"
             (valueChange)="setAccountId($event)"
+          />
+        </app-form-field>
+
+        <app-form-field label="File type">
+          <app-segmented-toggle
+            ariaLabel="Bank-file format"
+            [options]="formatOptions"
+            [value]="format()"
+            [disabled]="busy()"
+            (valueChange)="setFormat($event)"
           />
         </app-form-field>
 
@@ -34,8 +45,8 @@
 
         <app-empty-state
           image="assets/illustrations/get-started.svg"
-          message="Import a CSV bank statement. Nothing is saved until you review and confirm the transactions."
-          cta="Choose a CSV file"
+          [message]="chooseFileMessage()"
+          [cta]="chooseFileCta()"
           [ctaLoading]="busy()"
           (action)="chooseFile()"
         />
@@ -47,10 +58,7 @@
           </div>
         }
 
-        <p class="note">
-          The file stays on your device - nothing is uploaded. You will map its columns and confirm
-          every row before anything is saved.
-        </p>
+        <p class="note">{{ chooseFileNote() }}</p>
       }
     }
 
@@ -169,6 +177,20 @@
             </ul>
           </div>
         }
+
+        @if ((previewData()?.currencyMismatches?.length ?? 0) > 0) {
+          <div class="currency-mismatch">
+            <h2>
+              <svg lucideInfo [size]="16" aria-hidden="true"></svg>
+              <span>Not imported: different currency</span>
+            </h2>
+            <ul>
+              @for (err of previewData()?.currencyMismatches ?? []; track err.row) {
+                <li>Row {{ err.row + 1 }}: {{ err.message }}</li>
+              }
+            </ul>
+          </div>
+        }
       } @else {
         <app-banner tone="info">{{ summaryText() }}</app-banner>
 
@@ -232,6 +254,20 @@
           </div>
         }
 
+        @if ((previewData()?.currencyMismatches?.length ?? 0) > 0) {
+          <div class="currency-mismatch">
+            <h2>
+              <svg lucideInfo [size]="16" aria-hidden="true"></svg>
+              <span>Not imported: different currency</span>
+            </h2>
+            <ul>
+              @for (err of previewData()?.currencyMismatches ?? []; track err.row) {
+                <li>Row {{ err.row + 1 }}: {{ err.message }}</li>
+              }
+            </ul>
+          </div>
+        }
+
         <div class="wizard-actions">
           <app-button variant="ghost" (click)="startOver()">Start over</app-button>
           <app-button variant="primary" [disabled]="toImportCount() === 0" (click)="commit()">
@@ -261,6 +297,9 @@
           }
           @if ((result()?.malformed ?? 0) > 0) {
             {{ result()?.malformed }} row{{ (result()?.malformed ?? 0) === 1 ? '' : 's' }} could not be read.
+          }
+          @if ((result()?.currencySkipped ?? 0) > 0) {
+            {{ result()?.currencySkipped }} not imported (different currency).
           }
         </p>
         <app-button variant="primary" (click)="finish()">Done</app-button>

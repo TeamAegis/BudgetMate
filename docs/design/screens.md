@@ -182,30 +182,48 @@ in the current Figma - design them to this spec.
   types a value), engine-unavailable (plugin `NotImplemented` on desktop/iOS), failed
   (retry/manual entry). **Never auto-saves** - the user confirms on the Add expense page.
 
-### 4.5 Import Wizard **[BUILT for CSV]**
+### 4.5 Import Wizard **[BUILT for CSV, OFX, QFX]**
 - **FR:** FR-2.2/2.3/2.4.
-- **Components:** `ImportFile` (`features/import/import-file`) - account picker + file picker
-  (dialog, `pickImportFile`), CSV column-mapping (Date/Amount required, Payee/Note/Reference
-  optional, with a sample-rows preview table), a reviewing step (rule-suggested category per row,
-  **dedup review** with a per-row keep/skip toggle defaulting possible duplicates to skipped, and
-  malformed rows listed separately with their reason), a committing spinner, and a done summary.
-  Reached from Settings ("Import transactions") - route `import/file`, distinct from the OCR scan
-  route (`import`).
-- **Data:** a local CSV file (path only - read via `std::fs`, never uploaded), the parsed/staged
-  rows, rule-suggested categories, duplicate flags, parse errors.
-- **Commands:** `import_read_headers(path, format)` (header row + sample rows),
-  `import_preview(input)` (parses + suggests categories + flags duplicates; writes nothing),
-  `import_commit(input)` (re-parses and inserts as one ACID batch, honouring `skipRows`, then
-  records the `imports` audit row). All three reject a non-CSV `format` today.
-- **Status (2026-07):** CSV is wired end-to-end (issue #12; model decisions in ADR 0010). The
-  OFX/QFX parser exists (ADR 0009) but is not wired to these commands yet - they accept the
-  `format` field but reject anything other than `'csv'` with a plain-language validation error.
-- **States:** idle (account picker + "Choose a CSV file", loading while accounts load, empty when
-  there are no accounts yet), mapping (column selects + sample rows, Preview disabled until
-  Date+Amount are chosen), reviewing (summary banner, per-row duplicate flag + keep/skip, malformed
-  rows listed separately, nothing saved yet), committing (spinner, UI stays responsive), done
-  (inserted/skipped/malformed summary), error (plain-language + start over / try again). Nothing
-  auto-commits - the reviewing step always requires an explicit "Import N transactions" tap.
+- **Components:** `ImportFile` (`features/import/import-file`) - account picker, a `SegmentedToggle`
+  file-type picker (CSV/OFX/QFX), then the native file picker (dialog, `pickImportFile(format)`, its
+  filter/extensions following the chosen format). CSV alone gets a column-mapping step
+  (Date/Amount required, Payee/Note/Reference optional, with a sample-rows preview table); OFX/QFX
+  are self-describing and skip straight from picking the file to the reviewing step - while that
+  preview read is in flight the idle step's account `SelectField` and format `SegmentedToggle` are
+  disabled (`[disabled]="busy()"`) so the account the reviewed data was computed against cannot
+  change out from under it. Reviewing shows a rule-suggested category per row, **dedup review** with
+  a per-row keep/skip toggle defaulting possible duplicates to skipped, genuinely-malformed rows
+  listed separately with their reason, and - for OFX/QFX, as a SEPARATE, clearly-labelled, non-error
+  section ("Not imported: different currency", info tone) - any row whose own currency didn't match
+  the account's; a currency mismatch is never folded into the malformed list, since the row parsed
+  fine and was deliberately excluded for money-safety, not because the file could not be read. Then a
+  committing spinner and a done summary. Reached from Settings ("Import transactions") - route
+  `import/file`, distinct from the OCR scan route (`import`).
+- **Data:** a local CSV/OFX/QFX file (path only - read via `std::fs`/`android-fs`, never uploaded),
+  the parsed/staged rows, rule-suggested categories, duplicate flags, parse errors, currency
+  mismatches.
+- **Commands:** `import_read_headers(path, format)` (CSV-only: header row + sample rows),
+  `import_preview(input)` (parses + suggests categories + flags duplicates; writes nothing - `mapping`
+  is required for CSV, omitted for OFX/QFX; returns `errors` for genuinely-malformed rows and a
+  separate `currencyMismatches` for OFX/QFX currency exclusions), `import_commit(input)` (re-parses
+  and inserts as one ACID batch, honouring `skipRows` by row ordinal, then records the `imports`
+  audit row; returns `malformed` and a separate `currencySkipped` count).
+- **Status (2026-07):** CSV wired end-to-end first (issue #12; model decisions in ADR 0010); OFX and
+  QFX now wired through the same shared preview/commit core (issue #13; ADR 0011). A transaction
+  whose OWN currency in the file differs from the account's is never imported (imports carry no fx
+  rate yet, so importing it would misrepresent reporting totals) - reported as its own
+  `currencyMismatches`/`currencySkipped` category, distinct from genuinely-malformed rows (finance/
+  design review of issue #13: a currency mismatch is not "could not be read").
+- **States:** idle (account picker + file-type toggle + "Choose a CSV/OFX/QFX file", loading while
+  accounts load, empty when there are no accounts yet; the idle-step note for OFX/QFX also states
+  plainly that a different-currency transaction will not be imported), mapping (CSV only: column
+  selects + sample rows, Preview disabled until Date+Amount are chosen - OFX/QFX skip this state
+  entirely), reviewing (summary banner with malformed and currency-mismatch counts in their own
+  clauses, per-row duplicate flag + keep/skip, malformed rows and currency-mismatch rows each listed
+  in their own labelled section, nothing saved yet), committing (spinner, UI stays responsive), done
+  (inserted/skipped/malformed/currency-skipped summary), error (plain-language + start over / try
+  again). Nothing auto-commits - the reviewing step always requires an explicit "Import N
+  transactions" tap.
 
 ---
 

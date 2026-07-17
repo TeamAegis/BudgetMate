@@ -358,8 +358,8 @@ export interface UpdateGoal extends NewGoal {
 
 // ── Bank-file import (FR-2.2, mirrors import:: / db::imports / commands::import) ──
 
-/** Supported/target bank-file formats (mirrors Rust `import::ImportFormat`). Only `'csv'` is wired
- *  end-to-end; `'ofx'`/`'qfx'` are reserved for a later change (issue #13). */
+/** Supported bank-file formats (mirrors Rust `import::ImportFormat`). All three are wired
+ *  end-to-end (`docs/adr/0011-ofx-import-wiring.md`). */
 export type ImportFormat = 'csv' | 'ofx' | 'qfx';
 
 /** Header row + a few sample data rows for the column-mapping step (mirrors Rust
@@ -388,12 +388,14 @@ export interface RowError {
   message: string;
 }
 
-/** Input for `importPreview` (mirrors Rust `commands::import::ImportPreviewInput`). */
+/** Input for `importPreview` (mirrors Rust `commands::import::ImportPreviewInput`). `mapping` is
+ *  required for `'csv'` (the file's column layout is not self-describing) and omitted for
+ *  `'ofx'`/`'qfx'` (the file already names its own fields). */
 export interface ImportPreviewInput {
   path: string;
   format: ImportFormat;
   accountId: number;
-  mapping: ColumnMappingInput;
+  mapping?: ColumnMappingInput;
 }
 
 /**
@@ -424,29 +426,39 @@ export interface PreviewRow {
 }
 
 /** Result of `importPreview` (mirrors Rust `db::imports::ImportPreviewData`). Nothing is written -
- *  the user reviews and confirms before `importCommit`. */
+ *  the user reviews and confirms before `importCommit`. `errors` holds only genuinely-malformed
+ *  rows (bad date, unparsable amount, ...); `currencyMismatches` is a SEPARATE, non-error list of
+ *  rows that were read fine but deliberately excluded because their OWN currency differs from the
+ *  account's (OFX/QFX only - imports carry no fx rate yet). Never conflate the two: a currency
+ *  mismatch is not "could not be read". */
 export interface ImportPreviewData {
   rows: PreviewRow[];
   errors: RowError[];
+  currencyMismatches: RowError[];
   duplicateCount: number;
   currency: Iso4217;
 }
 
 /** Input for `importCommit` (mirrors Rust `commands::import::ImportCommitInput`). `skipRows` are
- *  the 0-based data-row indices the user chose not to import (e.g. a flagged duplicate). */
+ *  the 0-based row ordinals the user chose not to import (e.g. a flagged duplicate) - a data-row
+ *  index for CSV, a transaction-block index for OFX/QFX. `mapping` is required for `'csv'`, omitted
+ *  for `'ofx'`/`'qfx'`. */
 export interface ImportCommitInput {
   path: string;
   format: ImportFormat;
   accountId: number;
-  mapping: ColumnMappingInput;
+  mapping?: ColumnMappingInput;
   skipRows: number[];
 }
 
-/** Result of committing an import (mirrors Rust `db::imports::ImportResultData`). */
+/** Result of committing an import (mirrors Rust `db::imports::ImportResultData`). `malformed`
+ *  counts only genuinely-malformed rows; `currencySkipped` (always 0 for CSV) counts rows excluded
+ *  solely for a currency mismatch - see `ImportPreviewData`. */
 export interface ImportResultData {
   inserted: number;
   skipped: number;
   malformed: number;
+  currencySkipped: number;
 }
 
 // ── Budgets / envelopes (FR-3.1) ──────────────────────────────────────────────────

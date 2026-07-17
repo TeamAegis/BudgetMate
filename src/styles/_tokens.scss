@@ -41,6 +41,7 @@
   --tap-highlight: transparent;            // kills the Android WebView default blue tap overlay
   --c-press-tint: var(--c-primary-05);     // pressed-state tint for transparent-surface controls
   --c-selection: var(--c-primary-10);      // text-selection band (replaces the WebView blue default)
+  --opacity-disabled: 0.5;                 // disabled controls (Button, SelectField, SegmentedToggle)
 
   // ---- Elevation ----
   --c-shadow-pink: rgba(255, 203, 203, 0.29);

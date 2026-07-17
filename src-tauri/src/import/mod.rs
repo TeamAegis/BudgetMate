@@ -1,18 +1,18 @@
 //! Bank-file import (FR-2.2): CSV, OFX 1.x/2.x, and QFX parsed into normalised `StagedTx`, then
 //! run through the rule engine + dedup and reviewed by the user before an ACID batch insert.
 //!
-//! CSV is wired end-to-end (`import::csv` for the pure parse, `db::imports` for the DB-aware
-//! pipeline, `commands::import` for IPC). The OFX 1.x/2.x/QFX parser is implemented,
+//! CSV and OFX/QFX are both wired end-to-end (`import::csv` / `import::ofx` for the pure parse,
+//! `db::imports` for the shared DB-aware pipeline, `commands::import` for IPC - see
+//! `docs/adr/0011-ofx-import-wiring.md`). The OFX 1.x/2.x/QFX parser is implemented,
 //! self-contained, in `import/ofx.rs` (`parse_ofx`; see
-//! `docs/adr/0009-hand-rolled-ofx-parser.md`), but is NOT yet wired to the command surface: the
-//! three `import_*` commands reject a non-CSV `format`. Wiring OFX through `db::imports` is its
-//! own change.
+//! `docs/adr/0009-hand-rolled-ofx-parser.md`).
 //!
 //! Note the two per-row failure types, which are deliberately distinct rather than shared: OFX
 //! reports `import::RowError` (keyed by transaction-block ordinal + the bank's `FITID`), while CSV
 //! reports `import::csv::RowError` (keyed by 0-based data-row index, which `skipRows` refers back
-//! to). Only the CSV one crosses IPC today. Unifying them is a follow-up, not a merge-time
-//! refactor.
+//! to). `db::imports` adapts an OFX `RowError` into a `csv::RowError` (`row` = the block ordinal)
+//! at the boundary so only the CSV shape crosses IPC. Unifying the two Rust types is a follow-up,
+//! not a merge-time refactor.
 
 pub mod csv;
 pub mod ofx;
@@ -26,6 +26,16 @@ pub struct StagedTx {
     pub payee: Option<String>,
     pub note: Option<String>,
     pub source_ref: Option<String>,
+}
+
+/// One successfully parsed row, carrying its stable ordinal within the file: for CSV, the 0-based
+/// data-row index (excludes the header row); for OFX/QFX, the 0-based transaction-block ordinal.
+/// Both index spaces line up with their format's own row-error list, and `commit`'s `skipRows`
+/// refers back to this same `row`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StagedRow {
+    pub row: usize,
+    pub staged: StagedTx,
 }
 
 /// Which bank-file format is being imported. Mirrors TS `ImportFormat`. Stored in the `imports`
@@ -53,7 +63,7 @@ impl ImportFormat {
 /// has its own row-index-keyed `csv::ParsedRows` (see the module note above).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ParsedImport {
-    pub transactions: Vec<StagedTx>,
+    pub transactions: Vec<StagedRow>,
     pub row_errors: Vec<RowError>,
 }
 

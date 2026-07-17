@@ -75,6 +75,96 @@ describe('ImportFile - mapping validation', () => {
   });
 });
 
+describe('ImportFile - format selection (docs/adr/0011-ofx-import-wiring.md)', () => {
+  it('defaults to CSV', () => {
+    const c = createComponent();
+    expect(c.format()).toBe('csv');
+  });
+
+  it('setFormat drives the format signal - what the picker and the idle-step copy read from', () => {
+    const c = createComponent();
+    c.setFormat('ofx');
+    expect(c.format()).toBe('ofx');
+    c.setFormat('qfx');
+    expect(c.format()).toBe('qfx');
+  });
+
+  it('CSV still requires a date and amount column before previewing', () => {
+    const c = createComponent();
+    c.accountId.set(1);
+    expect(c.canPreview()).toBe(false, 'no date/amount column chosen yet');
+    c.setDateCol(0);
+    c.setAmountCol(1);
+    expect(c.canPreview()).toBe(true);
+  });
+
+  it('OFX/QFX need only an account - no mapping step, so no column requirement', () => {
+    const c = createComponent();
+    c.setFormat('ofx');
+    expect(c.canPreview()).toBe(false, 'still needs an account');
+    c.accountId.set(1);
+    expect(c.canPreview()).toBe(true, 'dateCol/amountCol are never set for a self-describing file');
+
+    c.setFormat('qfx');
+    expect(c.canPreview()).toBe(true);
+  });
+
+  it('idle-step copy names the chosen format and only mentions column mapping for CSV', () => {
+    const c = createComponent();
+    expect(c.chooseFileCta()).toBe('Choose a CSV file');
+    expect(c.chooseFileNote()).toContain('map its columns');
+
+    c.setFormat('ofx');
+    expect(c.chooseFileCta()).toBe('Choose an OFX file');
+    expect(c.chooseFileMessage()).toContain('OFX');
+    expect(c.chooseFileNote()).not.toContain('map its columns');
+
+    c.setFormat('qfx');
+    expect(c.chooseFileCta()).toBe('Choose a QFX file');
+    expect(c.chooseFileMessage()).toContain('QFX');
+    expect(c.chooseFileNote()).not.toContain('map its columns');
+  });
+
+  it('OFX/QFX idle-step note gives a heads-up that a different-currency row will not be imported', () => {
+    const c = createComponent();
+    // CSV never mixes currencies (the row always takes the account's currency), so the CSV note
+    // says nothing about currency exclusion.
+    expect(c.chooseFileNote()).not.toContain('currency');
+
+    c.setFormat('ofx');
+    expect(c.chooseFileNote()).toContain('different currency');
+    expect(c.chooseFileNote()).toContain('will not be imported');
+
+    c.setFormat('qfx');
+    expect(c.chooseFileNote()).toContain('different currency');
+  });
+
+  it('reaches the reviewing step for OFX/QFX without ever populating headers (no mapping step)', () => {
+    // Mirrors what `preview()` does on success (headers/mapping are CSV-only, so an OFX/QFX run
+    // never touches `headers`) - bridge calls cannot be spied on here (see the file header note),
+    // so this simulates the resulting state directly.
+    const c = createComponent();
+    c.setFormat('ofx');
+    c.previewData.set({
+      rows: [],
+      errors: [],
+      currencyMismatches: [],
+      duplicateCount: 0,
+      currency: 'MUR',
+    });
+    c.phase.set('reviewing');
+
+    expect(c.phase()).toBe('reviewing');
+    expect(c.headers()).toBeNull();
+
+    // retry() from an error must still route back to 'reviewing' (never 'mapping') for OFX/QFX,
+    // exactly as it does for CSV once a preview exists.
+    c.phase.set('error');
+    c.retry();
+    expect(c.phase()).toBe('reviewing');
+  });
+});
+
 describe('ImportFile - duplicate keep/skip toggling + summary', () => {
   const preview: ImportPreviewData = {
     rows: [
@@ -106,6 +196,7 @@ describe('ImportFile - duplicate keep/skip toggling + summary', () => {
       },
     ],
     errors: [{ row: 2, message: "unrecognised date 'oops'" }],
+    currencyMismatches: [],
     duplicateCount: 1,
     currency: 'MUR',
   };
@@ -154,12 +245,32 @@ describe('ImportFile - duplicate keep/skip toggling + summary', () => {
     );
   });
 
+  it('summarises a currency mismatch in its own clause, distinct from malformed and duplicates', () => {
+    const c = createComponent();
+    c.previewData.set({
+      ...preview,
+      errors: [],
+      currencyMismatches: [{ row: 3, message: 'This transaction is in USD; this account is in MUR.' }],
+    });
+    c.skipRows.set(new Set([1]));
+
+    expect(c.summaryText()).toBe(
+      '1 transaction to import, 1 possible duplicate, 1 in another currency (not imported)',
+    );
+  });
+
   it('has no importable rows only when the parsed rows array is empty', () => {
     const c = createComponent();
     c.previewData.set(preview);
     expect(c.noImportableRows()).toBe(false);
 
-    c.previewData.set({ rows: [], errors: preview.errors, duplicateCount: 0, currency: 'MUR' });
+    c.previewData.set({
+      rows: [],
+      errors: preview.errors,
+      currencyMismatches: [],
+      duplicateCount: 0,
+      currency: 'MUR',
+    });
     expect(c.noImportableRows()).toBe(true);
   });
 
@@ -211,13 +322,31 @@ describe('ImportFile - foreign-currency warning (finance#1 / code#5)', () => {
   });
 });
 
+describe('ImportFile - done summary (currencySkipped kept separate from malformed)', () => {
+  it('holds inserted/skipped/malformed/currencySkipped independently', () => {
+    const c = createComponent();
+    c.result.set({ inserted: 2, skipped: 1, malformed: 1, currencySkipped: 3 });
+
+    expect(c.result().inserted).toBe(2);
+    expect(c.result().skipped).toBe(1);
+    expect(c.result().malformed).toBe(1);
+    expect(c.result().currencySkipped).toBe(3);
+  });
+});
+
 describe('ImportFile - states', () => {
   it('starts idle and clears every step on startOver', () => {
     const c = createComponent();
     c.phase.set('reviewing');
     c.path.set('/tmp/statement.csv');
     c.headers.set({ headers: ['Date'], sampleRows: [] });
-    c.previewData.set({ rows: [], errors: [], duplicateCount: 0, currency: 'MUR' });
+    c.previewData.set({
+      rows: [],
+      errors: [],
+      currencyMismatches: [],
+      duplicateCount: 0,
+      currency: 'MUR',
+    });
     c.skipRows.set(new Set([1]));
 
     c.startOver();
@@ -242,7 +371,13 @@ describe('ImportFile - states', () => {
     expect(c.phase()).toBe('mapping');
 
     // Preview present -> reviewing.
-    c.previewData.set({ rows: [], errors: [], duplicateCount: 0, currency: 'MUR' });
+    c.previewData.set({
+      rows: [],
+      errors: [],
+      currencyMismatches: [],
+      duplicateCount: 0,
+      currency: 'MUR',
+    });
     c.retry();
     expect(c.phase()).toBe('reviewing');
   });
