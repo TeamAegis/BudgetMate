@@ -202,7 +202,7 @@ v1 scope as requirements regardless of status; Status only reflects current prog
 | FR-2.1 OCR | §6 OCR Subsystem | Built (Android; iOS deferred) |
 | FR-2.2 Import (CSV/OFX/QFX) | §8 Import Pipeline | Built for CSV, OFX, and QFX (column mapping for CSV, rule suggestion, dedup review, ACID commit - ADR 0010/0011). OFX/QFX share the CSV preview/commit pipeline and additionally reject a row whose own currency does not match the account's (never silently imported at an implicit rate) |
 | FR-2.3 Rule engine | §8 Rule Engine | Built (rule management + preview; now applied at CSV/OFX/QFX import time, not just manual entry) |
-| FR-2.4 Dedup | §8 Dedup | Built for CSV/OFX/QFX import (preview + commit flag likely duplicates for user keep/skip); still not wired into manual entry |
+| FR-2.4 Dedup | §8 Dedup | Built for CSV/OFX/QFX import (preview + commit flag likely duplicates for user keep/skip); the dedup window is user-configurable in Settings > Duplicate detection (presets from same day to 2 weeks in the UI; the Rust backend accepts 0-30 days, defaults to 3), read by both preview and commit so they always agree; still not wired into manual entry |
 | FR-3.1 Envelope budgeting | §3 Frontend, §4 aggregations | Built |
 | FR-3.2 Savings goals | §3 Frontend, §4 | Built |
 | FR-3.3 Local reporting (charts) | §3 Frontend (charts), §4 aggregations | Built |

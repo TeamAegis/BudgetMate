@@ -30,8 +30,11 @@ use crate::rules::dedup::{is_likely_duplicate, DedupKey};
 use crate::rules::engine::{apply_rules_traced, Applied, RuleFields};
 
 /// Default dedup window (FR-2.4): flag rows within this many days of an existing/earlier-in-batch
-/// row at the same account and exact amount as a possible duplicate.
-const DEFAULT_WINDOW_DAYS: i64 = 3;
+/// row at the same account and exact amount as a possible duplicate. Derived from
+/// `vault::DEFAULT_DEDUP_WINDOW_DAYS` (rather than a second hardcoded literal) so the two can never
+/// drift apart - `commands::import::dedup_window` reads the user-configurable setting that
+/// defaults to the same value.
+const DEFAULT_WINDOW_DAYS: i64 = crate::vault::DEFAULT_DEDUP_WINDOW_DAYS as i64;
 
 /// One parsed row annotated for the review screen (mirrors TS `PreviewRow`). `amount_minor` is the
 /// file's SIGNED amount.
@@ -884,6 +887,40 @@ mod tests {
             "names the earlier in-batch row's date"
         );
         assert!(!data.rows[3].duplicate);
+    }
+
+    /// FR-2.4 acceptance criterion: the dedup window is configurable, not a fixed constant. Two
+    /// rows 5 days apart, same account + exact amount: a narrower window (0 days, "same day only")
+    /// must NOT flag either as a duplicate, while a wider window (7 days) MUST flag the later one -
+    /// proving `window_days` is actually honoured by the pipeline (not just accepted and ignored).
+    #[test]
+    fn dedup_window_is_configurable_at_the_pipeline_layer() {
+        let conn = db();
+        commit(
+            &conn,
+            CommitInput {
+                content: "Date,Description,Amount\n2026-06-01,Winners,-450.00\n",
+                mapping: &mapping(),
+                account_id: 1,
+                filename: "seed.csv",
+                format: "csv",
+                skip_rows: &[],
+                window_days: None,
+            },
+            "2026-06-01T10:00:00Z",
+        )
+        .unwrap();
+
+        // Same account, same exact amount, 5 days after the seeded row.
+        let content = "Date,Description,Amount\n2026-06-06,Winners,-450.00\n";
+
+        let narrow = preview(&conn, content, &mapping(), 1, Some(0)).unwrap();
+        assert!(!narrow.rows[0].duplicate, "5 days apart is outside a same-day-only (0) window");
+        assert_eq!(narrow.duplicate_count, 0);
+
+        let wide = preview(&conn, content, &mapping(), 1, Some(7)).unwrap();
+        assert!(wide.rows[0].duplicate, "5 days apart is within a 7-day window");
+        assert_eq!(wide.duplicate_count, 1);
     }
 
     #[test]

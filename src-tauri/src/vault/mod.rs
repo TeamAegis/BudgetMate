@@ -18,9 +18,15 @@ pub const CURRENT_META_VERSION: u32 = 1;
 pub const DEFAULT_IDLE_TIMEOUT_SECS: u32 = 120;
 /// Default base (reporting) currency - design-system §8 (MUR, "Rs").
 pub const DEFAULT_BASE_CURRENCY: &str = "MUR";
+/// Default dedup window in days (FR-2.4) - must equal `db::imports::DEFAULT_WINDOW_DAYS`.
+pub const DEFAULT_DEDUP_WINDOW_DAYS: u32 = 3;
 
 fn default_base_currency() -> String {
     DEFAULT_BASE_CURRENCY.to_string()
+}
+
+fn default_dedup_window_days() -> u32 {
+    DEFAULT_DEDUP_WINDOW_DAYS
 }
 
 const SALT_LEN: usize = 16;
@@ -58,6 +64,11 @@ pub struct VaultSettings {
     /// user rate (FR-1.4). `#[serde(default)]` so meta written before this field still loads.
     #[serde(default = "default_base_currency")]
     pub base_currency: String,
+    /// Dedup window in days (FR-2.4): how many days apart, at the same amount + account, an
+    /// imported row is flagged as a possible duplicate. `#[serde(default)]` so meta written before
+    /// this field still loads.
+    #[serde(default = "default_dedup_window_days")]
+    pub dedup_window_days: u32,
 }
 
 impl Default for VaultSettings {
@@ -66,6 +77,7 @@ impl Default for VaultSettings {
             idle_timeout_secs: DEFAULT_IDLE_TIMEOUT_SECS,
             biometric_enabled: false,
             base_currency: default_base_currency(),
+            dedup_window_days: default_dedup_window_days(),
         }
     }
 }
@@ -205,6 +217,44 @@ mod tests {
         let dir = temp_dir("corrupt");
         std::fs::write(meta_path(&dir), b"{not valid json").unwrap();
         assert!(matches!(read_meta(&dir), Err(VaultError::CorruptMeta)));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// Meta written before `dedup_window_days` existed (no `settings.dedupWindowDays` key) must
+    /// still deserialise, defaulting to `DEFAULT_DEDUP_WINDOW_DAYS` (serde `#[serde(default)]`
+    /// back-compat) - and a meta that DOES set the field round-trips it exactly.
+    #[test]
+    fn dedup_window_days_defaults_on_old_meta_and_round_trips_when_set() {
+        let dir = temp_dir("dedup_window");
+        let meta = VaultMeta {
+            meta_version: CURRENT_META_VERSION,
+            salt: generate_salt().unwrap(),
+            kdf: KdfParams::default(),
+            created_at: "2026-06-05T00:00:00Z".to_string(),
+            settings: VaultSettings::default(),
+        };
+
+        // Simulate a meta file written before `dedup_window_days` existed: serialise via the real
+        // struct, then strip the key from the JSON rather than hand-building/guessing the shape of
+        // sibling structs (`KdfParams`, ...).
+        let mut value = serde_json::to_value(&meta).unwrap();
+        value["settings"].as_object_mut().unwrap().remove("dedupWindowDays");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(meta_path(&dir), serde_json::to_string(&value).unwrap()).unwrap();
+
+        let back = read_meta(&dir).unwrap();
+        assert_eq!(
+            back.settings.dedup_window_days, DEFAULT_DEDUP_WINDOW_DAYS,
+            "meta written before dedup_window_days existed still loads, defaulting the field"
+        );
+
+        // Now round-trip a meta that DOES set a non-default value.
+        let mut meta = back;
+        meta.settings.dedup_window_days = 7;
+        write_meta(&dir, &meta).unwrap();
+        let back2 = read_meta(&dir).unwrap();
+        assert_eq!(back2.settings.dedup_window_days, 7);
+
         let _ = std::fs::remove_dir_all(&dir);
     }
 }

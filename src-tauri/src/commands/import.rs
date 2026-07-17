@@ -17,13 +17,31 @@
 //! header/sample-rows preview is meaningless for OFX/QFX.
 
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Manager, State};
 
 use crate::db::imports::{self, CommitInput, ImportPreviewData, ImportResultData};
 use crate::error::AppError;
 use crate::import::csv::{self, ColumnMapping};
 use crate::import::ImportFormat;
 use crate::state::DbState;
+
+/// The user-configured dedup window (FR-2.4, Settings > Duplicate detection), read from the vault
+/// meta sidecar so preview and commit always honour the SAME setting (they must agree - the flags
+/// the user reviewed must match what commit persists). Falls back to
+/// `vault::DEFAULT_DEDUP_WINDOW_DAYS` if the app data dir or meta can't be read (mirrors the
+/// defensive fallback `commands::vault::get_settings` already uses).
+///
+/// The value is re-clamped to 0..=30 here as defense-in-depth: `vault-meta.json` is a plaintext,
+/// hand-editable sidecar, so a manually-edited or future-version value could otherwise reach the
+/// dedup pipeline unclamped even though `commands::vault::clamp_dedup_window` already enforces the
+/// same range on write.
+fn dedup_window(app: &AppHandle) -> Option<i64> {
+    let dir = app.path().app_data_dir().ok()?;
+    let days = crate::vault::read_meta(&dir)
+        .map(|m| m.settings.dedup_window_days)
+        .unwrap_or(crate::vault::DEFAULT_DEDUP_WINDOW_DAYS);
+    Some(days.clamp(0, 30) as i64)
+}
 
 /// Header row + a few sample data rows for the column-mapping step (mirrors Rust `csv::CsvHeaders`).
 #[derive(Debug, Serialize)]
@@ -176,11 +194,13 @@ pub fn import_preview(
             })?;
             let content = read_file(&app, &input.path)?;
             let mapping = ColumnMapping::from(&mapping_input);
-            state.with(|c| imports::preview(c, &content, &mapping, input.account_id, None))
+            let window = dedup_window(&app);
+            state.with(|c| imports::preview(c, &content, &mapping, input.account_id, window))
         }
         ImportFormat::Ofx | ImportFormat::Qfx => {
             let bytes = read_file_bytes(&app, &input.path)?;
-            state.with(|c| imports::preview_ofx(c, &bytes, input.account_id, None))
+            let window = dedup_window(&app);
+            state.with(|c| imports::preview_ofx(c, &bytes, input.account_id, window))
         }
     }
 }
@@ -215,6 +235,7 @@ pub fn import_commit(
             })?;
             let content = read_file(&app, &input.path)?;
             let mapping = ColumnMapping::from(&mapping_input);
+            let window = dedup_window(&app);
             state.with(|c| {
                 imports::commit(
                     c,
@@ -225,7 +246,7 @@ pub fn import_commit(
                         filename: &filename,
                         format: input.format.as_str(),
                         skip_rows: &input.skip_rows,
-                        window_days: None,
+                        window_days: window,
                     },
                     &now,
                 )
@@ -233,6 +254,7 @@ pub fn import_commit(
         }
         ImportFormat::Ofx | ImportFormat::Qfx => {
             let bytes = read_file_bytes(&app, &input.path)?;
+            let window = dedup_window(&app);
             state.with(|c| {
                 imports::commit_ofx(
                     c,
@@ -241,7 +263,7 @@ pub fn import_commit(
                     &filename,
                     input.format.as_str(),
                     &input.skip_rows,
-                    None,
+                    window,
                     &now,
                 )
             })

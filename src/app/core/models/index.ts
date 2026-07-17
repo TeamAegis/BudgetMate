@@ -41,6 +41,9 @@ export interface VaultSettings {
   biometricEnabled: boolean;
   /** Base (reporting) currency; foreign amounts convert to it via a per-transaction rate (FR-1.4). */
   baseCurrency: Iso4217;
+  /** Dedup window in days (FR-2.4): how many days apart, at the same amount + account, an imported
+   *  row is flagged as a possible duplicate. */
+  dedupWindowDays: number;
 }
 
 /** Mirrors Rust `Money` (domain::money). */

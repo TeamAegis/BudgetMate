@@ -182,6 +182,18 @@ pub fn currency_minor_units() -> Result<crate::domain::money::CurrencyMinorUnits
     Ok(crate::domain::money::CurrencyMinorUnits::canonical())
 }
 
+/// Set the dedup window in days (FR-2.4): how many days apart, at the same amount + account, an
+/// imported row is flagged as a possible duplicate. Read by the import commands at preview/commit
+/// time (`commands::import::dedup_window`) so the flags the user reviewed match what commit
+/// persists.
+#[tauri::command]
+pub fn set_dedup_window<R: Runtime>(
+    app: AppHandle<R>,
+    days: u32,
+) -> Result<vault::VaultSettings, AppError> {
+    update_settings(&app, |s| s.dedup_window_days = clamp_dedup_window(days))
+}
+
 fn update_settings<R: Runtime>(
     app: &AppHandle<R>,
     f: impl FnOnce(&mut vault::VaultSettings),
@@ -199,5 +211,24 @@ fn clamp_timeout(secs: u32) -> u32 {
         0
     } else {
         secs.clamp(15, 3600)
+    }
+}
+
+/// Clamp the dedup window to a sane 0-30 day range: `0` means same calendar day only, `30` is a
+/// generous upper bound (a wider window trades more false positives for fewer missed duplicates).
+fn clamp_dedup_window(days: u32) -> u32 {
+    days.clamp(0, 30)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn clamp_dedup_window_bounds_to_0_30() {
+        assert_eq!(clamp_dedup_window(0), 0);
+        assert_eq!(clamp_dedup_window(3), 3);
+        assert_eq!(clamp_dedup_window(30), 30);
+        assert_eq!(clamp_dedup_window(100), 30);
     }
 }

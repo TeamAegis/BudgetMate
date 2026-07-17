@@ -12,9 +12,10 @@ import {
   LucidePiggyBank,
   LucideDownload,
   LucideDatabaseBackup,
+  LucideCopy,
 } from '@lucide/angular';
 import { LockService } from '../../core/lock/lock.service';
-import { getSettings, setBaseCurrency, isTauri } from '../../core/bridge';
+import { getSettings, setBaseCurrency, setDedupWindow, isTauri } from '../../core/bridge';
 import { SelectField, type SelectOption } from '../../shared/ui/select-field/select-field';
 import { SettingsRow } from '../../shared/ui/settings-row/settings-row';
 import { PrivacyNote } from '../../shared/ui/privacy-note/privacy-note';
@@ -34,6 +35,7 @@ import { PrivacyNote } from '../../shared/ui/privacy-note/privacy-note';
     LucidePiggyBank,
     LucideDownload,
     LucideDatabaseBackup,
+    LucideCopy,
     SelectField,
     SettingsRow,
     PrivacyNote,
@@ -77,6 +79,22 @@ import { PrivacyNote } from '../../shared/ui/privacy-note/privacy-note';
             <svg icon lucideFileUp [size]="24" aria-hidden="true"></svg>
             <svg trailing lucideChevronRight [size]="18" aria-hidden="true"></svg>
           </a>
+        </li>
+        <li>
+          <div
+            app-settings-row
+            label="Duplicate detection"
+            hint="When importing, mark transactions this many days apart at the same amount so you can check them before they're added"
+          >
+            <svg icon lucideCopy [size]="24" aria-hidden="true"></svg>
+            <app-select-field
+              trailing
+              ariaLabel="Duplicate detection window"
+              [options]="dedupWindowOptions"
+              [value]="dedupWindowDays()"
+              (valueChange)="onDedupWindowChange($event)"
+            />
+          </div>
         </li>
       </ul>
 
@@ -153,6 +171,7 @@ export class Settings implements OnInit {
   protected readonly lock = inject(LockService);
 
   protected readonly baseCurrency = signal<string>('MUR');
+  protected readonly dedupWindowDays = signal<number>(3);
 
   protected readonly timeoutOptions: SelectOption[] = [
     { value: 30, label: '30 seconds' },
@@ -174,12 +193,22 @@ export class Settings implements OnInit {
     { value: 'JPY', label: 'JPY · Japanese yen' },
   ];
 
+  protected readonly dedupWindowOptions: SelectOption[] = [
+    { value: 0, label: 'Same day only' },
+    { value: 1, label: '1 day' },
+    { value: 3, label: '3 days' },
+    { value: 7, label: '1 week' },
+    { value: 14, label: '2 weeks' },
+  ];
+
   async ngOnInit(): Promise<void> {
     if (!isTauri()) return;
     try {
-      this.baseCurrency.set((await getSettings()).baseCurrency);
+      const settings = await getSettings();
+      this.baseCurrency.set(settings.baseCurrency);
+      this.dedupWindowDays.set(settings.dedupWindowDays);
     } catch {
-      // Non-fatal: keep the default; the picker still works once the core is reachable.
+      // Non-fatal: keep the defaults; the pickers still work once the core is reachable.
     }
   }
 
@@ -190,5 +219,10 @@ export class Settings implements OnInit {
   protected async onBaseCurrencyChange(value: number | string): Promise<void> {
     const settings = await setBaseCurrency(String(value));
     this.baseCurrency.set(settings.baseCurrency);
+  }
+
+  protected async onDedupWindowChange(value: number | string): Promise<void> {
+    const settings = await setDedupWindow(Number(value));
+    this.dedupWindowDays.set(settings.dedupWindowDays);
   }
 }

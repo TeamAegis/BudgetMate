@@ -222,6 +222,7 @@ fn swap_in_restored_copy(
             idle_timeout_secs: old_meta.settings.idle_timeout_secs,
             biometric_enabled: false,
             base_currency: base_currency.to_string(),
+            dedup_window_days: old_meta.settings.dedup_window_days,
         },
     };
     vault::write_meta(dir, &new_meta)?;
@@ -398,6 +399,7 @@ mod tests {
                 base_currency: base_currency.to_string(),
                 idle_timeout_secs: 300,
                 biometric_enabled: true,
+                dedup_window_days: 14,
             },
         };
         vault::write_meta(dir, &meta).unwrap();
@@ -434,6 +436,7 @@ mod tests {
         assert_eq!(new_meta.settings.base_currency, "USD", "adopts the backup's base currency");
         assert!(!new_meta.settings.biometric_enabled, "biometric forced off on restore");
         assert_eq!(new_meta.settings.idle_timeout_secs, 300, "local idle timeout preserved");
+        assert_eq!(new_meta.settings.dedup_window_days, 14, "local dedup window preserved");
         let rekeyed = crypto::derive_key_with_params(b"passphrase-one-A", &new_meta.salt, &new_meta.kdf)
             .unwrap();
         let rekeyed_hex = crypto::key_to_sqlcipher_hex(&rekeyed);
