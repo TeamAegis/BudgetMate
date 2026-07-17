@@ -29,8 +29,18 @@
 
     <div class="detail-list">
       <div app-detail-row label="Status" [value]="g.completed ? 'Completed' : 'In progress'"></div>
+      <div
+        app-detail-row
+        label="Saved so far"
+        [value]="{ amountMinor: g.currentMinor, currency: g.currency } | money"
+      ></div>
+      <div
+        app-detail-row
+        label="Target"
+        [value]="{ amountMinor: g.targetMinor, currency: g.currency } | money"
+      ></div>
       @if (g.targetDate) {
-        <div app-detail-row label="Target date" [value]="g.targetDate"></div>
+        <div app-detail-row label="Target date" [value]="g.targetDate | friendlyDate"></div>
       }
     </div>
 

@@ -18,11 +18,13 @@ const OTHER_LABEL = 'Other';
  * Spend-by-category pie chart (FR-3.3, design-system §7 - bundled Chart.js/canvas, never a static
  * image). Dumb/presentational: the parent (Analytics) supplies pre-aggregated slices (already
  * sorted highest-spend-first by Rust); this component only renders them. The Chart.js legend gives
- * every slice a text label so meaning is never colour-alone (design.md a11y); a visually-hidden
- * list mirrors the same label/amount pairs for screen readers, since a `<canvas>` chart itself
- * exposes nothing to assistive tech. Amounts are scaled/labelled via `CurrencyService`/`MoneyPipe` -
- * never a hand-rolled `/100`. The caller must have run `registerCharts()` once
- * (`shared/charts/chart-setup.ts`) before this renders.
+ * every slice a text label so meaning is never colour-alone (design.md a11y); the canvas
+ * `aria-label` carries the same label/amount pairs for screen readers, since a `<canvas>` chart
+ * itself exposes nothing to assistive tech. Do NOT reintroduce a `visually-hidden` DOM list here -
+ * the release Android System WebView has rendered such nodes visibly (ux-blueprint.md §7 WebView
+ * caveat). Amounts are scaled/labelled via `CurrencyService`/`MoneyPipe` - never a hand-rolled
+ * `/100`. The caller must have run `registerCharts()` once (`shared/charts/chart-setup.ts`)
+ * before this renders.
  *
  * **"Other" rollup:** when there are more categories than distinct palette hues
  * (`--chart-cat-1`..`--chart-cat-8`), the top `palette.length - 1` slices by amount are kept as-is
@@ -33,7 +35,7 @@ const OTHER_LABEL = 'Other';
 @Component({
   selector: 'app-pie-chart',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [BaseChartDirective, MoneyPipe],
+  imports: [BaseChartDirective],
   providers: [MoneyPipe],
   template: `
     <div class="chart-wrap">
@@ -43,14 +45,9 @@ const OTHER_LABEL = 'Other';
         [data]="chartData()"
         [options]="chartOptions()"
         role="img"
-        [attr.aria-label]="ariaLabel()"
+        [attr.aria-label]="canvasAriaLabel()"
       ></canvas>
     </div>
-    <ul class="visually-hidden">
-      @for (s of displaySlices(); track s.label) {
-        <li>{{ s.label }}: {{ { amountMinor: s.amountMinor, currency: currency() } | money }}</li>
-      }
-    </ul>
   `,
   styleUrl: './pie-chart.scss',
 })
@@ -62,6 +59,16 @@ export class PieChart {
   readonly currency = input.required<string>();
   /** Accessible name for the chart region (e.g. "Spend by category"). */
   readonly ariaLabel = input('Spend by category');
+
+  /** The canvas' full accessible name: region name + every slice's label/amount pair. Replaces
+   *  the old visually-hidden `<ul>` (which the release Android WebView rendered visibly). */
+  protected readonly canvasAriaLabel = computed<string>(() => {
+    const currency = this.currency();
+    const parts = this.displaySlices().map(
+      (s) => `${s.label} ${this.money.transform({ amountMinor: s.amountMinor, currency })}`,
+    );
+    return parts.length ? `${this.ariaLabel()}: ${parts.join(', ')}` : this.ariaLabel();
+  });
 
   /** `slices()` with any categories beyond the palette collapsed into one "Other" slice. */
   protected readonly displaySlices = computed<PieSlice[]>(() => {

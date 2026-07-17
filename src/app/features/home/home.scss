@@ -2,6 +2,8 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
+  // Reserve space so the FabMenu never occludes the last section (design-system §7 FAB rule).
+  padding-bottom: calc(var(--layout-fab-size) + var(--space-6));
 }
 
 .skeletons {
@@ -10,21 +12,25 @@
   gap: var(--space-4);
 }
 
-// The "ready to spend" secondary line under the hero balance - plain text, no colour-only meaning.
-.ready-line {
+// The plain-language explainer under the "Ready to spend" hero - no colour-only meaning.
+.hero-subline {
   margin: calc(-1 * var(--space-3)) 0 0;
-  font-size: var(--t-body);
-  color: var(--c-text);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-.ready-explainer {
   font-size: var(--t-caption);
   color: var(--c-text-muted);
 }
 
-.spend-figure {
+// Compact secondary figures (Spent this month / Total balance) side by side under the hero.
+.stat-row {
+  display: flex;
+  gap: var(--space-3);
+
+  .stat {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.stat {
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;

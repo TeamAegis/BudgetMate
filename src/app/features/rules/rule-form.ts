@@ -3,13 +3,14 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import {
   listRules,
+  listCategories,
   createRule,
   updateRule,
   deleteRule,
   toUserMessage,
   isTauri,
 } from '../../core/bridge';
-import type { ImportRule, MatchOp, RuleField } from '../../core/models';
+import type { Category, ImportRule, MatchOp, RuleField } from '../../core/models';
 import { HeaderActionService } from '../../core/layout/header-action.service';
 import { Banner } from '../../shared/ui/banner/banner';
 import { Spinner } from '../../shared/ui/spinner/spinner';
@@ -70,9 +71,40 @@ export class RuleForm implements OnInit {
   protected readonly error = signal<string | null>(null);
   protected readonly confirmingDelete = signal(false);
 
+  /** Raw enum values never render (ux-blueprint §10) - the sentence-style display labels. */
+  private static readonly FIELD_LABELS: Record<string, string> = {
+    merchant: 'Payee name',
+    category: 'Category',
+    account: 'Account',
+  };
+  private static readonly OP_LABELS: Record<string, string> = {
+    contains: 'contains',
+    equals: 'is exactly',
+  };
+
   /** Themed-dropdown options for the rule builder (rule fields/operators are fixed enums). */
-  protected readonly fieldOptions: SelectOption[] = FIELDS.map((f) => ({ value: f, label: f }));
-  protected readonly opOptions: SelectOption[] = OPS.map((o) => ({ value: o, label: o }));
+  protected readonly fieldOptions: SelectOption[] = FIELDS.map((f) => ({
+    value: f,
+    label: RuleForm.FIELD_LABELS[f] ?? f,
+  }));
+  protected readonly opOptions: SelectOption[] = OPS.map((o) => ({
+    value: o,
+    label: RuleForm.OP_LABELS[o] ?? o,
+  }));
+
+  /** Existing categories, so "set category to ..." offers a picker instead of free text that can
+   *  silently misspell a category name (error prevention; same stored string either way). */
+  protected readonly categories = signal<Category[]>([]);
+  protected readonly setValueOptions = computed<SelectOption[]>(() => {
+    const names = this.categories().map((c) => c.name);
+    const current = this.form.controls.setValue.value;
+    const options: SelectOption[] = names.map((n) => ({ value: n, label: n }));
+    // Keep a saved value that no longer matches a category selectable (never lose user data),
+    // and give the empty new-rule state a visible prompt.
+    if (current && !names.includes(current)) options.unshift({ value: current, label: current });
+    if (!current) options.unshift({ value: '', label: 'Choose a category' });
+    return options;
+  });
 
   protected readonly form = this.fb.nonNullable.group({
     matchField: this.fb.nonNullable.control<RuleField>('merchant', Validators.required),
@@ -124,6 +156,12 @@ export class RuleForm implements OnInit {
           this.patchFromRule(rule);
         }
       }
+      // For the "set category to ..." picker; non-fatal if it fails (free text still works).
+      try {
+        this.categories.set(await listCategories(false));
+      } catch {
+        this.categories.set([]);
+      }
     } catch (e) {
       this.error.set(toUserMessage(e));
     } finally {
@@ -150,6 +188,10 @@ export class RuleForm implements OnInit {
   }
   protected setSetField(v: number | string): void {
     this.form.controls.setField.setValue(v as RuleField);
+  }
+  protected setSetValue(v: number | string): void {
+    this.form.controls.setValue.setValue(String(v));
+    this.form.controls.setValue.markAsTouched();
   }
 
   protected async save(): Promise<void> {

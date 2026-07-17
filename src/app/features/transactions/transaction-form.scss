@@ -41,6 +41,13 @@
   text-align: center;
   text-transform: uppercase;
 }
+// The hero treatment: the amount renders at balance scale (the same emphasis the Home hero
+// number gets) so the screen's one job - type the amount - is unmistakable. Tokens only.
+.amount-hero input {
+  font-size: var(--t-balance);
+  font-weight: var(--fw-extralight);
+  line-height: var(--lh-tight);
+}
 
 // Split editor (FR-1.2).
 .splits {

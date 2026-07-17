@@ -10,7 +10,7 @@ describe('PieChart', () => {
     TestBed.configureTestingModule({ imports: [PieChart] });
   });
 
-  it('renders a canvas and a visually-hidden label/amount list (legend text, never colour alone)', () => {
+  it('renders a canvas whose aria-label carries every slice label/amount (no hidden DOM list)', () => {
     const fixture = TestBed.createComponent(PieChart);
     fixture.componentRef.setInput('slices', [
       { label: 'Groceries', amountMinor: 3_000 },
@@ -20,10 +20,14 @@ describe('PieChart', () => {
     fixture.detectChanges();
 
     const host = fixture.nativeElement as HTMLElement;
-    expect(host.querySelector('canvas')).not.toBeNull();
-    const items = Array.from(host.querySelectorAll('.visually-hidden li')).map((li) => li.textContent);
-    expect(items.some((t) => t?.includes('Groceries'))).toBe(true);
-    expect(items.some((t) => t?.includes('Dining'))).toBe(true);
+    const canvas = host.querySelector('canvas');
+    expect(canvas).not.toBeNull();
+    const label = canvas?.getAttribute('aria-label') ?? '';
+    expect(label).toContain('Groceries');
+    expect(label).toContain('Dining');
+    // The old visually-hidden list rendered VISIBLY on the release Android WebView - it must not
+    // come back (ux-blueprint.md section 7 WebView caveat).
+    expect(host.querySelector('.visually-hidden')).toBeNull();
   });
 
   it('renders nothing catastrophic for an empty slice list', () => {
@@ -32,7 +36,8 @@ describe('PieChart', () => {
     fixture.componentRef.setInput('currency', 'MUR');
     expect(() => fixture.detectChanges()).not.toThrow();
     const host = fixture.nativeElement as HTMLElement;
-    expect(host.querySelectorAll('.visually-hidden li').length).toBe(0);
+    // Falls back to the plain region name when there is no data.
+    expect(host.querySelector('canvas')?.getAttribute('aria-label')).toBe('Spend by category');
   });
 
   it('more than 8 categories: rolls the overflow up into a single "Other" slice, not a reused hue', () => {
@@ -55,15 +60,13 @@ describe('PieChart', () => {
     fixture.detectChanges();
 
     const host = fixture.nativeElement as HTMLElement;
-    const items = Array.from(host.querySelectorAll('.visually-hidden li')).map((li) => li.textContent ?? '');
-    // 7 kept categories + 1 "Other" = 8 rows, never a bare 10.
-    expect(items.length).toBe(8);
-    expect(items.some((t) => t.includes('Cat 7'))).toBe(true);
-    expect(items.some((t) => t.includes('Cat 8'))).toBe(false, 'Cat 8 must be rolled into Other');
-    const other = items.find((t) => t.startsWith('Other:'));
-    expect(other).toBeDefined();
+    const label = host.querySelector('canvas')?.getAttribute('aria-label') ?? '';
+    // 7 kept categories + 1 "Other" - never a bare 10.
+    expect(label).toContain('Cat 7');
+    expect(label).not.toContain('Cat 8');
+    expect(label).toContain('Other');
     // Cat 8 (305) + Cat 9 (204) + Cat 10 (101) = 610 minor = Rs 6.10.
-    expect(other).toContain('6.10');
+    expect(label).toContain('6.10');
 
     const component = fixture.componentInstance as unknown as {
       displaySlices: { (): { label: string; amountMinor: number }[] };

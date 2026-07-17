@@ -10,6 +10,7 @@ import { BalanceCard } from '../../shared/ui/balance-card/balance-card';
 import { Button } from '../../shared/ui/button/button';
 import { Card } from '../../shared/ui/card/card';
 import { EmptyState } from '../../shared/ui/empty-state/empty-state';
+import { FabMenu, type FabMenuItem } from '../../shared/ui/fab-menu/fab-menu';
 import { GoalProgressRow } from '../../shared/ui/goal-progress-row/goal-progress-row';
 import { ListRow } from '../../shared/ui/list-row/list-row';
 import { Skeleton } from '../../shared/ui/skeleton/skeleton';
@@ -44,6 +45,7 @@ import { BalanceTrendChart } from './balance-trend-chart/balance-trend-chart';
     Button,
     Card,
     EmptyState,
+    FabMenu,
     GoalProgressRow,
     ListRow,
     Skeleton,
@@ -68,29 +70,31 @@ export class Home implements OnInit {
   private latestRequestId = 0;
 
   /** Newest few transactions (list is newest-first from Rust). */
-  protected readonly recent = computed(() => this.transactions().slice(0, 4));
+  protected readonly recent = computed(() => this.transactions().slice(0, 5));
 
   protected readonly baseCurrency = computed(() => this.dashboard()?.baseCurrency ?? 'MUR');
 
-  /** "Rs Z ready to spend" - only shown once something has been set aside for goals; gently
-   *  phrased as information (never alarm-red) when the free balance is actually over-committed. */
-  protected readonly readyToSpendLine = computed<string | null>(() => {
+  /** Quick-add in the thumb zone (same labelled menu as Expenses). "Add expense"/"Add income"
+   *  ARE the ADR 0004 kind decision, so they deep-link straight to the category picker. */
+  protected readonly fabItems: FabMenuItem[] = [
+    { id: 'add', label: 'Add expense', icon: 'plus' },
+    { id: 'income', label: 'Add income', icon: 'plus' },
+    { id: 'scan', label: 'Scan receipt', icon: 'scan' },
+  ];
+
+  /** The plain-language line under the "Ready to spend" hero. Uses only Rust-computed figures
+   *  (goalsReservedMinor); gently phrased as information when the free balance is over-committed
+   *  (never alarm-red - financial-knowledge section 9). */
+  protected readonly heroSubline = computed<string | null>(() => {
     const d = this.dashboard();
-    if (!d || d.goalsReservedMinor <= 0) return null;
+    if (!d) return null;
+    if (d.goalsReservedMinor <= 0) {
+      return "That's your whole balance - nothing set aside for goals yet.";
+    }
+    const reserved = this.money.transform({ amountMinor: d.goalsReservedMinor, currency: d.baseCurrency });
     if (d.usableBalanceMinor < 0) {
-      const reserved = this.money.transform({ amountMinor: d.goalsReservedMinor, currency: d.baseCurrency });
       return `${reserved} set aside for goals is more than your free balance right now.`;
     }
-    const usable = this.money.transform({ amountMinor: d.usableBalanceMinor, currency: d.baseCurrency });
-    return `${usable} ready to spend`;
-  });
-
-  /** The explainer under `readyToSpendLine` - omitted for the gentle over-committed phrasing above
-   *  (which already carries the full explanation in one sentence). */
-  protected readonly readyToSpendExplainer = computed<string | null>(() => {
-    const d = this.dashboard();
-    if (!d || d.goalsReservedMinor <= 0 || d.usableBalanceMinor < 0) return null;
-    const reserved = this.money.transform({ amountMinor: d.goalsReservedMinor, currency: d.baseCurrency });
     return `after ${reserved} set aside for goals`;
   });
 
@@ -163,6 +167,13 @@ export class Home implements OnInit {
 
   protected addExpense(): void {
     void this.router.navigate(['/expenses/new']);
+  }
+
+  /** Route a FAB-menu choice: the labelled items carry the kind, so they skip the chooser. */
+  protected onFabSelect(id: string): void {
+    if (id === 'scan') void this.router.navigate(['/import']);
+    else if (id === 'income') void this.router.navigate(['/expenses/new/income']);
+    else void this.router.navigate(['/expenses/new/expense']);
   }
 
   /** First letter of the row's display name, for the avatar monogram. */

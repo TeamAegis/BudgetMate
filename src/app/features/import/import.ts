@@ -11,7 +11,6 @@ import type { TransactionPrefill } from '../../core/models';
 import { MoneyPipe } from '../../shared/pipes/money.pipe';
 import { Button } from '../../shared/ui/button/button';
 import { Banner } from '../../shared/ui/banner/banner';
-import { EmptyState } from '../../shared/ui/empty-state/empty-state';
 import { FormField } from '../../shared/ui/form-field/form-field';
 import { Spinner } from '../../shared/ui/spinner/spinner';
 
@@ -50,7 +49,6 @@ export function receiptTotalToBaseMinor(extractorMinor: number, baseDigits: numb
     LucideTriangleAlert,
     Button,
     Banner,
-    EmptyState,
     FormField,
     Spinner,
   ],

@@ -1,6 +1,6 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { LucidePlus, LucidePencil, LucidePlay, LucidePause } from '@lucide/angular';
+import { LucidePencil, LucidePlay, LucidePause } from '@lucide/angular';
 import {
   listRecurringRules,
   setRecurringActive,
@@ -10,7 +10,8 @@ import {
   isTauri,
 } from '../../core/bridge';
 import type { RecurringRule, Account, Category } from '../../core/models';
-import { Button } from '../../shared/ui/button/button';
+import { FriendlyDatePipe } from '../../shared/pipes/friendly-date.pipe';
+import { Fab } from '../../shared/ui/fab/fab';
 import { IconButton } from '../../shared/ui/icon-button/icon-button';
 import { Banner } from '../../shared/ui/banner/banner';
 import { EmptyState } from '../../shared/ui/empty-state/empty-state';
@@ -27,11 +28,10 @@ import { Skeleton } from '../../shared/ui/skeleton/skeleton';
 @Component({
   selector: 'app-recurring',
   imports: [
-    LucidePlus,
     LucidePencil,
     LucidePlay,
     LucidePause,
-    Button,
+    Fab,
     IconButton,
     Banner,
     EmptyState,
@@ -92,17 +92,41 @@ export class Recurring implements OnInit {
   protected isExpense(r: RecurringRule): boolean {
     return this.categories().find((c) => c.id === r.template.categoryId)?.kind === 'expense';
   }
-  /** Signed display amount, e.g. "-250 MUR" / "+30000 MUR". */
+
+  /** For the meta line's next-run date ("next 30 Jul 2026"), same format as everywhere else. */
+  private readonly dateFmt = new FriendlyDatePipe();
+
+  /** Raw enum values never render (ux-blueprint §10) - display labels only. */
+  private static readonly SCHEDULE_LABELS: Record<string, string> = {
+    daily: 'Daily',
+    weekly: 'Weekly',
+    monthly: 'Monthly',
+    custom: 'Custom',
+  };
+
+  /**
+   * Signed display amount matching the money pipe's shape ("-Rs 250", "+Rs 20,000"). The template
+   * only carries a major-unit STRING (Rust signs/parses it on materialisation), so this is pure
+   * string presentation - symbol mapping, zero-decimal trim, thousands grouping - and never
+   * arithmetic (no minor units exist here to feed the pipe).
+   */
   protected amountLabel(r: RecurringRule): string {
-    return `${this.isExpense(r) ? '-' : '+'}${r.template.amount} ${this.accountCurrency(r)}`;
+    const sign = this.isExpense(r) ? '-' : '+';
+    const code = this.accountCurrency(r).toUpperCase();
+    const symbol = code === 'MUR' ? 'Rs' : code;
+    const [int = '0', dec = ''] = r.template.amount.split('.');
+    const grouped = int.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    const decPart = /[1-9]/.test(dec) ? `.${dec}` : '';
+    return `${sign}${symbol} ${grouped}${decPart}`;
   }
 
   protected ruleTitle(r: RecurringRule): string {
     return r.template.payee || this.categoryName(r.template.categoryId);
   }
   protected ruleMeta(r: RecurringRule): string {
-    const status = r.active ? `Next: ${r.nextRunDate}` : 'Paused';
-    return `${r.schedule} · ${status}`;
+    const schedule = Recurring.SCHEDULE_LABELS[r.schedule] ?? r.schedule;
+    const status = r.active ? `next ${this.dateFmt.transform(r.nextRunDate)}` : 'Paused';
+    return `${schedule} · ${status}`;
   }
 
   protected addRecurring(): void {

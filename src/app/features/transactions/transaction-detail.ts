@@ -11,6 +11,7 @@ import {
 import type { Transaction, Account } from '../../core/models';
 import { HeaderActionService } from '../../core/layout/header-action.service';
 import { MoneyPipe } from '../../shared/pipes/money.pipe';
+import { FriendlyDatePipe } from '../../shared/pipes/friendly-date.pipe';
 import { Banner } from '../../shared/ui/banner/banner';
 import { Skeleton } from '../../shared/ui/skeleton/skeleton';
 import { EmptyState } from '../../shared/ui/empty-state/empty-state';
@@ -29,7 +30,7 @@ import { DetailRow } from '../../shared/ui/detail-row/detail-row';
  */
 @Component({
   selector: 'app-transaction-detail',
-  imports: [MoneyPipe, Banner, Skeleton, EmptyState, FormActions, ConfirmDialog, DetailRow],
+  imports: [MoneyPipe, FriendlyDatePipe, Banner, Skeleton, EmptyState, FormActions, ConfirmDialog, DetailRow],
   templateUrl: './transaction-detail.html',
   styleUrl: './transaction-detail.scss',
 })
@@ -119,7 +120,7 @@ export class TransactionDetail implements OnInit {
     this.error.set(null);
     try {
       await deleteTransaction(t.id);
-      await this.router.navigate(['/expenses']);
+      await this.router.navigate(['/expenses'], { state: { saved: 'Deleted' } });
     } catch (e) {
       this.error.set(toUserMessage(e));
       this.confirmingDelete.set(false);

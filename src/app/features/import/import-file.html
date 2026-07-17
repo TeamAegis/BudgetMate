@@ -32,13 +32,15 @@
           <app-banner tone="warning">{{ warning }}</app-banner>
         }
 
-        <app-empty-state
-          image="assets/illustrations/get-started.svg"
-          message="Import a CSV bank statement. Nothing is saved until you review and confirm the transactions."
-          cta="Choose a CSV file"
-          [ctaLoading]="busy()"
-          (action)="chooseFile()"
-        />
+        <!-- The primary action sits ABOVE the fold; the illustration supports, it never buries
+             the CTA (audit finding 4). -->
+        <p class="lede">
+          Import a CSV bank statement. Nothing is saved until you review and confirm the
+          transactions.
+        </p>
+        <app-button variant="primary" [block]="true" [loading]="busy()" (click)="chooseFile()">
+          Choose a CSV file
+        </app-button>
 
         @if (busy()) {
           <div class="processing" role="status" aria-live="polite">
@@ -51,6 +53,7 @@
           The file stays on your device - nothing is uploaded. You will map its columns and confirm
           every row before anything is saved.
         </p>
+        <img class="idle-art" src="assets/illustrations/get-started.svg" alt="" />
       }
     }
 

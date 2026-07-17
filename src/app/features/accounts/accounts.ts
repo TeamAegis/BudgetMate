@@ -1,10 +1,10 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { LucidePencil, LucidePlus } from '@lucide/angular';
+import { LucidePencil } from '@lucide/angular';
 import { listAccounts, toUserMessage, isTauri } from '../../core/bridge';
 import type { Account } from '../../core/models';
 import { MoneyPipe } from '../../shared/pipes/money.pipe';
-import { Button } from '../../shared/ui/button/button';
+import { Fab } from '../../shared/ui/fab/fab';
 import { IconButton } from '../../shared/ui/icon-button/icon-button';
 import { Banner } from '../../shared/ui/banner/banner';
 import { EmptyState } from '../../shared/ui/empty-state/empty-state';
@@ -22,8 +22,7 @@ import { Skeleton } from '../../shared/ui/skeleton/skeleton';
   imports: [
     MoneyPipe,
     LucidePencil,
-    LucidePlus,
-    Button,
+    Fab,
     IconButton,
     Banner,
     EmptyState,
@@ -37,6 +36,20 @@ export class Accounts implements OnInit {
   private readonly router = inject(Router);
   /** Placeholder row count shown while the list loads. */
   protected readonly skeletonRows = [0, 1, 2, 3];
+
+  /** Raw enum values never render (ux-blueprint §10) - display labels only. */
+  private static readonly TYPE_LABELS: Record<string, string> = {
+    cash: 'Cash',
+    bank: 'Bank',
+    card: 'Card',
+    wallet: 'Wallet',
+    other: 'Other',
+  };
+
+  protected typeLabel(type: string): string {
+    return Accounts.TYPE_LABELS[type] ?? type;
+  }
+
   protected readonly accounts = signal<Account[]>([]);
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);

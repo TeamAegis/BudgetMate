@@ -68,19 +68,22 @@ in the current Figma - design them to this spec.
 ### 3.1 Dashboard (populated)
 - **Figma:** `124:224` (Mobile Home). Tokens validated from this node.
 - **FR:** FR-3.x preview, entry points to FR-1.x/2.x.
-- **Components:** AppHeader (brand + settings icon `124:297`); **BalanceCard** (`app-balance-card`,
-  `124:302`) as the balance/summary **hero** - coral-40 fill + offset pink shadow, showing the live
-  total balance from `get_dashboard()`; a "ready to spend" secondary line (total minus what is set
-  aside for ongoing base-currency goals, phrased gently, never alarm-red, even when over-committed);
-  a this-month-spend figure; a grid of **labelled** quick-action tiles (**ActionTile**, old-MCB-Juice
-  layout: hero on top, then the tile grid) - *Add expense* (-> `/expenses/new`), *Scan receipt*
-  (-> `/import`), *Add goal* (-> `/goals/new`); labelled tiles only, never icon-only; a lazily-loaded
-  (`@defer (on viewport)`) trailing 6-month TOTAL-balance **TrendChart** (Chart.js, skipped entirely
-  for an all-zero first run); a live **Recent activity** list and a **goals preview** (from
-  `get_dashboard()` and `listTransactions`). Recent-activity rows reuse the monogram-avatar list row
-  (income uses the positive tint paired with the signed amount, never colour alone) and show the
-  base-currency equivalent for a foreign-currency transaction, same as the Expenses list. BottomNav
-  (`124:355`).
+- **Components (retention order, 2026-07 redesign):** AppHeader (brand + settings icon `124:297`);
+  **BalanceCard** (`app-balance-card`, `124:302`) as the **"Ready to spend" hero** - coral-40 fill +
+  offset pink shadow, showing `usableBalanceMinor` (Rust-computed: total minus what is set aside for
+  ongoing base-currency goals) with a plain-language subline ("after Rs Y set aside for goals" /
+  "That's your whole balance - nothing set aside for goals yet." / a gentle over-committed sentence,
+  never alarm-red); a compact **stat row** - "Spent this month ... so far" always, "Total balance"
+  only when goals reserve makes it differ from the hero; a grid of **labelled** quick-action tiles
+  (**ActionTile**) - *Add expense* (-> `/expenses/new/expense`), *Scan receipt* (-> `/import`),
+  *Add goal* (-> `/goals/new`); labelled tiles only, never icon-only; a live **Recent activity**
+  list (top 5) and a **goals preview**; and LAST, the lazily-loaded (`@defer (on viewport)`)
+  trailing 6-month TOTAL-balance **TrendChart** (Chart.js, skipped entirely for an all-zero first
+  run) - the chart is context, it never precedes the actions. The labelled **FabMenu** (Add expense /
+  Add income / Scan receipt) floats in the thumb zone, hidden while the teaching empty state shows.
+  Recent-activity rows reuse the monogram-avatar list row (income uses the positive tint paired with
+  the signed amount, never colour alone) and show the base-currency equivalent for a
+  foreign-currency transaction, same as the Expenses list. BottomNav (`124:355`).
 - **Data:** `get_dashboard()` aggregates, as of today, total balance, usable ("ready to spend")
   balance, this-month spend, a trailing 6-month total-balance trend, and a top-3 ongoing-goals
   preview; recent transactions come from `listTransactions`. A confirmed transaction dated in the
@@ -115,13 +118,16 @@ in the current Figma - design them to this spec.
 ### 4.1 Expenses list
 - **Figma:** `131:21` (Mobile expenses), chart `132:477`, items `132:391`/`133:789`.
 - **FR:** FR-1.1, FR-3.3 (trend), entry to FR-2.1/2.2.
-- **Components:** AppHeader (titled "Expenses"), TrendChart, SegmentedToggle
-  (Daily/Weekly/Monthly `133:799`), TransactionListItem ×N, FabMenu (`app-fab-menu`, `132:510` -
-  labelled *Add expense* -> `/expenses/new` / *Scan receipt* -> `/import`), BottomNav.
-- **Data:** balance summary, period trend, transactions for period.
-- **Commands:** `list_transactions(period, filter)`, `get_trend(period)`.
-- **States:** loading, empty ("no transactions yet" - add to design), populated, busy
-  (import/scan running).
+- **Components:** AppHeader (titled "Expenses"), TransactionListItem ×N grouped under
+  **friendly date headings** ("Today" / "Yesterday" / "30 Jun 2026" via the shared `friendlyDate`
+  pipe - raw ISO never renders), FabMenu (`app-fab-menu`, `132:510` - labelled *Add expense* ->
+  `/expenses/new/expense`, *Add income* -> `/expenses/new/income`, *Scan receipt* -> `/import`;
+  the labelled item IS the ADR 0004 kind decision, so it deep-links past the chooser; hidden while
+  the empty state shows), BottomNav. A transient success Banner ("Saved" / "Deleted") acknowledges
+  a form save handed over via router state.
+- **Data:** transactions (grouped by posted date).
+- **Commands:** `list_transactions(period, filter)`.
+- **States:** loading, empty ("no transactions yet"), populated, busy (import/scan running).
 - **Layout:** the transaction list reserves `padding-bottom` ≥ ≈84px so the FAB never occludes the
   last row (see `design-system.md` §7 FAB).
 
@@ -131,7 +137,11 @@ in the current Figma - design them to this spec.
   1. **Kind chooser** (`expenses/new`, `transaction-kind`): a plain navigation list (Settings
      style, no Save bar) - *Expense* (money out) or *Income* (money in).
   2. **Category picker** (`expenses/new/:kind`, `category-picker`): a navigation list of that
-     kind's categories. Title is the branch (*Expense* / *Income*). Choosing one pushes the form.
+     kind's categories, each row led by a **monogram avatar** (first letter, income = positive
+     tint) so rows scan at a glance - never a repeated identical icon. Title is the branch
+     (*Expense* / *Income*). Choosing one pushes the form. Entry points that already carry the
+     kind (the FabMenu's labelled *Add expense* / *Add income*, the Home tile) deep-link straight
+     here; the kind chooser (step 1a) remains the generic entry point.
   3. **Entry form** (`expenses/new/:kind/:categoryId`, `transaction-form`): the chosen category is
      **shown** (a tappable context row with its type tag), **not** re-picked, so there is no type
      toggle and no category dropdown for a simple entry. The category carries the type; Rust derives
@@ -142,7 +152,9 @@ in the current Figma - design them to this spec.
 - **Presentation:** full-screen pages (§8.0), lazy-loaded, route data
   `{ title, back: true, hideNav: true }`; the form title and amount hint are phrased per kind
   ("New expense"/"How much you spent" vs "New income"/"How much you received"). **Amount-first:**
-  the amount is the hero field; Split and FX are progressively disclosed.
+  the amount is the hero field - it renders at balance scale (`--t-balance`, extralight), the one
+  unmistakable thing on the page; Split and FX are progressively disclosed. Saving returns to the
+  list with a transient "Saved" confirmation (router-state hand-off).
 - **Components:** SettingsRow (chooser + picker rows; income uses the `tone="income"` tint), the
   category context row, CurrencyField (amount + currency + rate, the hero field), date picker,
   account picker (SelectField), note; inline split editor ("+ Split across categories", which seeds
@@ -200,12 +212,15 @@ in the current Figma - design them to this spec.
 - **Status (2026-07):** CSV is wired end-to-end (issue #12; model decisions in ADR 0010). The
   OFX/QFX parser exists (ADR 0009) but is not wired to these commands yet - they accept the
   `format` field but reject anything other than `'csv'` with a plain-language validation error.
-- **States:** idle (account picker + "Choose a CSV file", loading while accounts load, empty when
-  there are no accounts yet), mapping (column selects + sample rows, Preview disabled until
+- **States:** idle (account picker + lede + "Choose a CSV file" - the primary action sits ABOVE
+  the supporting illustration, never below the fold; loading while accounts load, empty when
+  there are no accounts yet), mapping (column selects + sample rows in a horizontally scrollable
+  table with a visible scroll indicator and non-truncating headers, Preview disabled until
   Date+Amount are chosen), reviewing (summary banner, per-row duplicate flag + keep/skip, malformed
   rows listed separately, nothing saved yet), committing (spinner, UI stays responsive), done
   (inserted/skipped/malformed summary), error (plain-language + start over / try again). Nothing
   auto-commits - the reviewing step always requires an explicit "Import N transactions" tap.
+  Route title is "Import file" (one header line); account options read "Cash · MUR".
 
 ---
 
@@ -284,8 +299,10 @@ in the current Figma - design them to this spec.
 
 ### 7.1a Accounts **[NEW - FR-1.x foundation]**
 - **FR:** underpins FR-1.1 (account picker), FR-1.4 (per-account currency), FR-3.x.
-- **Components:** AppHeader (titled "Accounts" + back); in-content **Add** action button; list of
-  accounts (name · type · currency · opening balance via the money pipe, Rs). The create/edit form is
+- **Components:** AppHeader (titled "Accounts" + back); a thumb-zone **FAB** as the add action
+  (one convention for every list; it yields to the empty state's single CTA); list of
+  accounts (name · Type label · currency · opening balance via the money pipe, Rs - enum values
+  render as display labels, "Cash" not "cash"). The create/edit form is
   a **full-screen page** (§8.0) - routes `settings/accounts/new` and `settings/accounts/:id/edit`,
   route data `{ title, back: true, hideNav: true }` - with fields (name, type ∈
   cash|bank|card|wallet|other, ISO-4217 currency); the edit page exposes **Archive** as the header
@@ -300,8 +317,9 @@ in the current Figma - design them to this spec.
 
 ### 7.1b Categories **[NEW - FR-1.x/FR-2.3 foundation]**
 - **FR:** underpins category pickers (FR-1.1), the rule engine (FR-2.3), analytics (FR-3.3).
-- **Components:** AppHeader (titled "Categories" + back); in-content **Add** action button; list
-  (name · kind · parent). The create/edit form is a **full-screen page** (§8.0) - routes
+- **Components:** AppHeader (titled "Categories" + back); a thumb-zone **FAB** as the add action
+  (yields to the empty state's CTA); list (name · Kind label, "· under <parent>" only when one
+  exists - never "Parent: -"). The create/edit form is a **full-screen page** (§8.0) - routes
   `settings/categories/new` and `settings/categories/:id/edit`, route data
   `{ title, back: true, hideNav: true }` - with fields (name, kind ∈ expense|income|transfer,
   optional parent); the edit page exposes **Archive** as the header danger icon (`archive`, via
@@ -330,13 +348,18 @@ in the current Figma - design them to this spec.
 
 ### 7.3 Rules (if-then)
 - **FR:** FR-2.3.
-- **Components:** RuleBuilderRow ×N (ordered), add/reorder/delete. The add/edit form is a
-  **full-screen page** (§8.0) - routes `settings/rules/new` and `settings/rules/:id/edit`, route data
+- **Components:** RuleBuilderRow ×N (ordered), reorder/delete; add = thumb-zone **FAB** (yields to
+  the empty state's CTA). The add/edit form is a **full-screen page** (§8.0) - routes
+  `settings/rules/new` and `settings/rules/:id/edit`, route data
   `{ title, back: true, hideNav: true }`; the edit page exposes **Delete** as the header danger icon
-  (`trash`, via `HeaderActionService`) → ConfirmDialog. Recurring (`/settings/recurring`) follows the
-  same page pattern
+  (`trash`, via `HeaderActionService`) → ConfirmDialog. The form reads as a **sentence** ("When /
+  the Payee name / contains / uber -> Then set / Category / to Transport") - display labels only,
+  never raw enum values; when the set-field is Category the "To" control is a **SelectField of
+  existing categories** (same stored string; prevents silent misspellings; a saved value that no
+  longer matches stays selectable). Recurring (`/settings/recurring`) follows the same page pattern
   (`settings/recurring/new`, `settings/recurring/:id/edit`) but has **no delete** - pause/resume
-  stays on its list.
+  stays on its list; its rows show money-pipe-shaped amounts ("-Rs 250") and "Monthly · next
+  30 Jul 2026" via `friendlyDate`.
 - **Commands:** `list_rules()`, `save_rules(ordered)`.
 
 ### 7.4 Export
