@@ -1,7 +1,7 @@
 //! Bank-file import persistence (FR-2.2/2.3/2.4): preview a parsed CSV against the active rule
 //! engine + dedup, then commit it as ONE ACID batch. Money stays integer minor units throughout;
 //! amounts are the file's SIGNED value (sign from the data, NOT derived from a category kind -
-//! the one place imports differ from manual entry - see `docs/adr/0006-csv-import-model.md`).
+//! the one place imports differ from manual entry - see `docs/adr/0010-csv-import-model.md`).
 //! Commands are stateless: both `preview` and `commit` re-parse the file (it is the source of
 //! truth) - `commit` additionally honours `skip_rows`, identified by the parsed row's stable
 //! 0-based data-row index.

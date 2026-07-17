@@ -4,6 +4,48 @@
   gap: var(--space-5);
 }
 
+.skeletons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+// The "ready to spend" secondary line under the hero balance - plain text, no colour-only meaning.
+.ready-line {
+  margin: calc(-1 * var(--space-3)) 0 0;
+  font-size: var(--t-body);
+  color: var(--c-text);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.ready-explainer {
+  font-size: var(--t-caption);
+  color: var(--c-text-muted);
+}
+
+.spend-figure {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+
+  .label {
+    font-size: var(--t-section);
+    font-weight: var(--fw-medium);
+    color: var(--c-text-muted);
+    flex-basis: 100%;
+  }
+  .amount {
+    font-size: var(--t-title);
+    font-weight: var(--fw-medium);
+  }
+  .caption {
+    font-size: var(--t-caption);
+    color: var(--c-text-muted);
+  }
+}
+
 .section-title {
   margin: 0;
   font-size: var(--t-section);
@@ -44,8 +86,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 38px;
-  height: 38px;
+  width: var(--size-avatar-sm);
+  height: var(--size-avatar-sm);
   flex: none;
   border-radius: var(--radius-pill);
   background: var(--c-primary-05);
@@ -54,7 +96,20 @@
 }
 .avatar.income {
   background: var(--c-positive-soft);
-  color: var(--c-positive);
+  color: var(--c-positive-700);
+}
+
+// Stacked original + base amount in a recent-activity row (mirrors transactions.scss).
+.amount-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex: none;
+  text-align: right;
+}
+.amount-cell .base {
+  color: var(--c-text-muted);
+  white-space: nowrap;
 }
 
 .amount {
@@ -62,22 +117,10 @@
   white-space: nowrap;
 }
 .amount.income {
-  color: var(--c-positive);
+  color: var(--c-positive-700);
 }
 .amount.expense {
   color: var(--c-danger-700);
-}
-
-// Loading placeholder shaped like a row.
-.skeleton-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  min-height: var(--tap-target-min);
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-md);
 }
 
 .empty-line {

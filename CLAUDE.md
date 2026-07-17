@@ -123,6 +123,20 @@ debugging just invoke the role directly (and use the
   --watch --fail-fast`); never merge a failing/pending check, never `--admin`/`--no-verify` past it.
 - New GitHub Actions workflows: use the **`new-workflow`** skill (the real CI pipeline is issue #5).
 
+## Scheduled auto-implementer routine (unattended)
+The unattended "BudgetMate Issue Auto-Implementer" routine (Opus top-level, reasoning + orchestration
+only; all code delegated to the `fullstack-engineer` sonnet subagent) follows everything above, plus
+these routine-specific rules:
+- **Pull the latest remote `main` before implementing.** At the start of each run, `git fetch origin`
+  and base the work on the freshest `origin/main` (`git switch main && git pull --ff-only`, or
+  `git checkout -B main origin/main`) so the branch never starts behind remote.
+- **Branch name format `issue/<issue-number>`** (for example `issue/19`), overriding the general
+  `<type>/<issue#>-<slug>` naming for this routine's branches only.
+- **If a merge conflict exists, resolve it first, then merge.** Bring the branch up to date with
+  `origin/main` (rebase or merge), resolve the conflicts on the branch, re-run the full local gate,
+  push, and only then merge once CI is green. Never merge a conflicted, red, or still-pending PR, and
+  never bypass with `--admin`/`--no-verify`.
+
 ## Definition of done for any change
 1. Logic in Rust, presentation in Angular; bridge used for IPC.
 2. Money is minor-units/decimal; DB writes are transactional.

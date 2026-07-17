@@ -135,7 +135,8 @@ transactions(id, account_id, posted_date, amount_minor, currency,
                                                     -- allowance_id: optional allowance tag (FR-3.4, nullable)
 tx_splits(id, transaction_id, category_id, amount_minor) -- sum == parent amount (FR-1.2)
 recurring_rules(id, template_json, schedule, next_run_date, last_materialised_date, active)
-budgets(id, category_id, period, cap_minor)             -- envelope caps (FR-3.1)
+budgets(id, category_id, period, cap_minor)             -- envelope caps (FR-3.1); UNIQUE(category_id, period)
+                                                    -- (migration 0004) - one cap per category/period
 goals(id, name, target_minor, current_minor, currency, target_date) -- savings goals (FR-3.2); `currency` added in migration 0003
 allowances(id, name, currency, target_minor, balance_minor, kind, period,
            week_start, next_refresh_date, active, created_at) -- imprest envelopes (FR-3.4);
@@ -326,20 +327,43 @@ file (csv/ofx/qfx) ──pick (dialog)──► read (fs) ──► parse ──
 
 ## 9. Backup, Restore & Export (FR-4.x)
 
-> **Status (2026-06-25):** this section describes the intended approach. The export crates are
-> selected, but backup, restore, and export are **specified, not implemented** (no `create_backup`,
-> `restore_backup`, or `export_transactions` command exists yet). The Settings screens for them are
-> a design spec (`screens.md` §7.4 / §7.5). See §11 "Build status".
+> **Status (2026-07-14):** Export (FR-4.2), Backup (FR-4.1), and Restore (FR-4.3, REPLACE mode) are
+> all **implemented desktop-first** - `export_transactions` reads the DB, assembles CSV/XLSX bytes,
+> and writes them via the `dialog` save picker + `std::fs`; `create_backup` copies the
+> already-encrypted SQLCipher DB bytes, bundles them with the non-secret salt/KDF params, and writes
+> a `.vaultbak` JSON envelope the same way (ADR 0007); `restore_backup` reads a `.vaultbak` picked via
+> the open dialog, re-derives the key from the envelope's own salt/kdf, validates it on a temp copy,
+> and swaps the live database + meta sidecar for the backup's inside a crash-safe copy/rename
+> sequence (ADR 0008). Android's SAF-backed save/open (`tauri-plugin-android-fs`) is **deferred** for
+> all three to a separate, device-verified change; the Export and Backup/Restore screens show an info
+> banner on Android instead (see ADR 0006 / ADR 0007 / ADR 0008). Restore's **Merge mode is deferred**
+> (issue #21 follow-up) - only Replace is implemented. See §11 "Build status".
 
-- **Backup (FR-4.1):** produce an encrypted `.vaultbak`. Simplest robust path: the encrypted
-  SQLCipher DB file *is* already encrypted; copy it (or an encrypted JSON dump) to a
-  user-chosen location via the **save dialog**. On Android, `tauri-plugin-android-fs` gives
-  Play-Store-safe SAF pickers + persistable URI permissions; on iOS the fs plugin manages
-  security-scoped resources for picker-selected destinations.
-- **Restore (FR-4.3):** pick a `.vaultbak`, prompt passphrase, validate, then replace or
-  merge inside a transaction.
-- **Export (FR-4.2):** `rust_xlsxwriter` for `.xlsx`, `csv` for CSV; user picks destination.
-  Export is plaintext by design (it's for external use) and the UI warns accordingly.
+- **Backup (FR-4.1):** produce an encrypted `.vaultbak` - a JSON envelope bundling the
+  already-encrypted SQLCipher DB bytes (base64) with the non-secret salt/`KdfParams` needed to
+  re-derive the key on restore, written to a user-chosen location via the **save dialog**
+  (`create_backup`, desktop-first; ADR 0007). No key access is needed for the snapshot itself - the
+  DB file is already encrypted; consistency comes from holding the `DbState` mutex and a defensive
+  `PRAGMA wal_checkpoint(TRUNCATE)`, never `VACUUM INTO` or the online-backup API (both would emit a
+  plaintext file unless keyed identically). On Android, `tauri-plugin-android-fs` gives
+  Play-Store-safe SAF pickers + persistable URI permissions (deferred, device-verified follow-up);
+  on iOS the fs plugin manages security-scoped resources for picker-selected destinations.
+- **Restore (FR-4.3):** pick a `.vaultbak` via the **open dialog**, prompt for the backup's own
+  passphrase, and REPLACE the live vault (`restore_backup`, desktop-first, REPLACE mode only; ADR
+  0008) - Merge mode is deferred. The key is re-derived from the envelope's OWN carried salt/`kdf`
+  (never the local install's), validated on a temp copy before anything live is touched (wrong
+  passphrase and a corrupt embedded database both surface as the same generic
+  `AppError::keyVerificationFailed`, no oracle), then swapped in via a crash-safe copy-to-`.prev` +
+  atomic-rename sequence with a `restore.pending` marker that a subsequent boot/unlock self-heals
+  from (`backup::restore::recover_interrupted_restore`) - a crash mid-swap can never leave the app
+  silently empty. The restored meta adopts the backup's base currency (`base_amount_minor` is bound
+  to it) and forces biometric off (it wrapped the previous install's key); the frontend reloads the
+  webview on success so every cached signal re-fetches against the restored data.
+- **Export (FR-4.2):** `rust_xlsxwriter` for `.xlsx`, `csv` for CSV; user picks destination via the
+  save dialog and Rust writes the bytes with `std::fs::write` (desktop-first; Android SAF deferred -
+  ADR 0006). Export is plaintext by design (it's for external use) and the UI warns accordingly.
+  Amounts are written as decimal STRINGS (`domain::money::minor_to_major_string`), never a float, so
+  the `no-float-money` guard holds for the export path too.
 
 ---
 
@@ -402,16 +426,24 @@ traceability table (`functional-requirements.md` §5) carries the same status pe
   field extraction (Android), passphrase/biometric unlock, lock-on-background, SQLCipher at rest,
   schema migrations, **CSV bank-file import** (FR-2.2/2.3/2.4: `import_read_headers` /
   `import_preview` / `import_commit`, column mapping, rule-engine category suggestion, dedup
-  review with a keep/skip toggle, ACID batch commit + `imports` audit row - see ADR 0006). OFX/QFX
-  parsing is deferred (issue #13).
+  review with a keep/skip toggle, ACID batch commit + `imports` audit row - see ADR 0010),
+  envelope budgeting (FR-3.1; monthly caps per category, `list_envelopes`
+  aggregates `tx_splits` in base currency and classifies under/approaching/over), local
+  reporting/analytics aggregations (FR-3.3), the home dashboard (`get_dashboard`), transaction
+  export to CSV/XLSX (FR-4.2, desktop-first - `export_transactions` + the save dialog; ADR 0006),
+  encrypted local backup (FR-4.1, desktop-first - `create_backup` + the save dialog; ADR 0007),
+  and restore from backup (FR-4.3, desktop-first, REPLACE mode only - `restore_backup` + the open
+  dialog; ADR 0008).
 - **Partial:** dedup (matcher in `rules/dedup.rs`; wired into CSV import's preview/commit, still
-  not wired into manual entry); performance metrics (web payload size tracked; Android
-  install-size metric pending issue #4).
-- **Specified only (little or no runtime code):** envelope budgeting (FR-3.1; `budgets` table
-  exists, no spent-vs-remaining logic), local reporting/analytics aggregations (FR-3.3), the home
-  dashboard (`get_dashboard`), OFX/QFX bank-file import (FR-2.2, issue #13), backup/restore/export
-  (FR-4.x), the income/onboarding profile (`set_onboarding_profile`), and savings-backed allowances
-  (FR-3.4; domain spec `docs/allowances.md` + ADR 0005, no schema or runtime code yet).
+  not wired into manual entry); OFX/QFX import (the parser is built and unit-tested per ADR 0009,
+  but is not wired to the command surface - the `import_*` commands reject a non-CSV format);
+  export (FR-4.2), backup (FR-4.1), and restore (FR-4.3) are all desktop-only - the Android
+  SAF-backed save/open is a separate, device-verified follow-up for each (ADR 0006, ADR 0007, ADR
+  0008); restore's Merge mode is also deferred (Replace only so far; issue #21 follow-up);
+  performance metrics (web payload size tracked; Android install-size metric pending issue #4).
+- **Specified only (little or no runtime code):** the income/onboarding profile
+  (`set_onboarding_profile`), and savings-backed allowances (FR-3.4; domain spec
+  `docs/allowances.md` + ADR 0005, no schema or runtime code yet).
 
 ### 11.2 Open product questions (from the 2026-06 financial-domain review)
 Recorded so they are not lost. These are **observations and recommendations, not committed scope**
@@ -421,8 +453,6 @@ Recorded so they are not lost. These are **observations and recommendations, not
   take-home pay or pay cycle, and no "money in vs out" / "left to spend" view. A budget is
   conventionally built on net income (`financial-knowledge.md` §1, §2, §6); without it, 50/30/20,
   zero-based budgeting, and planned-vs-actual variance cannot be computed.
-- **Envelope engine unbuilt (FR-3.1).** The flagship budgeting feature is schema-only; there is no
-  spent-vs-remaining aggregation or over-budget state in code yet.
 - **Allowances specified, not built (FR-3.4).** The imprest allowance model is fully specified
   (`docs/allowances.md`, ADR 0005) but has no schema or runtime code. It depends on a savings
   `Total` / `Available` balance, so it intersects the income / cash-flow-spine gap above; pin down

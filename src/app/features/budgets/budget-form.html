@@ -1,0 +1,55 @@
+<section class="form-page">
+  @if (error(); as err) {
+    <app-banner>{{ err }}</app-banner>
+  }
+
+  @if (loading()) {
+    <div class="form-loading" aria-busy="true">
+      <app-spinner [size]="28" label="Loading" />
+    </div>
+  } @else if (!editing() && noCategoriesAvailable()) {
+    <p class="all-budgeted">
+      Every expense category already has a monthly limit. Edit an existing budget from the list, or
+      add a new expense category first.
+    </p>
+  } @else {
+    <!-- ngSubmit keeps Enter-to-save working; Save lives in the fixed bottom action bar. -->
+    <form class="form-body" [formGroup]="form" (ngSubmit)="save()">
+      @if (editing()) {
+        <app-form-field label="Category" hint="Not editable - delete and re-add to change the category">
+          <p class="category-value">{{ categoryName() }}</p>
+        </app-form-field>
+      } @else {
+        <app-form-field label="Category" [error]="categoryError()">
+          <app-select-field
+            ariaLabel="Category"
+            [options]="categoryOptions()"
+            [value]="form.controls.categoryId.value"
+            (valueChange)="setCategory($event)"
+          />
+        </app-form-field>
+      }
+
+      <app-form-field
+        label="Monthly limit"
+        [hint]="'In ' + baseCurrency() + ', your reporting currency'"
+        [error]="capError()"
+      >
+        <input type="text" inputmode="decimal" formControlName="cap" placeholder="0.00" class="numeric" />
+      </app-form-field>
+    </form>
+
+    <app-form-actions [loading]="busy()" (save)="save()" />
+  }
+
+  @if (confirmingDelete()) {
+    <app-confirm-dialog
+      title="Delete this budget?"
+      message="This removes the monthly limit for this category. Past spending isn't affected."
+      confirmLabel="Delete"
+      [busy]="busy()"
+      (confirm)="deleteConfirmed()"
+      (cancelled)="confirmingDelete.set(false)"
+    />
+  }
+</section>

@@ -194,12 +194,36 @@ export const routes: Routes = [
     data: { title: 'Edit rule', back: true, hideNav: true },
     loadComponent: () => import('./features/rules/rule-form').then((m) => m.RuleForm),
   },
+  {
+    path: 'settings/export',
+    canActivate: [unlockGuard],
+    data: { title: 'Export', back: true, hideNav: true },
+    loadComponent: () => import('./features/settings/export/export').then((m) => m.Export),
+  },
+  {
+    path: 'settings/backup',
+    canActivate: [unlockGuard],
+    data: { title: 'Backup', back: true, hideNav: true },
+    loadComponent: () => import('./features/settings/backup/backup').then((m) => m.Backup),
+  },
   // Nested actions (not in the bottom nav).
   {
     path: 'budgets',
     canActivate: [unlockGuard],
     data: { title: 'Budgets / Envelopes', back: true },
     loadComponent: () => import('./features/budgets/budgets').then((m) => m.Budgets),
+  },
+  {
+    path: 'budgets/new',
+    canActivate: [unlockGuard],
+    data: { title: 'Add budget', back: true, hideNav: true },
+    loadComponent: () => import('./features/budgets/budget-form').then((m) => m.BudgetForm),
+  },
+  {
+    path: 'budgets/:id/edit',
+    canActivate: [unlockGuard],
+    data: { title: 'Edit budget', back: true, hideNav: true },
+    loadComponent: () => import('./features/budgets/budget-form').then((m) => m.BudgetForm),
   },
   {
     path: 'import',

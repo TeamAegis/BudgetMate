@@ -112,7 +112,7 @@ export class ImportFile implements OnInit {
   );
 
   /**
-   * Imported amounts are stored at a fixed fx rate of 1 (docs/adr/0006 - a v1 limitation, no fx
+   * Imported amounts are stored at a fixed fx rate of 1 (docs/adr/0010 - a v1 limitation, no fx
    * input in this ticket). When the chosen account's currency differs from the base reporting
    * currency, warn plainly rather than silently importing unconverted amounts (finance#1 / code#5).
    */

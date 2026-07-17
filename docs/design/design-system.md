@@ -84,6 +84,21 @@ custom-property names - no component churn. The contract that makes this drop-in
 **never hardcode a hex/colour in a component** (design.md), always reference `var(--c-…)`. A
 component that inlines a colour today blocks the v2 theme layer.
 
+### 2.5 Charts (FR-3.3 Analytics)
+Bundled Chart.js (canvas) only - never a remote chart script. Chart.js draws to a `<canvas>` 2D
+context, which does not resolve `var(--x)` itself, so `shared/charts/chart-setup.ts`'s `chartColor()`
+resolves these tokens to a literal colour once at render time; components still never hardcode a hex.
+| Token | Value | Use |
+|---|---|---|
+| `--chart-cat-1` .. `--chart-cat-4` | `--c-primary`, `--c-info`, `--c-positive`, `--c-warning` | Pie per-category slices 1-4 (large fills - `--c-primary` itself is allowed here, unlike small text/strokes; see §2.3). |
+| `--chart-cat-5` | `#8B5FBF` (purple) | Pie slice 5 - added categorical hue. |
+| `--chart-cat-6` | `#2BA9A1` (teal) | Pie slice 6 - added categorical hue. |
+| `--chart-cat-7` | `#D6598F` (rose) | Pie slice 7 - added categorical hue. |
+| `--chart-cat-8` | `--c-text-muted` | Reserved for the pie chart's "Other" rollup slice (categories beyond the 7 explicit hues are summed into one "Other" slice, not silently recoloured by wrapping the palette). |
+| `--chart-line` | `--c-primary-700` (`#D84F2C`) | Spend-over-time line/point colour. Uses the **accessible** `-700` coral, not `--c-primary` - a thin stroke/point is small-scale coral, and `--c-primary` alone is ≈2.6:1 on white (fails WCAG 2.2 SC 1.4.11's 3:1 non-text floor; see §2.3). |
+| `--chart-grid` | `--c-border` | Line chart axis gridlines. |
+| `--chart-height` | `240px` | Canvas container height (`PieChart`/`LineChart`). |
+
 ---
 
 ## 3. Typography
@@ -266,7 +281,9 @@ and the tokens it consumes. Components are dumb/presentational (`shared/`) unles
 > ghost / **danger** variants, slightly rounded via `--radius-button`), Card, FormField, IconButton,
 > Banner, ListRow (with optional `[lead]` slot), SelectField, Skeleton, Spinner,
 > **Modal** (ConfirmDialog substrate only), **ConfirmDialog**, **FabMenu**, **GoalProgressRow**,
-> **FormActions** (bottom Save bar), **BalanceCard**, **ActionTile**, **SettingsRow**.
+> **FormActions** (bottom Save bar), **BalanceCard**, **ActionTile**, **SettingsRow**,
+> **EnvelopeCard**, **PrivacyNote** (`app-privacy-note`, static persistent trust/reassurance note -
+> not a live region, unlike the transient Banner).
 > Reuse/extend these rather than re-inlining markup - see the `ui-component`
 > skill. The remaining entries below are still to be built as they're needed.
 
@@ -360,6 +377,15 @@ and the tokens it consumes. Components are dumb/presentational (`shared/`) unles
   + optional hint + a trailing chevron or inline control. Used to build the grouped Settings screen
   (Your money / General / Security - see `screens.md` §7.1). Display/presentational; the feature
   feeds it data and handles the tap.
+- **EnvelopeCard** (`app-envelope-card`, **built**, FR-3.1) - category name, cap/spent amounts (via
+  the money pipe) and an 8px (`--progress-track-h`) pill track. Three Rust-computed states: **under**
+  (`--c-positive` fill, no icon - nothing to flag), **approaching** (`--c-warning` fill +
+  `lucideTriangleAlert` + "Rs X left"), **over** (`--c-danger` fill + icon + "Rs Y over"). Meaning is
+  never colour-alone - approaching/over always pair the fill with the icon + a plain-language label.
+  The bar visually clamps at 100% width even when over (the label/percent carry "how much over", not
+  an overflowing bar) - phrased as information, not punitively (see "Over-budget is gentle" below).
+  Display-only; the whole card is a button that emits `open` (the Budgets screen navigates to the
+  budget's edit page).
 
 ### New - required by FRs, absent in Figma (specified here, to design)
 - **LockScreen** - biometric prompt + passphrase fallback (FR-5.1). App entry gate.
@@ -371,8 +397,6 @@ and the tokens it consumes. Components are dumb/presentational (`shared/`) unles
   (FR-1.2).
 - **CurrencyField** - amount + currency selector + user-entered FX rate + computed base
   amount (FR-1.4).
-- **EnvelopeCard** - category cap with spent/remaining bar; warning/over states using
-  `--c-warning`/`--c-danger` (FR-3.1).
 - **RecurringRuleForm** - template + schedule picker (FR-1.3).
 - **RuleBuilderRow** - "If [field] [op] [value] → set [field] [value]" (FR-2.3).
 - **SettingsList + BackupRestorePanel** - base currency, lock timeout, export, encrypted

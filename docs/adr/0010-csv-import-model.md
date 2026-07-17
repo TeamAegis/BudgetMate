@@ -1,6 +1,10 @@
-# 0006 - CSV bank-file import model
+# 0010 - CSV bank-file import model
 
 Status: Accepted (2026-07-13)
+
+Note: this ADR was drafted as 0006 and renumbered to 0010 when it landed, because ADRs 0006-0009
+(export, backup, restore, the OFX parser) reached `main` first. ADRs are forward-only; the number
+is the only thing that changed.
 
 ## Context
 

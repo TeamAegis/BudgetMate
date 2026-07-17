@@ -1,0 +1,129 @@
+<section class="feature-page">
+  @if (loading()) {
+    <div class="skeletons" aria-busy="true">
+      <app-skeleton variant="block" height="60px" />
+      <app-skeleton variant="block" height="88px" />
+      <app-skeleton variant="block" height="48px" />
+    </div>
+  } @else if (isAndroid()) {
+    <app-banner tone="info">Backup is available on the desktop app for now.</app-banner>
+  } @else if (loadError()) {
+    <app-banner>{{ loadError() }}</app-banner>
+    <app-button variant="primary" (click)="retry()">Try again</app-button>
+  } @else {
+    <app-banner tone="info">
+      This backup is encrypted with the passphrase you set when you create it. Keep the file and
+      that passphrase together - you'll need both to restore it later.
+    </app-banner>
+
+    @if (actionError()) {
+      <app-banner>{{ actionError() }}</app-banner>
+    }
+
+    @if (savedSummary(); as summary) {
+      <app-banner tone="success">Backup saved to {{ savedFileName() }}.</app-banner>
+    }
+
+    <app-card class="info-card">
+      <span class="label">What's saved</span>
+      <p class="hint">
+        All your accounts, transactions, categories, budgets and goals - encrypted, in one file.
+      </p>
+    </app-card>
+
+    <app-button
+      variant="primary"
+      [block]="true"
+      [loading]="busy()"
+      (click)="backup()"
+    >
+      <svg icon lucideDatabaseBackup [size]="18" aria-hidden="true"></svg>
+      <span>{{ busy() ? 'Creating backup...' : 'Create backup' }}</span>
+    </app-button>
+
+    <!-- Restore (FR-4.3) - REPLACE mode only (ADR 0008). Merge mode and Android are deferred. -->
+    <app-card class="restore-card">
+      <span class="label">Restore from backup</span>
+
+      @if (restoreSummary(); as summary) {
+        <!-- Success: an explicit continue step (no auto-reload) so this confirmation of a
+             destructive action is actually seen/announced, and the adopted base currency is
+             disclosed, before the webview reloads. Replaces the restore controls entirely. -->
+        <app-banner tone="success">
+          Restored {{ summary.transactionCount }} item(s) from your backup. Your reports now add up
+          in {{ restoreBaseCurrencyLabel() }}.
+        </app-banner>
+        <app-button variant="primary" [block]="true" (click)="reload()">
+          <svg icon lucideRotateCcw [size]="18" aria-hidden="true"></svg>
+          <span>Reopen app</span>
+        </app-button>
+      } @else {
+        <p class="hint">
+          This replaces everything currently in the app with the contents of a backup file. You'll
+          need the passphrase that was set on that backup - it may be different from your current
+          one.
+        </p>
+
+        @if (restoreError()) {
+          <app-banner>{{ restoreError() }}</app-banner>
+        }
+
+        <app-button
+          variant="ghost"
+          [block]="true"
+          [disabled]="restorePickBusy()"
+          (click)="pickRestoreFile()"
+        >
+          <svg icon lucideUpload [size]="18" aria-hidden="true"></svg>
+          <span>{{ restoreFileName() || 'Choose backup file' }}</span>
+        </app-button>
+
+        <app-form-field label="Backup passphrase">
+          <input
+            [type]="restoreReveal() ? 'text' : 'password'"
+            [value]="restorePassphrase()"
+            (input)="onRestorePassphraseInput($event)"
+            autocomplete="off"
+            autocapitalize="off"
+            spellcheck="false"
+          />
+        </app-form-field>
+        <button
+          type="button"
+          class="reveal"
+          (click)="toggleRestoreReveal()"
+          [attr.aria-pressed]="restoreReveal()"
+        >
+          @if (restoreReveal()) {
+            <svg lucideEyeOff [size]="16" aria-hidden="true"></svg>
+            <span>Hide passphrase</span>
+          } @else {
+            <svg lucideEye [size]="16" aria-hidden="true"></svg>
+            <span>Show passphrase</span>
+          }
+        </button>
+
+        <app-button
+          variant="primary"
+          [block]="true"
+          [disabled]="!canRestore()"
+          (click)="confirmRestore()"
+        >
+          <svg icon lucideRotateCcw [size]="18" aria-hidden="true"></svg>
+          <span>Restore</span>
+        </app-button>
+      }
+    </app-card>
+  }
+
+  @if (confirmingRestore()) {
+    <app-confirm-dialog
+      title="Replace all data?"
+      message="This permanently overwrites everything currently in the app with the contents of this backup. This can't be undone."
+      confirmLabel="Replace"
+      [busy]="restoreBusy()"
+      (confirm)="restoreConfirmed()"
+      (cancelled)="cancelRestore()"
+    />
+  }
+</section>

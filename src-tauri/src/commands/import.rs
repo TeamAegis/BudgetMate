@@ -4,7 +4,7 @@
 //! `std::fs` cannot open - so on that target the read goes through `tauri-plugin-android-fs`
 //! (`AndroidFsExt::android_fs().open_file(..., FileAccessMode::Read)`, a content-URI-aware
 //! `std::fs::File`), still no new ACL permission needed since the call is Rust-side, not a
-//! JS-invoked plugin command (see `docs/adr/0006-csv-import-model.md`) - unlike `extract_receipt`,
+//! JS-invoked plugin command (see `docs/adr/0010-csv-import-model.md`) - unlike `extract_receipt`,
 //! which forwards its path to the native OCR plugin and never touches `std::fs` in Rust at all.
 //! Delegates to the pure CSV parser (`import::csv`) for the header preview and to the DB-aware
 //! pipeline (`db::imports`) for preview/commit. Nothing is written until `import_commit`, and even

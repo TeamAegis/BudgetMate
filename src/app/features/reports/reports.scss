@@ -1,0 +1,53 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.feature-page {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: var(--space-4);
+}
+
+.skeletons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.filters {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+
+  // Safety net: even with short segment labels, a narrow device (or a large OS font size) can
+  // still overflow a 4-segment pill row - scroll it horizontally rather than clipping/wrapping.
+  app-segmented-toggle {
+    display: block;
+    overflow-x: auto;
+  }
+}
+
+.total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+
+  .label {
+    font-size: var(--t-section);
+    font-weight: var(--fw-medium);
+    color: var(--c-text-muted);
+  }
+
+  .amount {
+    font-size: var(--t-title);
+    font-weight: var(--fw-medium);
+  }
+}
+
+h2 {
+  margin: 0 0 var(--space-3);
+}

@@ -37,6 +37,47 @@ impl From<crate::db::DbError> for AppError {
     }
 }
 
+impl From<crate::export::ExportError> for AppError {
+    fn from(e: crate::export::ExportError) -> Self {
+        use crate::export::ExportError;
+        let msg = e.to_string();
+        match e {
+            // The UI never offers JSON (screens.md §7.4); a stray call is a caller mistake.
+            ExportError::Unsupported => AppError::Validation(msg),
+            // A writer failure (disk-full-at-buffer-time, encoding issue) is unexpected/internal.
+            ExportError::Csv(_) | ExportError::Xlsx(_) => AppError::Internal(msg),
+        }
+    }
+}
+
+impl From<crate::backup::BackupError> for AppError {
+    fn from(e: crate::backup::BackupError) -> Self {
+        // Only ever a serialisation failure building the envelope - unexpected/internal, and the
+        // message never contains salt/kdf/key/passphrase/db bytes (see `backup::BackupError`).
+        AppError::Internal(e.to_string())
+    }
+}
+
+impl From<crate::backup::restore::RestoreError> for AppError {
+    fn from(e: crate::backup::restore::RestoreError) -> Self {
+        use crate::backup::restore::RestoreError;
+        match e {
+            RestoreError::Validation(msg) => AppError::Validation(msg),
+            RestoreError::KeyVerificationFailed => AppError::KeyVerificationFailed,
+            RestoreError::Internal(msg) => AppError::Internal(msg),
+        }
+    }
+}
+
+impl From<crate::import::ofx::OfxError> for AppError {
+    fn from(e: crate::import::ofx::OfxError) -> Self {
+        // Every variant (not OFX at all, too large, no resolvable currency, too many rows) is a
+        // user-fixable "pick a different/valid file" condition, never a hint about the file's
+        // financial contents - safe to surface to the user as-is.
+        AppError::Validation(e.to_string())
+    }
+}
+
 impl From<crate::vault::VaultError> for AppError {
     fn from(e: crate::vault::VaultError) -> Self {
         use crate::vault::VaultError;

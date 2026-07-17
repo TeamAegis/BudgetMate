@@ -9,11 +9,15 @@ import {
   LucideCoins,
   LucideFunnel,
   LucideFileUp,
+  LucidePiggyBank,
+  LucideDownload,
+  LucideDatabaseBackup,
 } from '@lucide/angular';
 import { LockService } from '../../core/lock/lock.service';
 import { getSettings, setBaseCurrency, isTauri } from '../../core/bridge';
 import { SelectField, type SelectOption } from '../../shared/ui/select-field/select-field';
 import { SettingsRow } from '../../shared/ui/settings-row/settings-row';
+import { PrivacyNote } from '../../shared/ui/privacy-note/privacy-note';
 
 @Component({
   selector: 'app-settings',
@@ -27,8 +31,12 @@ import { SettingsRow } from '../../shared/ui/settings-row/settings-row';
     LucideCoins,
     LucideFunnel,
     LucideFileUp,
+    LucidePiggyBank,
+    LucideDownload,
+    LucideDatabaseBackup,
     SelectField,
     SettingsRow,
+    PrivacyNote,
   ],
   template: `
     <section class="feature-page">
@@ -43,6 +51,12 @@ import { SettingsRow } from '../../shared/ui/settings-row/settings-row';
         <li>
           <a app-settings-row routerLink="/settings/categories" label="Categories" hint="Group your spending and income">
             <svg icon lucideTags [size]="24" aria-hidden="true"></svg>
+            <svg trailing lucideChevronRight [size]="18" aria-hidden="true"></svg>
+          </a>
+        </li>
+        <li>
+          <a app-settings-row routerLink="/budgets" label="Budgets / Envelopes" hint="Set a monthly limit per category">
+            <svg icon lucidePiggyBank [size]="24" aria-hidden="true"></svg>
             <svg trailing lucideChevronRight [size]="18" aria-hidden="true"></svg>
           </a>
         </li>
@@ -69,6 +83,18 @@ import { SettingsRow } from '../../shared/ui/settings-row/settings-row';
       <h2 class="group-title">General</h2>
       <ul class="rows">
         <li>
+          <a app-settings-row routerLink="/settings/export" label="Export" hint="Save your transactions as a CSV or Excel file">
+            <svg icon lucideDownload [size]="24" aria-hidden="true"></svg>
+            <svg trailing lucideChevronRight [size]="18" aria-hidden="true"></svg>
+          </a>
+        </li>
+        <li>
+          <a app-settings-row routerLink="/settings/backup" label="Backup" hint="Save an encrypted copy of your data">
+            <svg icon lucideDatabaseBackup [size]="24" aria-hidden="true"></svg>
+            <svg trailing lucideChevronRight [size]="18" aria-hidden="true"></svg>
+          </a>
+        </li>
+        <li>
           <div app-settings-row label="Base currency" hint="Foreign-currency transactions convert to this for reporting">
             <svg icon lucideCoins [size]="24" aria-hidden="true"></svg>
             <app-select-field
@@ -81,6 +107,8 @@ import { SettingsRow } from '../../shared/ui/settings-row/settings-row';
           </div>
         </li>
       </ul>
+
+      <app-privacy-note />
 
       <h2 class="group-title">Security</h2>
       <ul class="rows">

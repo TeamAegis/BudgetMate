@@ -238,7 +238,7 @@ function checkStyle() {
 const snakeToCamel = (s) => s.replace(/_([a-z0-9])/g, (_, c) => c.toUpperCase());
 
 // Rust serde structs that deliberately do NOT cross IPC (no TS mirror expected).
-const DTO_SKIP = new Set(['VaultMeta']);
+const DTO_SKIP = new Set(['VaultMeta', 'VaultBackup']);
 // Rust struct name -> TS interface name, for intentional renames.
 const DTO_NAME_MAP = { PreviewInput: 'RulePreviewInput' };
 

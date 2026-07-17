@@ -2,10 +2,20 @@
 //! run through the rule engine + dedup and reviewed by the user before an ACID batch insert.
 //!
 //! CSV is wired end-to-end (`import::csv` for the pure parse, `db::imports` for the DB-aware
-//! pipeline, `commands::import` for IPC). The `ofx`/`qfx` parsers are a later change (issue #13;
-//! OFX will live behind its own `import/ofx.rs`, the least-mature dependency, isolated there).
+//! pipeline, `commands::import` for IPC). The OFX 1.x/2.x/QFX parser is implemented,
+//! self-contained, in `import/ofx.rs` (`parse_ofx`; see
+//! `docs/adr/0009-hand-rolled-ofx-parser.md`), but is NOT yet wired to the command surface: the
+//! three `import_*` commands reject a non-CSV `format`. Wiring OFX through `db::imports` is its
+//! own change.
+//!
+//! Note the two per-row failure types, which are deliberately distinct rather than shared: OFX
+//! reports `import::RowError` (keyed by transaction-block ordinal + the bank's `FITID`), while CSV
+//! reports `import::csv::RowError` (keyed by 0-based data-row index, which `skipRows` refers back
+//! to). Only the CSV one crosses IPC today. Unifying them is a follow-up, not a merge-time
+//! refactor.
 
 pub mod csv;
+pub mod ofx;
 
 /// A parsed-but-not-yet-saved transaction from an imported file.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -36,6 +46,27 @@ impl ImportFormat {
             ImportFormat::Qfx => "qfx",
         }
     }
+}
+
+/// The outcome of parsing an import file: normalised rows plus any per-row failures (malformed
+/// rows are reported, never silently dropped - FR-2.2). Produced by `import::ofx`; the CSV parser
+/// has its own row-index-keyed `csv::ParsedRows` (see the module note above).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ParsedImport {
+    pub transactions: Vec<StagedTx>,
+    pub row_errors: Vec<RowError>,
+}
+
+/// A single transaction block that could not be normalised. `message` is STRUCTURAL only - never
+/// echo payee/memo/amount text (the `error.rs` "no secrets" rule extends to user financial data).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RowError {
+    /// 0-based ordinal of the transaction block within the file.
+    pub index: usize,
+    /// The bank's own transaction id (`FITID`), if it parsed before the failure.
+    pub source_ref: Option<String>,
+    /// Plain-language, structural reason (no financial data).
+    pub message: String,
 }
 
 #[cfg(test)]

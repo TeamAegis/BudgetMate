@@ -200,14 +200,16 @@ v1 scope as requirements regardless of status; Status only reflects current prog
 |---|---|---|
 | FR-1.1/1.2/1.3/1.4 (entry, splits, recurring, multi-currency) | §4 Domain & Data Model, §3 Frontend | Built |
 | FR-2.1 OCR | §6 OCR Subsystem | Built (Android; iOS deferred) |
-| FR-2.2 Import (CSV/OFX/QFX) | §8 Import Pipeline | Built for CSV (column mapping, rule suggestion, dedup review, ACID commit - ADR 0006); OFX/QFX still pending (issue #13). The Android file read (`content://` URI) is a known gap not yet verified on-device - tracked follow-up, see ADR 0006 |
+| FR-2.2 Import (CSV/OFX/QFX) | §8 Import Pipeline | Built for CSV (column mapping, rule suggestion, dedup review, ACID commit - ADR 0010). The OFX/QFX parser exists (ADR 0009) but is not wired to the command surface yet - the `import_*` commands reject a non-CSV format |
 | FR-2.3 Rule engine | §8 Rule Engine | Built (rule management + preview; now applied at CSV import time, not just manual entry) |
 | FR-2.4 Dedup | §8 Dedup | Built for CSV import (preview + commit flag likely duplicates for user keep/skip); still not wired into manual entry |
-| FR-3.1 Envelope budgeting | §3 Frontend, §4 aggregations | Specified (schema only; no spent-vs-remaining logic yet) |
+| FR-3.1 Envelope budgeting | §3 Frontend, §4 aggregations | Built |
 | FR-3.2 Savings goals | §3 Frontend, §4 | Built |
-| FR-3.3 Local reporting (charts) | §3 Frontend (charts), §4 aggregations | Specified (no aggregation queries yet) |
+| FR-3.3 Local reporting (charts) | §3 Frontend (charts), §4 aggregations | Built |
 | FR-3.4 Savings-backed allowances (envelopes) | §4 Domain & Data Model, `docs/allowances.md`, ADR 0005 | Specified (domain spec + ADR; no schema or runtime code yet) |
-| FR-4.1/4.2/4.3 Backup, export, restore | §9 Backup/Export | Specified |
+| FR-4.1 Encrypted backup | §9 Backup/Export | Partial (desktop-first, ADR 0007; Android SAF save deferred) |
+| FR-4.3 Restore | §9 Backup/Export | Partial (Replace implemented desktop-first, ADR 0008; Merge + Android SAF deferred, issue #21) |
+| FR-4.2 Export (CSV/XLSX) | §9 Backup/Export | Partial (desktop-first, ADR 0006; Android SAF save deferred) |
 | FR-5.1/5.2 / NFR-P2/P3 (unlock, lock, encryption, biometric) | §5 Storage & Crypto, §7 Security | Built (Android; iOS deferred) |
 | NFR-P1 Zero-internet | §7 Offline Enforcement | Built |
 | NFR-Perf* | §10 Performance & Build | Partial (web payload size tracked; Android install-size metric pending issue #4) |

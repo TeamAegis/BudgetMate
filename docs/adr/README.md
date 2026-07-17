@@ -26,7 +26,28 @@ Consequences, and Alternatives considered.
   allowances use the imprest set-to-target top-up (carryover, no stacking), three balances
   (`Available = Total - Reserved`), an all-or-nothing savings gate on increases, and calendar-aligned
   lazy refresh. Distinct from goals (FR-3.2) and category caps (FR-3.1). Full spec: `docs/allowances.md`.
-- [0006](0006-csv-import-model.md): CSV import model. Imported amounts keep the file's own sign
-  (no category-kind derivation); category resolves via the rule engine with an "Uncategorized"
-  fallback; commands are stateless and re-parse the file on `preview`/`commit`. OFX/QFX deferred
-  (issue #13).
+- [0006](0006-export-desktop-first-android-saf-deferred.md): Transaction export (FR-4.2). Pure,
+  platform-agnostic CSV/XLSX writers; the save path is desktop-first (dialog `save()` + `std::fs`),
+  Android's SAF-backed save (`tauri-plugin-android-fs`) is a separate device-verified change; amounts
+  are always exported as strings (never a float) to keep the `no-float-money` guard honest.
+- [0007](0007-encrypted-backup-desktop-first.md): Encrypted local backup (FR-4.1). `.vaultbak` is a
+  JSON envelope bundling the already-encrypted SQLCipher DB bytes (base64) with the non-secret
+  salt/`KdfParams`; the snapshot copies encrypted bytes under the `DbState` mutex (no key access,
+  never `VACUUM INTO`/online-backup); desktop-first save mirrors ADR 0006; restore (FR-4.3) is
+  out of scope (issue #21).
+- [0008](0008-restore-replace-desktop-first-merge-deferred.md): Restore from backup (FR-4.3),
+  REPLACE mode only. Key re-derived from the envelope's own salt/kdf; the envelope now also carries
+  `baseCurrency` (adopted on restore - `base_amount_minor` is bound to it); crash-safe swap
+  (copy-to-`.prev` + atomic rename + a `restore.pending` marker self-healed on next unlock/restore);
+  biometric forced off; app left locked only if the swap itself fails; Merge mode and Android's
+  SAF file-pick are deferred (issue #21 follow-up).
+- [0009](0009-hand-rolled-ofx-parser.md): OFX/QFX import parser (FR-2.2). A hand-rolled, lenient
+  tag scanner in `import/ofx.rs` handles OFX 1.x SGML, OFX 2.x XML, and QFX in one pass (no new
+  XML/SGML dependency); amounts route through `domain::money::parse_minor`, currency is never
+  guessed, and malformed rows are reported as `RowError`s, never dropped. Command/DB wiring is a
+  separate change (issue #12).
+- [0010](0010-csv-import-model.md): CSV import model (FR-2.2). Imported amounts keep the file's own
+  sign (no category-kind derivation); category resolves via the rule engine with a sign-aware
+  "Uncategorized" fallback; commands are stateless and re-parse the file on `preview`/`commit`. The
+  file read is platform-branched: `std::fs` on desktop, `tauri-plugin-android-fs` for Android's
+  `content://` URI. Wiring the OFX parser (ADR 0009) through the same pipeline is a follow-up.
