@@ -24,10 +24,14 @@ pub fn run() {
         // Custom on-device OCR (native engines deferred; skeleton returns NotImplemented).
         .plugin(tauri_plugin_ocr::init());
 
-    // Biometric unlock is Android-only here (its init() is mobile-only).
+    // Biometric unlock and the content-URI-aware file reader (CSV import, FR-2.2) are
+    // Android-only: their init()s are mobile-only, and android-fs isn't even a dependency on
+    // other targets (see Cargo.toml's `cfg(target_os = "android")` dependency block).
     #[cfg(target_os = "android")]
     {
-        builder = builder.plugin(tauri_plugin_biometric::init());
+        builder = builder
+            .plugin(tauri_plugin_biometric::init())
+            .plugin(tauri_plugin_android_fs::init());
     }
 
     builder

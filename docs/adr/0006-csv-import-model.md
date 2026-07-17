@@ -14,18 +14,21 @@ state the import commands should carry.
 
 - **No new migration.** The `imports` audit table (`id, filename, format, imported_at, row_count`)
   already existed in `0001_init.sql` and is used as-is.
-- **No new ACL, but the file read is a known Android gap.** Rust reads the picked file via
-  `std::fs::read_to_string` given a path - the file dialog returns a path, Rust reads it, and the
-  existing `dialog:allow-open` capability is sufficient (no `fs:` permission was added). This is
-  **not** "exactly like the OCR flow": `extract_receipt(image_path)` forwards its path unopened to
-  the native OCR plugin (ML Kit on Android via Kotlin), which is content-URI aware and never touches
-  `std::fs` in Rust. CSV import has no such native forwarding step - it reads the path directly in
-  Rust. That works on the **Windows desktop dev/test target**, where the dialog returns a real
-  filesystem path. On **Android**, the picker returns a `content://` URI, which `std::fs` cannot
-  open - `import_read_headers`/`import_preview`/`import_commit` will fail to read the file at all on
-  a real device. A content-URI-aware read (`tauri-plugin-android-fs`, already a dependency) is
-  required and is a **tracked follow-up**, not yet implemented; this is why the feature has not been
-  verified on-device and needs a human to confirm the fix once it lands.
+- **No new ACL; the file read is platform-branched.** The file dialog returns a path/URI, and the
+  read for it is resolved per target in `commands/import.rs`. This is **not** "exactly like the OCR
+  flow": `extract_receipt(image_path)` forwards its path unopened to the native OCR plugin (ML Kit on
+  Android via Kotlin), which is content-URI aware and never touches `std::fs` in Rust. CSV import has
+  no such native forwarding step - it reads the file itself. On the **Windows desktop dev/test
+  target**, the dialog returns a real filesystem path, read via `std::fs::read_to_string`. On
+  **Android**, the picker returns a `content://` URI, which `std::fs` cannot open; that target reads
+  it through `tauri-plugin-android-fs` instead (`AndroidFsExt::android_fs().open_file(&FileUri,
+  FileAccessMode::Read)`, which hands back a content-URI-aware `std::fs::File`), and resolves the
+  `imports` audit filename via the same plugin's `get_name` rather than the URI's opaque last path
+  segment. No new ACL permission was needed because both calls are Rust-side (`AppHandle` methods),
+  not a JS-invoked plugin command - the existing `dialog:allow-open` capability, which only grants the
+  picker itself, is unaffected. This was landed and needs on-device confirmation (`run-app` skill)
+  before merge, since the original implementation session had no Android SDK/NDK/emulator to verify
+  against.
 - **Imported rows store the file's SIGNED amount directly.** Manual entry derives the sign from the
   chosen category's kind (`domain::transaction::signed_amount`); an imported row has no such
   category at parse time; a raw CSV amount is already signed (negative = money out, positive =
