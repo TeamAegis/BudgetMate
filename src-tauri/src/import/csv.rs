@@ -7,7 +7,7 @@ use ::csv::{ReaderBuilder, StringRecord};
 use serde::Serialize;
 
 use crate::domain::money::parse_minor;
-use crate::import::StagedTx;
+use crate::import::{StagedRow, StagedTx};
 
 /// Header row + a handful of sample data rows, for the column-mapping UI.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -37,14 +37,9 @@ pub struct RowError {
     pub message: String,
 }
 
-/// One successfully parsed row, carrying its stable 0-based data-row index (used for `skipRows`).
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct StagedRow {
-    pub row: usize,
-    pub staged: StagedTx,
-}
-
-/// Result of parsing a whole file against a `ColumnMapping`.
+/// Result of parsing a whole file against a `ColumnMapping`. `rows` uses the shared
+/// `import::StagedRow` (0-based data-row index, excludes the header row) - the same shape OFX/QFX
+/// parsing produces, so `db::imports` can share one preview/commit core across formats.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ParsedRows {
     pub rows: Vec<StagedRow>,

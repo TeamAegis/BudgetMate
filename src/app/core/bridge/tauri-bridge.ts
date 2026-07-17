@@ -267,19 +267,27 @@ export function extractReceipt(imagePath: string): Promise<ReceiptExtraction> {
 }
 
 // ── Bank-file import (FR-2.2) ────────────────────────────────────────────────────
-// CSV is wired end-to-end; OFX/QFX are reserved for a later change (issue #13). Nothing is
+// CSV and OFX/QFX are both wired end-to-end (docs/adr/0011-ofx-import-wiring.md). Nothing is
 // written until `importCommit` - the wizard always shows a reviewing step first.
+
+/** Native file-picker filter per format, so the dialog only offers files that make sense for the
+ *  chosen import format. */
+const IMPORT_FILE_FILTERS: Record<ImportFormat, { name: string; extensions: string[] }> = {
+  csv: { name: 'Bank statement (CSV)', extensions: ['csv', 'txt'] },
+  ofx: { name: 'Bank statement (OFX)', extensions: ['ofx', 'txt'] },
+  qfx: { name: 'Bank statement (QFX)', extensions: ['qfx', 'txt'] },
+};
 
 /**
  * Open the native picker for a bank-statement file and return its local path (or `null` if
  * cancelled). The file stays on-device; nothing is uploaded. Routed through the bridge so the
  * dialog ACL stays auditable.
  */
-export async function pickImportFile(): Promise<string | null> {
+export async function pickImportFile(format: ImportFormat = 'csv'): Promise<string | null> {
   const selected = await openDialog({
     multiple: false,
     directory: false,
-    filters: [{ name: 'Bank statement (CSV)', extensions: ['csv', 'txt'] }],
+    filters: [IMPORT_FILE_FILTERS[format]],
   });
   return typeof selected === 'string' ? selected : null;
 }

@@ -22,6 +22,10 @@
   outline: 2px solid var(--c-primary-700);
   outline-offset: 1px;
 }
+.trigger.disabled {
+  opacity: var(--opacity-disabled);
+  cursor: default;
+}
 
 .chevron {
   color: var(--c-text-muted);

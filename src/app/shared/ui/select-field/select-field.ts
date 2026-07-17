@@ -22,6 +22,12 @@ export interface SelectOption {
  * in the WebView, so this presentational listbox is built from design tokens instead. Accessible:
  * a `listbox`/`option` ARIA pattern with roving focus, full keyboard support, and click-outside +
  * Escape to dismiss. Dumb component - the parent owns the value (feature → core/bridge).
+ *
+ * `disabled` (default false) makes the trigger non-interactive - e.g. while an in-flight operation
+ * elsewhere on the page depends on the current value staying put (the import wizard's idle-step
+ * preview read, design review of issue #13). The trigger gets `[disabled]` (removing it from the
+ * tab order and blocking the popup from opening) and `aria-disabled="true"`; the visual dimming
+ * uses `--opacity-disabled` only, never a hardcoded value.
  */
 @Component({
   selector: 'app-select-field',
@@ -30,12 +36,15 @@ export interface SelectOption {
     <button
       type="button"
       class="trigger"
+      [class.disabled]="disabled()"
+      [disabled]="disabled()"
       (click)="toggle()"
       (keydown)="onTriggerKeydown($event)"
       aria-haspopup="listbox"
       [attr.aria-expanded]="open()"
       [attr.aria-labelledby]="ariaLabelledby()"
       [attr.aria-label]="ariaLabel()"
+      [attr.aria-disabled]="disabled() ? true : null"
     >
       <span>{{ selectedLabel() }}</span>
       <svg lucideChevronDown [size]="18" class="chevron" [class.up]="open()" aria-hidden="true"></svg>
@@ -76,6 +85,8 @@ export class SelectField {
   readonly ariaLabelledby = input<string | undefined>(undefined);
   /** Accessible name when there is no labelledby element (e.g. inside an app-form-field). */
   readonly ariaLabel = input<string | undefined>(undefined);
+  /** Makes the control non-interactive (see class doc). */
+  readonly disabled = input(false);
   readonly valueChange = output<number | string>();
 
   protected readonly open = signal(false);
@@ -95,6 +106,7 @@ export class SelectField {
   }
 
   protected toggle(): void {
+    if (this.disabled()) return;
     if (this.open()) this.close();
     else this.openMenu();
   }
@@ -116,6 +128,7 @@ export class SelectField {
   }
 
   protected onTriggerKeydown(event: KeyboardEvent): void {
+    if (this.disabled()) return;
     if (['ArrowDown', 'ArrowUp', 'Enter', ' '].includes(event.key)) {
       event.preventDefault();
       this.openMenu();

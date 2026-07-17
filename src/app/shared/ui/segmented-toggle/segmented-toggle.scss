@@ -35,3 +35,10 @@
   outline: 2px solid var(--c-primary-700);
   outline-offset: 2px;
 }
+
+.seg.disabled {
+  opacity: var(--opacity-disabled);
+}
+.segment:disabled {
+  cursor: default;
+}

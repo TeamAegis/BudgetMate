@@ -54,4 +54,21 @@ describe('SegmentedToggle', () => {
     fixture.detectChanges();
     expect(fixture.componentInstance.value()).toBe('ongoing');
   });
+
+  it('is non-interactive and marked aria-disabled when disabled', () => {
+    const fixture = make('ongoing');
+    fixture.componentRef.setInput('disabled', true);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('[role="radiogroup"]')!.getAttribute('aria-disabled')).toBe('true');
+    const segments = el.querySelectorAll<HTMLButtonElement>('[role="radio"]');
+    for (const seg of Array.from(segments)) {
+      expect(seg.disabled).toBe(true);
+    }
+
+    // A click on a non-active segment must not change the value while disabled.
+    segments[1].click();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.value()).toBe('ongoing');
+  });
 });

@@ -6,6 +6,7 @@ import {
   LucideTriangleAlert,
   LucideSquare,
   LucideSquareCheck,
+  LucideInfo,
 } from '@lucide/angular';
 import {
   listAccounts,
@@ -21,6 +22,7 @@ import { LockService } from '../../core/lock/lock.service';
 import type {
   Account,
   ColumnMappingInput,
+  ImportFormat,
   ImportHeaders,
   ImportPreviewData,
   Iso4217,
@@ -32,6 +34,7 @@ import { Button } from '../../shared/ui/button/button';
 import { Banner } from '../../shared/ui/banner/banner';
 import { EmptyState } from '../../shared/ui/empty-state/empty-state';
 import { FormField } from '../../shared/ui/form-field/form-field';
+import { SegmentedToggle, type SegmentOption } from '../../shared/ui/segmented-toggle/segmented-toggle';
 import { SelectField, type SelectOption } from '../../shared/ui/select-field/select-field';
 import { Spinner } from '../../shared/ui/spinner/spinner';
 import { Skeleton } from '../../shared/ui/skeleton/skeleton';
@@ -39,8 +42,17 @@ import { Skeleton } from '../../shared/ui/skeleton/skeleton';
 /** Sentinel for "no source column" in an optional mapping field's SelectField. */
 const NOT_MAPPED = -1;
 
-/** UI phase of the import wizard. Each maps to one of the five required screen states (design.md). */
+/** UI phase of the import wizard. Each maps to one of the five required screen states (design.md).
+ *  OFX/QFX skip 'mapping' entirely (the file already names its own fields) - `chooseFile()` goes
+ *  straight from 'idle' to 'reviewing' for those two formats. */
 type Phase = 'idle' | 'mapping' | 'reviewing' | 'committing' | 'done' | 'error';
+
+/** Format choices for the idle-step segmented toggle. */
+const FORMAT_OPTIONS: SegmentOption[] = [
+  { value: 'csv', label: 'CSV' },
+  { value: 'ofx', label: 'OFX' },
+  { value: 'qfx', label: 'QFX' },
+];
 
 /**
  * Import Wizard (FR-2.2/2.3/2.4, screens.md §4.5): pick an account and a local CSV file, map its
@@ -60,10 +72,12 @@ type Phase = 'idle' | 'mapping' | 'reviewing' | 'committing' | 'done' | 'error';
     LucideTriangleAlert,
     LucideSquare,
     LucideSquareCheck,
+    LucideInfo,
     Button,
     Banner,
     EmptyState,
     FormField,
+    SegmentedToggle,
     SelectField,
     Spinner,
     Skeleton,
@@ -91,6 +105,11 @@ export class ImportFile implements OnInit {
   /** The reporting/base currency (`getSettings().baseCurrency`) - used only to warn (never to
    *  convert) when the chosen account's currency differs (finance#1 / code#5). */
   protected readonly baseCurrency = signal<Iso4217 | null>(null);
+
+  /** Chosen bank-file format (docs/adr/0011). Only CSV has a mapping step - OFX/QFX are
+   *  self-describing, so `chooseFile()` goes straight from picking the file to `preview()`. */
+  protected readonly format = signal<ImportFormat>('csv');
+  protected readonly formatOptions: SegmentOption[] = FORMAT_OPTIONS;
 
   protected readonly path = signal<string | null>(null);
   protected readonly headers = signal<ImportHeaders | null>(null);
@@ -141,9 +160,39 @@ export class ImportFile implements OnInit {
     ...this.columnOptions(),
   ]);
 
-  protected readonly canPreview = computed(
-    () => this.accountId() !== null && this.dateCol() !== null && this.amountCol() !== null,
+  /** CSV needs a valid mapping before previewing; OFX/QFX only need an account (the file already
+   *  names its own fields, so there is no mapping step to gate on). */
+  protected readonly canPreview = computed(() => {
+    if (this.accountId() === null) return false;
+    if (this.format() !== 'csv') return true;
+    return this.dateCol() !== null && this.amountCol() !== null;
+  });
+
+  /** Idle-step copy that names the chosen format (design.md - plain language over jargon). "OFX"
+   *  takes "an" (vowel sound); "CSV"/"QFX" take "a". */
+  protected readonly chooseFileCta = computed(
+    () => `Choose ${this.format() === 'ofx' ? 'an' : 'a'} ${this.format().toUpperCase()} file`,
   );
+  protected readonly chooseFileMessage = computed(() => {
+    switch (this.format()) {
+      case 'ofx':
+        return 'Import an OFX bank statement. Nothing is saved until you review and confirm the transactions.';
+      case 'qfx':
+        return 'Import a QFX bank statement. Nothing is saved until you review and confirm the transactions.';
+      default:
+        return 'Import a CSV bank statement. Nothing is saved until you review and confirm the transactions.';
+    }
+  });
+  /** The mapping step only exists for CSV - say so only there; an OFX/QFX file needs no column
+   *  mapping (design.md "Plain-language glossary" - name only what the user will actually see). For
+   *  OFX/QFX also set expectations up front that a different-currency transaction will not be
+   *  imported (design review of issue #13 - heads-up before the user picks a file). */
+  protected readonly chooseFileNote = computed(() => {
+    if (this.format() === 'csv') {
+      return 'The file stays on your device - nothing is uploaded. You will map its columns and confirm every row before anything is saved.';
+    }
+    return 'The file stays on your device - nothing is uploaded. Any transaction in a different currency than this account will not be imported. You will confirm every row before anything is saved.';
+  });
 
   protected readonly toImportCount = computed(() => {
     const data = this.previewData();
@@ -152,9 +201,11 @@ export class ImportFile implements OnInit {
   });
 
   /** Plain-language summary for the reviewing banner: how many will import, how many look like
-   *  duplicates, and how many rows could not be read at all. "Skipped"/"left out" is reserved for
-   *  rows the USER excludes; malformed rows always read "could not be read" (finance#7) so the two
-   *  never conflate. */
+   *  duplicates, how many rows could not be read at all, and how many were excluded solely for a
+   *  currency mismatch. Three distinct clauses that must never conflate (finance#7): "skipped"/
+   *  "left out" is reserved for rows the USER excludes; malformed rows always read "could not be
+   *  read"; a currency mismatch reads "in another currency (not imported)" - it was read fine, it
+   *  was deliberately excluded for money-safety, and it is not an error. */
   protected readonly summaryText = computed(() => {
     const data = this.previewData();
     if (!data) return '';
@@ -168,6 +219,11 @@ export class ImportFile implements OnInit {
     if (data.errors.length > 0) {
       parts.push(
         `${data.errors.length} row${data.errors.length === 1 ? '' : 's'} could not be read`,
+      );
+    }
+    if (data.currencyMismatches.length > 0) {
+      parts.push(
+        `${data.currencyMismatches.length} in another currency (not imported)`,
       );
     }
     return parts.join(', ');
@@ -197,6 +253,9 @@ export class ImportFile implements OnInit {
 
   protected setAccountId(v: number | string): void {
     this.accountId.set(Number(v));
+  }
+  protected setFormat(v: string): void {
+    this.format.set(v as ImportFormat);
   }
   protected setDateCol(v: number | string): void {
     this.dateCol.set(Number(v));
@@ -249,7 +308,7 @@ export class ImportFile implements OnInit {
     // visibility listener doesn't lock the vault mid-pick (mirrors the OCR scan flow).
     this.lockService.beginTrustedExcursion();
     try {
-      picked = await pickImportFile();
+      picked = await pickImportFile(this.format());
     } catch (e) {
       this.phase.set('error');
       this.error.set(toUserMessage(e));
@@ -260,6 +319,13 @@ export class ImportFile implements OnInit {
     if (!picked) return; // cancelled - stay on the current phase
 
     this.path.set(picked);
+
+    if (this.format() !== 'csv') {
+      // OFX/QFX are self-describing - no column-mapping step. Parse straight to reviewing.
+      await this.preview();
+      return;
+    }
+
     this.busy.set(true);
     try {
       const h = await importReadHeaders(picked, 'csv');
@@ -300,9 +366,9 @@ export class ImportFile implements OnInit {
     try {
       const data = await importPreview({
         path,
-        format: 'csv',
+        format: this.format(),
         accountId,
-        mapping: this.mappingInput(),
+        mapping: this.format() === 'csv' ? this.mappingInput() : undefined,
       });
       this.previewData.set(data);
       this.skipRows.set(new Set(data.rows.filter((r) => r.duplicate).map((r) => r.row)));
@@ -325,9 +391,9 @@ export class ImportFile implements OnInit {
     try {
       const result = await importCommit({
         path,
-        format: 'csv',
+        format: this.format(),
         accountId,
-        mapping: this.mappingInput(),
+        mapping: this.format() === 'csv' ? this.mappingInput() : undefined,
         skipRows: [...this.skipRows()],
       });
       this.result.set(result);

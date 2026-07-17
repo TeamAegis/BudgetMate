@@ -1,10 +1,20 @@
-//! Bank-file import persistence (FR-2.2/2.3/2.4): preview a parsed CSV against the active rule
+//! Bank-file import persistence (FR-2.2/2.3/2.4): preview a parsed file against the active rule
 //! engine + dedup, then commit it as ONE ACID batch. Money stays integer minor units throughout;
 //! amounts are the file's SIGNED value (sign from the data, NOT derived from a category kind -
 //! the one place imports differ from manual entry - see `docs/adr/0010-csv-import-model.md`).
 //! Commands are stateless: both `preview` and `commit` re-parse the file (it is the source of
 //! truth) - `commit` additionally honours `skip_rows`, identified by the parsed row's stable
-//! 0-based data-row index.
+//! 0-based ordinal (data-row index for CSV, transaction-block index for OFX/QFX).
+//!
+//! CSV (`preview`/`commit`) and OFX/QFX (`preview_ofx`/`commit_ofx`) share one format-agnostic
+//! core (`preview_rows`/`commit_rows`, taking an already-parsed `import::StagedRow` slice) - see
+//! `docs/adr/0011-ofx-import-wiring.md`. The OFX entry points additionally reconcile each row's OWN
+//! currency against the account's: imports carry no fx rate yet, so a row in a different currency
+//! is never imported (never silently stored at an implicit rate of 1). That exclusion is reported
+//! as its OWN category - `currency_mismatches` / `currency_skipped` - kept SEPARATE from
+//! genuinely-malformed rows (`errors` / `malformed`): the row was read fine, it was deliberately
+//! excluded for money-safety, and telling the user it "could not be read" would be factually wrong
+//! and misleading (issue #13 finance/design review).
 
 use std::collections::HashSet;
 
@@ -15,6 +25,7 @@ use serde::Serialize;
 use super::DbError;
 use crate::domain::category::CategoryKind;
 use crate::import::csv::{self, ColumnMapping, RowError};
+use crate::import::{ofx, RowError as OfxRowError, StagedRow};
 use crate::rules::dedup::{is_likely_duplicate, DedupKey};
 use crate::rules::engine::{apply_rules_traced, Applied, RuleFields};
 
@@ -52,23 +63,34 @@ pub struct PreviewRow {
     pub duplicate_reason: Option<String>,
 }
 
-/// Preview of an import (mirrors TS `ImportPreviewData`). Writes nothing.
+/// Preview of an import (mirrors TS `ImportPreviewData`). Writes nothing. `errors` holds only
+/// genuinely-malformed rows (bad date, unparsable amount, ...) - a row was read fine but is in a
+/// different currency than the account is a SEPARATE, non-error category: `currency_mismatches`
+/// (finance/design review of issue #13 - conflating the two told the user their file was corrupt
+/// when it was not).
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ImportPreviewData {
     pub rows: Vec<PreviewRow>,
     pub errors: Vec<RowError>,
+    /// Rows read fine but deliberately excluded because their OWN currency differs from the
+    /// account's (imports carry no fx rate yet - ADR 0010/0011). Always empty for CSV (a CSV row's
+    /// currency is always the account's, by construction). Each message names both currency codes.
+    pub currency_mismatches: Vec<RowError>,
     pub duplicate_count: i64,
     pub currency: String,
 }
 
-/// Result of committing an import (mirrors TS `ImportResultData`).
+/// Result of committing an import (mirrors TS `ImportResultData`). `malformed` counts only
+/// genuinely-malformed rows; `currency_skipped` (always 0 for CSV) counts rows excluded solely for
+/// a currency mismatch - see `ImportPreviewData`.
 #[derive(Debug, Clone, Copy, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ImportResultData {
     pub inserted: i64,
     pub skipped: i64,
     pub malformed: i64,
+    pub currency_skipped: i64,
 }
 
 /// Bundled arguments for `commit` (kept under clippy's too-many-arguments threshold, mirrors the
@@ -240,27 +262,28 @@ fn resolve_category_id(
     }
 }
 
-/// Preview a CSV file against `mapping`: parse it, suggest a category per row from the active
-/// rules (merchant = payee), and flag likely duplicates against existing rows in this account (and
-/// earlier rows in the same batch). Writes nothing.
-pub fn preview(
+/// Format-agnostic preview core: annotate already-parsed rows with a rule-suggested category and a
+/// dedup flag against existing rows in this account (and earlier rows in the same batch). Shared
+/// by the CSV and OFX/QFX preview entry points. Writes nothing.
+#[allow(clippy::too_many_arguments)]
+fn preview_rows(
     conn: &Connection,
-    content: &str,
-    mapping: &ColumnMapping,
+    parsed_rows: &[StagedRow],
+    errors: Vec<RowError>,
+    currency_mismatches: Vec<RowError>,
     account_id: i64,
+    currency: &str,
     window_days: Option<i64>,
 ) -> Result<ImportPreviewData, DbError> {
-    let currency = account_currency(conn, account_id)?;
     let window_days = window_days.unwrap_or(DEFAULT_WINDOW_DAYS);
-    let parsed = csv::parse_rows(content, mapping, &currency);
     let rules = crate::db::rules::active_engine_rules(conn)?;
     let existing = existing_keys(conn, account_id)?;
 
-    let mut rows = Vec::with_capacity(parsed.rows.len());
+    let mut rows = Vec::with_capacity(parsed_rows.len());
     let mut seen: Vec<DedupKey> = Vec::new();
     let mut duplicate_count = 0i64;
 
-    for staged in &parsed.rows {
+    for staged in parsed_rows {
         let tx = &staged.staged;
         let (_, applied) = apply_rules_traced(
             &rules,
@@ -298,30 +321,117 @@ pub fn preview(
         });
     }
 
-    Ok(ImportPreviewData { rows, errors: parsed.errors, duplicate_count, currency })
+    Ok(ImportPreviewData {
+        rows,
+        errors,
+        currency_mismatches,
+        duplicate_count,
+        currency: currency.to_string(),
+    })
 }
 
-/// Commit a CSV import as ONE ACID transaction: re-parse the file (deterministic; the file is the
-/// source of truth), skip `input.skip_rows`, resolve each remaining row's category exactly as
-/// `preview` did (a fired rule's category when it names an existing, sign-matching category, else
-/// the sign-correct Uncategorized bucket, created if missing), insert the transaction + exactly one
-/// split (the split amount == the parent, so the split-sum invariant holds trivially), flag
-/// `pending_review` on rows that look like a duplicate, then record the `imports` audit row. Rolls
-/// back on any error (all-or-nothing).
-pub fn commit(conn: &Connection, input: CommitInput, now_iso: &str) -> Result<ImportResultData, DbError> {
-    let currency = account_currency(conn, input.account_id)?;
-    let window_days = input.window_days.unwrap_or(DEFAULT_WINDOW_DAYS);
-    let parsed = csv::parse_rows(input.content, input.mapping, &currency);
+/// Preview a CSV file against `mapping`: parse it, suggest a category per row from the active
+/// rules (merchant = payee), and flag likely duplicates against existing rows in this account (and
+/// earlier rows in the same batch). Writes nothing.
+pub fn preview(
+    conn: &Connection,
+    content: &str,
+    mapping: &ColumnMapping,
+    account_id: i64,
+    window_days: Option<i64>,
+) -> Result<ImportPreviewData, DbError> {
+    let currency = account_currency(conn, account_id)?;
+    let parsed = csv::parse_rows(content, mapping, &currency);
+    preview_rows(conn, &parsed.rows, parsed.errors, Vec::new(), account_id, &currency, window_days)
+}
+
+/// Preview an OFX/QFX file (mirrors `preview` for CSV, `docs/adr/0011-ofx-import-wiring.md`): parse
+/// it, split out any row whose OWN currency does not match the account's into a SEPARATE
+/// `currency_mismatches` list (money-correctness - imports carry no fx rate yet, so such a row
+/// would otherwise be stored at an implicit rate of 1 and misrepresent reporting totals; it is
+/// deliberately NOT folded into `errors`, since the row was read fine - see
+/// `ImportPreviewData::currency_mismatches`), then suggest categories + flag duplicates for the
+/// rest. Writes nothing.
+pub fn preview_ofx(
+    conn: &Connection,
+    bytes: &[u8],
+    account_id: i64,
+    window_days: Option<i64>,
+) -> Result<ImportPreviewData, DbError> {
+    let currency = account_currency(conn, account_id)?;
+    let parsed = ofx::parse_ofx(bytes).map_err(|e| DbError::Invalid(e.to_string()))?;
+    let (rows, errors, currency_mismatches) =
+        split_by_account_currency(parsed.transactions, parsed.row_errors, &currency);
+    preview_rows(conn, &rows, errors, currency_mismatches, account_id, &currency, window_days)
+}
+
+/// Reconcile OFX-parsed rows against the account's currency, which is authoritative (imports carry
+/// no fx rate yet - ADR 0010/0011): a row whose OWN currency differs is moved into its OWN
+/// `currency_mismatches` list (never `errors` - the row was read fine, it is deliberately excluded
+/// for money-safety, not malformed) rather than imported at an implicit rate of 1. The message
+/// names both currency codes (currency codes are not sensitive, unlike amounts/payees, and naming
+/// both lets the user act). Both returned lists are sorted by row so each stays in file order.
+fn split_by_account_currency(
+    rows: Vec<StagedRow>,
+    ofx_errors: Vec<OfxRowError>,
+    account_currency: &str,
+) -> (Vec<StagedRow>, Vec<RowError>, Vec<RowError>) {
+    let mut kept = Vec::with_capacity(rows.len());
+    let mut errors: Vec<RowError> =
+        ofx_errors.into_iter().map(|e| RowError { row: e.index, message: e.message }).collect();
+    errors.sort_by_key(|e| e.row);
+    let mut currency_mismatches: Vec<RowError> = Vec::new();
+    for row in rows {
+        if row.staged.currency == account_currency {
+            kept.push(row);
+        } else {
+            currency_mismatches.push(RowError {
+                row: row.row,
+                message: format!(
+                    "This transaction is in {}; this account is in {}.",
+                    row.staged.currency, account_currency
+                ),
+            });
+        }
+    }
+    currency_mismatches.sort_by_key(|e| e.row);
+    (kept, errors, currency_mismatches)
+}
+
+/// Format-agnostic commit core: insert the given already-parsed rows (minus `skip_rows`) as ONE
+/// ACID transaction, exactly as CSV `commit` always did - resolve each row's category exactly as
+/// `preview_rows` did (a fired rule's category when it names an existing, sign-matching category,
+/// else the sign-correct Uncategorized bucket, created if missing), insert the transaction +
+/// exactly one split (the split amount == the parent, so the split-sum invariant holds trivially),
+/// flag `pending_review` on rows that look like a duplicate, then record the `imports` audit row.
+/// Rolls back on any error (all-or-nothing). `malformed` is the caller's already-known
+/// genuinely-malformed row-error count (CSV: `parsed.errors.len()`; OFX/QFX: OFX parse errors
+/// only). `currency_skipped` is the count of rows excluded solely for a currency mismatch (always
+/// 0 for CSV) - kept separate from `malformed` since those rows were read fine.
+#[allow(clippy::too_many_arguments)]
+fn commit_rows(
+    conn: &Connection,
+    parsed_rows: &[StagedRow],
+    account_id: i64,
+    filename: &str,
+    format: &str,
+    skip_rows: &[usize],
+    malformed: i64,
+    currency_skipped: i64,
+    window_days: Option<i64>,
+    now_iso: &str,
+) -> Result<ImportResultData, DbError> {
+    let window_days = window_days.unwrap_or(DEFAULT_WINDOW_DAYS);
     let rules = crate::db::rules::active_engine_rules(conn)?;
-    let existing = existing_keys(conn, input.account_id)?;
-    let skip: HashSet<usize> = input.skip_rows.iter().copied().collect();
+    let existing = existing_keys(conn, account_id)?;
+    let skip: HashSet<usize> = skip_rows.iter().copied().collect();
 
     let tx = conn.unchecked_transaction()?;
     let mut seen: Vec<DedupKey> = Vec::new();
     let mut inserted = 0i64;
     let mut skipped = 0i64;
 
-    for staged in &parsed.rows {
+    for staged in parsed_rows {
         if skip.contains(&staged.row) {
             skipped += 1;
             continue;
@@ -335,7 +445,7 @@ pub fn commit(conn: &Connection, input: CommitInput, now_iso: &str) -> Result<Im
 
         let key = NaiveDate::parse_from_str(&row.posted_date, "%Y-%m-%d")
             .ok()
-            .map(|posted_date| DedupKey { account_id: input.account_id, amount_minor: row.amount_minor, posted_date });
+            .map(|posted_date| DedupKey { account_id, amount_minor: row.amount_minor, posted_date });
         let duplicate = find_duplicate_match(key.as_ref(), &existing, &seen, window_days).is_some();
         if let Some(k) = key {
             seen.push(k);
@@ -347,7 +457,7 @@ pub fn commit(conn: &Connection, input: CommitInput, now_iso: &str) -> Result<Im
                 payee, note, source, source_ref, pending_review, created_at)
              VALUES (?1, ?2, ?3, ?4, '1', ?5, ?6, ?7, 'import', ?8, ?9, ?10)",
             params![
-                input.account_id,
+                account_id,
                 row.posted_date,
                 row.amount_minor,
                 row.currency,
@@ -369,11 +479,64 @@ pub fn commit(conn: &Connection, input: CommitInput, now_iso: &str) -> Result<Im
 
     tx.execute(
         "INSERT INTO imports (filename, format, imported_at, row_count) VALUES (?1, ?2, ?3, ?4)",
-        params![input.filename, input.format, now_iso, inserted],
+        params![filename, format, now_iso, inserted],
     )?;
     tx.commit()?;
 
-    Ok(ImportResultData { inserted, skipped, malformed: parsed.errors.len() as i64 })
+    Ok(ImportResultData { inserted, skipped, malformed, currency_skipped })
+}
+
+/// Commit a CSV import as ONE ACID transaction: re-parse the file (deterministic; the file is the
+/// source of truth), skip `input.skip_rows`, resolve each remaining row's category exactly as
+/// `preview` did, and record the `imports` audit row. Rolls back on any error (all-or-nothing).
+pub fn commit(conn: &Connection, input: CommitInput, now_iso: &str) -> Result<ImportResultData, DbError> {
+    let currency = account_currency(conn, input.account_id)?;
+    let parsed = csv::parse_rows(input.content, input.mapping, &currency);
+    commit_rows(
+        conn,
+        &parsed.rows,
+        input.account_id,
+        input.filename,
+        input.format,
+        input.skip_rows,
+        parsed.errors.len() as i64,
+        0,
+        input.window_days,
+        now_iso,
+    )
+}
+
+/// Commit an OFX/QFX import as ONE ACID transaction (mirrors `commit` for CSV,
+/// `docs/adr/0011-ofx-import-wiring.md`): re-parse the file, drop (report, never insert) any row
+/// whose OWN currency does not match the account's - counted separately as `currency_skipped`, not
+/// `malformed` - then insert the rest exactly as `commit_rows` always has.
+#[allow(clippy::too_many_arguments)]
+pub fn commit_ofx(
+    conn: &Connection,
+    bytes: &[u8],
+    account_id: i64,
+    filename: &str,
+    format: &str,
+    skip_rows: &[usize],
+    window_days: Option<i64>,
+    now_iso: &str,
+) -> Result<ImportResultData, DbError> {
+    let currency = account_currency(conn, account_id)?;
+    let parsed = ofx::parse_ofx(bytes).map_err(|e| DbError::Invalid(e.to_string()))?;
+    let (rows, errors, currency_mismatches) =
+        split_by_account_currency(parsed.transactions, parsed.row_errors, &currency);
+    commit_rows(
+        conn,
+        &rows,
+        account_id,
+        filename,
+        format,
+        skip_rows,
+        errors.len() as i64,
+        currency_mismatches.len() as i64,
+        window_days,
+        now_iso,
+    )
 }
 
 #[cfg(test)]
@@ -742,6 +905,293 @@ mod tests {
         assert!(err.is_err());
         let count: i64 = conn.query_row("SELECT count(*) FROM transactions", [], |r| r.get(0)).unwrap();
         assert_eq!(count, 0);
+    }
+}
+
+#[cfg(test)]
+mod ofx_tests {
+    use super::*;
+    use crate::db::rules::{self, RuleInput};
+
+    fn db() -> Connection {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch("PRAGMA foreign_keys = ON;").unwrap();
+        super::super::run_migrations(&conn, "2026-06-06T00:00:00Z").unwrap();
+        super::super::seed_defaults(&conn).unwrap();
+        conn
+    }
+
+    // Seeded defaults: account id 1 = Cash (MUR); category 1 = Groceries (expense).
+
+    const OFX: &str = "<OFX><BANKMSGSRSV1><STMTTRNRS><STMTRS><CURDEF>MUR<BANKTRANLIST>\
+<STMTTRN><TRNTYPE>DEBIT<DTPOSTED>20260601<TRNAMT>-450.00<FITID>1001<NAME>Winners</STMTTRN>\
+<STMTTRN><TRNTYPE>CREDIT<DTPOSTED>20260602<TRNAMT>20000.00<FITID>1002<NAME>Salary</STMTTRN>\
+</BANKTRANLIST></STMTRS></STMTTRNRS></BANKMSGSRSV1></OFX>";
+
+    #[test]
+    fn preview_ofx_writes_nothing_and_suggests_categories() {
+        let conn = db();
+        rules::create(
+            &conn,
+            RuleInput {
+                match_field: "merchant",
+                match_op: "contains",
+                match_value: "winners",
+                set_field: "category",
+                set_value: "Groceries",
+                active: true,
+            },
+        )
+        .unwrap();
+
+        let data = preview_ofx(&conn, OFX.as_bytes(), 1, None).unwrap();
+        assert_eq!(data.rows.len(), 2);
+        assert!(data.errors.is_empty());
+        assert_eq!(data.currency, "MUR");
+        assert_eq!(data.rows[0].suggested_category, "Groceries");
+        assert_eq!(data.rows[0].amount_minor, -45_000);
+        assert!(!data.rows[0].duplicate);
+
+        let count: i64 = conn.query_row("SELECT count(*) FROM transactions", [], |r| r.get(0)).unwrap();
+        assert_eq!(count, 0, "preview must never write");
+    }
+
+    #[test]
+    fn preview_ofx_flags_duplicates_against_existing_rows() {
+        let conn = db();
+        // Seed an existing transaction the first OFX row duplicates.
+        commit_ofx(
+            &conn,
+            "<OFX><BANKMSGSRSV1><STMTTRNRS><STMTRS><CURDEF>MUR<BANKTRANLIST>\
+<STMTTRN><DTPOSTED>20260601<TRNAMT>-450.00<FITID>SEED-1</STMTTRN>\
+</BANKTRANLIST></STMTRS></STMTTRNRS></BANKMSGSRSV1></OFX>"
+                .as_bytes(),
+            1,
+            "seed.ofx",
+            "ofx",
+            &[],
+            None,
+            "2026-06-01T10:00:00Z",
+        )
+        .unwrap();
+
+        let data = preview_ofx(&conn, OFX.as_bytes(), 1, None).unwrap();
+        assert_eq!(data.duplicate_count, 1);
+        assert!(data.rows[0].duplicate, "matches the seeded existing row");
+        assert!(!data.rows[1].duplicate);
+    }
+
+    #[test]
+    fn commit_ofx_inserts_one_split_per_row_and_one_audit_row_with_ofx_format() {
+        let conn = db();
+        let result = commit_ofx(
+            &conn,
+            OFX.as_bytes(),
+            1,
+            "statement.ofx",
+            "ofx",
+            &[],
+            None,
+            "2026-06-06T10:00:00Z",
+        )
+        .unwrap();
+        assert_eq!(result.inserted, 2);
+        assert_eq!(result.skipped, 0);
+        assert_eq!(result.malformed, 0);
+
+        let txs: Vec<(i64, i64)> = {
+            let mut stmt = conn
+                .prepare("SELECT id, amount_minor FROM transactions ORDER BY id ASC")
+                .unwrap();
+            stmt.query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+                .unwrap()
+                .collect::<rusqlite::Result<Vec<_>>>()
+                .unwrap()
+        };
+        assert_eq!(txs.len(), 2);
+        assert_eq!(txs[0].1, -45_000);
+        assert_eq!(txs[1].1, 2_000_000);
+
+        for (tx_id, amount) in &txs {
+            let split_amount: i64 = conn
+                .query_row(
+                    "SELECT amount_minor FROM tx_splits WHERE transaction_id = ?1",
+                    params![tx_id],
+                    |r| r.get(0),
+                )
+                .unwrap();
+            assert_eq!(split_amount, *amount, "one split whose amount == the parent");
+        }
+
+        let audit: (String, String, i64) = conn
+            .query_row("SELECT filename, format, row_count FROM imports", [], |r| {
+                Ok((r.get(0)?, r.get(1)?, r.get(2)?))
+            })
+            .unwrap();
+        assert_eq!(audit, ("statement.ofx".to_string(), "ofx".to_string(), 2));
+    }
+
+    #[test]
+    fn commit_ofx_honours_skip_rows_by_block_ordinal() {
+        let conn = db();
+        let result = commit_ofx(
+            &conn,
+            OFX.as_bytes(),
+            1,
+            "c.ofx",
+            "ofx",
+            &[1], // skip the Salary row (block ordinal 1)
+            None,
+            "2026-06-06T10:00:00Z",
+        )
+        .unwrap();
+        assert_eq!(result.inserted, 1);
+        assert_eq!(result.skipped, 1);
+
+        let count: i64 = conn.query_row("SELECT count(*) FROM transactions", [], |r| r.get(0)).unwrap();
+        assert_eq!(count, 1);
+        let amount: i64 =
+            conn.query_row("SELECT amount_minor FROM transactions", [], |r| r.get(0)).unwrap();
+        assert_eq!(amount, -45_000, "the Winners row was kept, Salary was skipped");
+    }
+
+    #[test]
+    fn commit_ofx_is_one_transaction_rolled_back_on_a_bad_account() {
+        let conn = db();
+        let err = commit_ofx(&conn, OFX.as_bytes(), 999, "x.ofx", "ofx", &[], None, "2026-06-06T10:00:00Z");
+        assert!(err.is_err());
+        let count: i64 = conn.query_row("SELECT count(*) FROM transactions", [], |r| r.get(0)).unwrap();
+        assert_eq!(count, 0);
+    }
+
+    #[test]
+    fn a_row_whose_currency_differs_from_the_account_is_a_currency_mismatch_not_an_error() {
+        let conn = db();
+        // Cash (account 1) is MUR; this file's second transaction carries its own USD override.
+        let ofx = "<OFX><BANKMSGSRSV1><STMTTRNRS><STMTRS><CURDEF>MUR<BANKTRANLIST>\
+<STMTTRN><DTPOSTED>20260601<TRNAMT>-450.00<FITID>MUR-1<NAME>Winners</STMTTRN>\
+<STMTTRN><DTPOSTED>20260602<TRNAMT>-19.99<CURRENCY><CURSYM>USD<CURRATE>1.00</CURRENCY><FITID>USD-1<NAME>Streaming</STMTTRN>\
+</BANKTRANLIST></STMTRS></STMTTRNRS></BANKMSGSRSV1></OFX>";
+
+        let preview = preview_ofx(&conn, ofx.as_bytes(), 1, None).unwrap();
+        assert_eq!(preview.rows.len(), 1, "only the MUR row previews as importable");
+        assert!(
+            preview.errors.is_empty(),
+            "a currency mismatch is NOT a genuinely-malformed row - the row was read fine"
+        );
+        assert_eq!(preview.currency_mismatches.len(), 1);
+        assert_eq!(preview.currency_mismatches[0].row, 1, "block ordinal of the USD row");
+        let msg = &preview.currency_mismatches[0].message;
+        assert!(msg.contains("USD"), "names the row's own currency code");
+        assert!(msg.contains("MUR"), "names the account's currency code");
+        assert!(
+            !msg.contains("19.99") && !msg.contains("Streaming"),
+            "structural message only - never echoes financial data (currency codes are not secrets)"
+        );
+
+        let result = commit_ofx(
+            &conn,
+            ofx.as_bytes(),
+            1,
+            "mixed.ofx",
+            "ofx",
+            &[],
+            None,
+            "2026-06-06T10:00:00Z",
+        )
+        .unwrap();
+        assert_eq!(result.inserted, 1, "only the MUR row is imported");
+        assert_eq!(result.malformed, 0, "the USD row is not malformed - it parsed fine");
+        assert_eq!(
+            result.currency_skipped, 1,
+            "the USD row is reported as a currency mismatch, never silently imported"
+        );
+
+        let count: i64 = conn.query_row("SELECT count(*) FROM transactions", [], |r| r.get(0)).unwrap();
+        assert_eq!(count, 1);
+        let currency: String =
+            conn.query_row("SELECT currency FROM transactions", [], |r| r.get(0)).unwrap();
+        assert_eq!(currency, "MUR", "every imported row stays at the account's currency");
+    }
+
+    #[test]
+    fn a_genuinely_malformed_ofx_block_still_lands_in_errors_not_currency_mismatches() {
+        let conn = db();
+        // A transaction block missing TRNAMT entirely is a parse failure, not a currency issue.
+        let ofx = "<OFX><BANKMSGSRSV1><STMTTRNRS><STMTRS><CURDEF>MUR<BANKTRANLIST>\
+<STMTTRN><DTPOSTED>20260601<FITID>BAD-1<NAME>NoAmount</STMTTRN>\
+<STMTTRN><DTPOSTED>20260602<TRNAMT>-450.00<FITID>OK-1<NAME>Winners</STMTTRN>\
+</BANKTRANLIST></STMTRS></STMTTRNRS></BANKMSGSRSV1></OFX>";
+
+        let preview = preview_ofx(&conn, ofx.as_bytes(), 1, None).unwrap();
+        assert_eq!(preview.rows.len(), 1, "only the well-formed row previews as importable");
+        assert_eq!(preview.errors.len(), 1, "the missing-amount block is genuinely malformed");
+        assert!(preview.currency_mismatches.is_empty());
+
+        let result = commit_ofx(
+            &conn,
+            ofx.as_bytes(),
+            1,
+            "bad.ofx",
+            "ofx",
+            &[],
+            None,
+            "2026-06-06T10:00:00Z",
+        )
+        .unwrap();
+        assert_eq!(result.inserted, 1);
+        assert_eq!(result.malformed, 1, "the malformed block is counted as malformed");
+        assert_eq!(result.currency_skipped, 0);
+    }
+
+    #[test]
+    fn a_file_where_every_row_matches_the_account_currency_imports_in_full() {
+        let conn = db();
+        let result = commit_ofx(
+            &conn,
+            OFX.as_bytes(),
+            1,
+            "all-mur.ofx",
+            "ofx",
+            &[],
+            None,
+            "2026-06-06T10:00:00Z",
+        )
+        .unwrap();
+        assert_eq!(result.inserted, 2);
+        assert_eq!(result.malformed, 0);
+    }
+
+    #[test]
+    fn qfx_routes_through_the_same_path() {
+        let conn = db();
+        // A QFX document: same OFX grammar plus Intuit tags, which are ignored.
+        let qfx = "<OFX><SIGNONMSGSRSV1><SONRS><INTU.BID>1234</SONRS></SIGNONMSGSRSV1>\
+<BANKMSGSRSV1><STMTTRNRS><STMTRS><CURDEF>MUR\
+<BANKTRANLIST>\
+<STMTTRN><TRNTYPE>DEBIT<DTPOSTED>20260610<TRNAMT>-19.99<FITID>QFX-1<NAME>Streaming Co<INTU.SC>1234</STMTTRN>\
+</BANKTRANLIST></STMTRS></STMTTRNRS></BANKMSGSRSV1></OFX>";
+
+        let preview = preview_ofx(&conn, qfx.as_bytes(), 1, None).unwrap();
+        assert_eq!(preview.rows.len(), 1);
+        assert!(preview.errors.is_empty());
+
+        let result = commit_ofx(
+            &conn,
+            qfx.as_bytes(),
+            1,
+            "statement.qfx",
+            "qfx",
+            &[],
+            None,
+            "2026-06-06T10:00:00Z",
+        )
+        .unwrap();
+        assert_eq!(result.inserted, 1);
+
+        let (fmt,): (String,) =
+            conn.query_row("SELECT format FROM imports", [], |r| Ok((r.get(0)?,))).unwrap();
+        assert_eq!(fmt, "qfx");
     }
 }
 

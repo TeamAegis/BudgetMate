@@ -51,3 +51,7 @@ Consequences, and Alternatives considered.
   "Uncategorized" fallback; commands are stateless and re-parse the file on `preview`/`commit`. The
   file read is platform-branched: `std::fs` on desktop, `tauri-plugin-android-fs` for Android's
   `content://` URI. Wiring the OFX parser (ADR 0009) through the same pipeline is a follow-up.
+- [0011](0011-ofx-import-wiring.md): OFX/QFX import wiring (FR-2.2). OFX/QFX reuse the CSV
+  preview/commit pipeline via a promoted `StagedRow`; a transaction whose own currency differs from
+  the destination account's is reported as an error and never imported (imports carry no fx rate
+  yet); OFX/QFX have no mapping step (the file is self-describing).
