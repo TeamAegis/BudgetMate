@@ -64,6 +64,7 @@ pub fn run() {
             commands::vault::set_idle_timeout,
             commands::vault::set_biometric_enabled,
             commands::vault::set_base_currency,
+            commands::vault::set_dedup_window,
             commands::vault::currency_minor_units,
             commands::accounts::list_accounts,
             commands::accounts::create_account,

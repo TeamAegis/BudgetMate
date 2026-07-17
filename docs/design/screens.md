@@ -295,10 +295,12 @@ in the current Figma - design them to this spec.
 - **FR:** FR-4.x, FR-5.2, FR-3.1, FR-2.3, FR-1.x (accounts/categories foundation).
 - **Components:** **SettingsRow** (`app-settings-row`: leading Lucide icon + label + optional hint +
   trailing chevron/control) in **grouped** sections:
-  - **Your money** -> Accounts, Categories, Budgets/Envelopes, Rules, Base currency.
+  - **Your money** -> Accounts, Categories, Budgets/Envelopes, Rules, Import transactions,
+    Duplicate detection (FR-2.4: how many days apart, at the same amount, an imported row is
+    flagged as a possible duplicate - feeds the import dedup window), Base currency.
   - **General** -> Export, Backup/Restore, About/Privacy note.
   - **Security** -> Lock timeout (and the biometric/lock controls, FR-5.x).
-- **Commands:** `get_settings()`, `update_settings(dto)`.
+- **Commands:** `get_settings()`, `set_dedup_window(days)`, `update_settings(dto)`.
 
 ### 7.1a Accounts **[NEW - FR-1.x foundation]**
 - **FR:** underpins FR-1.1 (account picker), FR-1.4 (per-account currency), FR-3.x.

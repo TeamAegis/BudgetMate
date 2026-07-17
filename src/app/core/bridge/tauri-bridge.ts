@@ -107,6 +107,11 @@ export function setBiometricEnabled(enabled: boolean): Promise<VaultSettings> {
 export function setBaseCurrency(currency: string): Promise<VaultSettings> {
   return invoke<VaultSettings>('set_base_currency', { currency });
 }
+/** Set the dedup window in days (FR-2.4); clamped to 0-30 in Rust. Read by the import preview/
+ *  commit commands so the flags reviewed match what commit persists. */
+export function setDedupWindow(days: number): Promise<VaultSettings> {
+  return invoke<VaultSettings>('set_dedup_window', { days });
+}
 /** Authoritative currency minor-unit-digit table from Rust (single source of truth for money scale). */
 export function currencyMinorUnits(): Promise<CurrencyMinorUnits> {
   return invoke<CurrencyMinorUnits>('currency_minor_units');

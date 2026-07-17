@@ -19,7 +19,7 @@ describe('BudgetForm', () => {
   });
 
   function settings(): VaultSettings {
-    return { idleTimeoutSecs: 120, biometricEnabled: false, baseCurrency: 'MUR' };
+    return { idleTimeoutSecs: 120, biometricEnabled: false, baseCurrency: 'MUR', dedupWindowDays: 3 };
   }
 
   function category(id: number, name: string, kind: Category['kind'] = 'expense'): Category {
