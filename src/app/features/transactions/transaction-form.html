@@ -10,9 +10,10 @@
   } @else {
     <!-- Save lives in the app header (keyboard-safe); ngSubmit keeps Enter-to-save working. -->
     <form class="form-body" [formGroup]="form" (ngSubmit)="save()">
-      <!-- Amount-first (genre quick-entry): the amount is the hero field. -->
+      <!-- Amount-first (genre quick-entry): the amount is THE hero - the one number this screen
+           exists for renders at balance scale (retention P2/P4). -->
       <div class="amount-row">
-        <app-form-field label="Amount" [hint]="amountHint()" [error]="amountError()">
+        <app-form-field label="Amount" class="amount-hero" [hint]="amountHint()" [error]="amountError()">
           <input type="text" inputmode="decimal" formControlName="amount" placeholder="0.00" class="numeric" />
         </app-form-field>
         <app-form-field label="Currency" class="currency-field" [error]="currencyError()">
@@ -65,10 +66,13 @@
       with >=2 lines each split is a card (category on top, amount + remove below). -->
       <div class="splits" formArrayName="splits">
         <div class="splits-head">
-          <span class="splits-title">{{ splits.length > 1 ? 'Split across categories' : 'Category' }}</span>
+          <!-- Single line: the field's own "Category" label suffices - no doubled heading. -->
+          @if (splits.length > 1) {
+            <span class="splits-title">Split across categories</span>
+          }
           <button type="button" class="add-split" (click)="addSplit()" [disabled]="busy()">
             <svg lucidePlus [size]="16" aria-hidden="true"></svg>
-            <span>{{ splits.length > 1 ? 'Add' : 'Split' }}</span>
+            <span>{{ splits.length > 1 ? 'Add' : 'Split across categories' }}</span>
           </button>
         </div>
 

@@ -5,6 +5,10 @@
     (selected)="onFabSelect($event)"
   />
 
+  @if (savedNotice(); as msg) {
+    <app-banner tone="success">{{ msg }}</app-banner>
+  }
+
   @if (error(); as err) {
     <app-banner>{{ err }}</app-banner>
   }
@@ -31,7 +35,7 @@
   } @else {
     @for (group of grouped(); track group.date) {
       <div class="date-group">
-        <h2 class="date-heading">{{ group.date }}</h2>
+        <h2 class="date-heading">{{ group.date | friendlyDate }}</h2>
         <ul class="rows">
           @for (t of group.items; track t.tx.id) {
             <li

@@ -2,14 +2,11 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+  // Reserve space so the FAB never occludes the last row (design-system §7 FAB rule).
+  padding-bottom: calc(var(--layout-fab-size) + var(--space-6));
 }
 
 // Screen title + back live in the AppHeader (app shell); this row holds only the Add action.
-.page-actions {
-  display: flex;
-  justify-content: flex-end;
-}
-
 .rows {
   list-style: none;
   margin: 0;

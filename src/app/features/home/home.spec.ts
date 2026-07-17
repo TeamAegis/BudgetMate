@@ -128,7 +128,7 @@ describe('Home', () => {
     expect(host.querySelector('app-balance-card')).toBeNull();
   });
 
-  it('populated state: renders the hero balance, ready-to-spend line, spend figure, recent activity, and goals', () => {
+  it('populated state: Ready-to-spend hero, stat row, quick-add menu, recent activity, and goals', () => {
     const fixture = createFixture();
     fixture.detectChanges();
     const component = fixture.componentInstance as unknown as HomeInternals;
@@ -140,21 +140,45 @@ describe('Home', () => {
 
     const host = fixture.nativeElement as HTMLElement;
     expect(host.querySelector('app-empty-state')).toBeNull();
+    // The hero answers "what's left to spend": usable 425_025 minor -> Rs 4,250.25.
     expect(host.querySelector('app-balance-card')).not.toBeNull();
-    // Total balance 465_050 minor -> Rs 4,650.50 via the shared money pipe.
-    expect(host.textContent).toContain('4,650.50');
-    // Ready-to-spend: usable 425_025 minor -> Rs 4,250.25.
+    expect(host.textContent).toContain('Ready to spend');
     expect(host.textContent).toContain('4,250.25');
-    expect(host.textContent).toContain('ready to spend');
     expect(host.textContent).toContain('set aside for goals');
+    // Total balance moves to a secondary stat (shown because goalsReservedMinor > 0):
+    // 465_050 minor -> Rs 4,650.50.
+    expect(host.textContent).toContain('Total balance');
+    expect(host.textContent).toContain('4,650.50');
     // Spend figure: 50_075 minor -> Rs 500.75.
     expect(host.textContent).toContain('Spent this month');
     expect(host.textContent).toContain('500.75');
     expect(host.textContent).toContain('so far');
+    // Quick-add is present in the thumb zone (retention P2/P9).
+    expect(host.querySelector('app-fab-menu')).not.toBeNull();
     expect(host.querySelector('app-goal-progress-row')).not.toBeNull();
     expect(host.textContent).toContain('Supermarket');
     // The chart lives behind @defer (on viewport) - not rendered synchronously in this test.
     expect(host.querySelector('app-balance-trend-chart')).toBeNull();
+  });
+
+  it('the trend section renders AFTER quick actions, recent activity, and goals (context last)', () => {
+    const fixture = createFixture();
+    fixture.detectChanges();
+    const component = fixture.componentInstance as unknown as HomeInternals;
+    component.loading.set(false);
+    component.error.set(null);
+    component.dashboard.set(sampleDashboard);
+    component.transactions.set([sampleTransaction]);
+    fixture.detectChanges();
+
+    const host = fixture.nativeElement as HTMLElement;
+    const text = host.textContent ?? '';
+    const order = ['Ready to spend', 'Spent this month', 'Quick actions', 'Recent activity', 'Goals', 'Balance trend'];
+    const positions = order.map((s) => text.indexOf(s));
+    expect(positions.every((p) => p >= 0)).toBe(true, `all sections must render: ${positions.join(',')}`);
+    for (let i = 1; i < positions.length; i++) {
+      expect(positions[i]).toBeGreaterThan(positions[i - 1], `${order[i]} must come after ${order[i - 1]}`);
+    }
   });
 
   it('recent-activity row shows the base-currency equivalent only for a foreign-currency transaction', () => {
@@ -211,7 +235,7 @@ describe('Home', () => {
     expect(host.textContent).toContain('is more than your free balance right now');
   });
 
-  it('no ready-to-spend line when nothing has been set aside for goals', () => {
+  it('nothing set aside for goals: no duplicate Total-balance stat, whole-balance subline instead', () => {
     const fixture = createFixture();
     fixture.detectChanges();
     const component = fixture.componentInstance as unknown as HomeInternals;
@@ -221,7 +245,9 @@ describe('Home', () => {
     fixture.detectChanges();
 
     const host = fixture.nativeElement as HTMLElement;
-    expect(host.textContent).not.toContain('ready to spend');
+    // The hero already IS the whole balance - a Total-balance stat would duplicate it.
+    expect(host.textContent).not.toContain('Total balance');
+    expect(host.textContent).toContain('nothing set aside for goals yet');
   });
 
   it('foreign-currency caveat note appears only when accounts/goals are excluded', () => {

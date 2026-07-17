@@ -1,4 +1,14 @@
 <section class="feature-page">
+  <!-- Quick-add in the thumb zone on the landing tab (retention P2/P9): same labelled menu as
+       Expenses. Hidden while the teaching empty state carries the single CTA. -->
+  @if (!loading() && dashboard() && !dashboard()!.isEmpty) {
+    <app-fab-menu
+      ariaLabel="Add a transaction or scan a receipt"
+      [items]="fabItems"
+      (selected)="onFabSelect($event)"
+    />
+  }
+
   @if (loading()) {
     <div class="skeletons" aria-busy="true">
       <app-skeleton variant="block" height="120px" />
@@ -21,28 +31,35 @@
         (action)="addExpense()"
       />
     } @else {
+      <!-- The one glanceable answer (P3): what can I still spend? usableBalanceMinor comes from
+           Rust (total minus goals reserve) - no money math here. -->
       <app-balance-card
-        label="Total balance"
-        [amountMinor]="d.totalBalanceMinor"
+        label="Ready to spend"
+        [amountMinor]="d.usableBalanceMinor"
         [currency]="d.baseCurrency"
       />
-      @if (readyToSpendLine(); as ready) {
-        <p class="ready-line">
-          {{ ready }}
-          @if (readyToSpendExplainer(); as explainer) {
-            <span class="ready-explainer">{{ explainer }}</span>
-          }
-        </p>
+      @if (heroSubline(); as sub) {
+        <p class="hero-subline">{{ sub }}</p>
       }
 
-      <app-card class="spend-figure" [attr.aria-busy]="refreshing() || null">
-        <span class="label">Spent this month</span>
-        <span class="amount numeric">{{ { amountMinor: d.thisMonthSpendMinor, currency: d.baseCurrency } | money }}</span>
-        <span class="caption">so far</span>
-        @if (refreshing()) {
-          <app-spinner [size]="18" label="Updating" />
+      <div class="stat-row">
+        <app-card class="stat" [attr.aria-busy]="refreshing() || null">
+          <span class="label">Spent this month</span>
+          <span class="amount numeric">{{ { amountMinor: d.thisMonthSpendMinor, currency: d.baseCurrency } | money }}</span>
+          <span class="caption">so far</span>
+          @if (refreshing()) {
+            <app-spinner [size]="18" label="Updating" />
+          }
+        </app-card>
+        @if (d.goalsReservedMinor > 0) {
+          <!-- Only shown when it differs from the hero (otherwise it duplicates it). -->
+          <app-card class="stat">
+            <span class="label">Total balance</span>
+            <span class="amount numeric">{{ { amountMinor: d.totalBalanceMinor, currency: d.baseCurrency } | money }}</span>
+            <span class="caption">including goals</span>
+          </app-card>
         }
-      </app-card>
+      </div>
 
       @if (caveatNote(); as note) {
         <app-banner tone="info">
@@ -50,18 +67,9 @@
         </app-banner>
       }
 
-      @if (showTrend()) {
-        <p class="section-title">Balance trend</p>
-        @defer (on viewport) {
-          <app-balance-trend-chart [points]="linePoints()" [currency]="d.baseCurrency" />
-        } @placeholder {
-          <app-skeleton variant="block" height="180px" />
-        }
-      }
-
       <p class="section-title">Quick actions</p>
       <div class="tiles">
-        <a app-action-tile routerLink="/expenses/new" label="Add expense">
+        <a app-action-tile routerLink="/expenses/new/expense" label="Add expense">
           <svg icon lucidePlus [size]="24" aria-hidden="true"></svg>
         </a>
         <a app-action-tile routerLink="/import" label="Scan receipt">
@@ -122,6 +130,17 @@
             </li>
           }
         </ul>
+      }
+
+      <!-- The trend is context, not the answer - it renders LAST, after the actionable content
+           (P3/P4), still deferred so Chart.js never touches the eager chunk. -->
+      @if (showTrend()) {
+        <p class="section-title">Balance trend</p>
+        @defer (on viewport) {
+          <app-balance-trend-chart [points]="linePoints()" [currency]="d.baseCurrency" />
+        } @placeholder {
+          <app-skeleton variant="block" height="180px" />
+        }
       }
     }
   }
