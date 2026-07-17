@@ -356,6 +356,99 @@ export interface UpdateGoal extends NewGoal {
   id: number;
 }
 
+// ── Bank-file import (FR-2.2, mirrors import:: / db::imports / commands::import) ──
+
+/** Supported/target bank-file formats (mirrors Rust `import::ImportFormat`). Only `'csv'` is wired
+ *  end-to-end; `'ofx'`/`'qfx'` are reserved for a later change (issue #13). */
+export type ImportFormat = 'csv' | 'ofx' | 'qfx';
+
+/** Header row + a few sample data rows for the column-mapping step (mirrors Rust
+ *  `commands::import::ImportHeaders`). */
+export interface ImportHeaders {
+  headers: string[];
+  sampleRows: string[][];
+}
+
+/** Which source column (0-based index into `ImportHeaders.headers`) feeds each target field
+ *  (mirrors Rust `commands::import::ColumnMappingInput`). `date`/`amount` are required; the rest
+ *  are optional - omit (or pass `null`) a column that has no source in the file. */
+export interface ColumnMappingInput {
+  date: number;
+  amount: number;
+  payee?: number | null;
+  note?: number | null;
+  sourceRef?: number | null;
+}
+
+/** A data row that failed to parse - reported to the user, never silently dropped (mirrors Rust
+ *  `import::csv::RowError`). `row` is the stable 0-based data-row index (excludes the header row);
+ *  it is the same index `preview`/`commit` use for `ImportCommitInput.skipRows`. */
+export interface RowError {
+  row: number;
+  message: string;
+}
+
+/** Input for `importPreview` (mirrors Rust `commands::import::ImportPreviewInput`). */
+export interface ImportPreviewInput {
+  path: string;
+  format: ImportFormat;
+  accountId: number;
+  mapping: ColumnMappingInput;
+}
+
+/**
+ * One parsed row annotated for the review screen (mirrors Rust `db::imports::PreviewRow`).
+ * `amountMinor` is the file's SIGNED amount (sign comes from the data, NOT a category kind - the
+ * one place imports differ from manual entry, see `docs/adr/0010-csv-import-model.md`).
+ * `suggestedCategory` is always the ACTUAL category NAME `importCommit` will store (a fired rule's
+ * category when it names an existing, sign-matching category, else the sign-correct
+ * "Uncategorized"/"Uncategorized income" fallback) - never stale rule text, and preview always
+ * agrees with commit. `suggestedCategoryReason` is the deterministic reason (e.g. "matched rule:
+ * merchant contains 'winners'"), `null` when it is the Uncategorized fallback. `duplicate` is
+ * advisory only (FR-2.4 never deletes) - the reviewing step lets the user keep or skip each row;
+ * `duplicateReason` names the matched row's date (e.g. "same amount as a transaction on
+ * 2026-06-01"), `null` when not a duplicate.
+ */
+export interface PreviewRow {
+  row: number;
+  postedDate: string;
+  amountMinor: number;
+  currency: Iso4217;
+  payee: string | null;
+  note: string | null;
+  sourceRef: string | null;
+  suggestedCategory: string;
+  suggestedCategoryReason: string | null;
+  duplicate: boolean;
+  duplicateReason: string | null;
+}
+
+/** Result of `importPreview` (mirrors Rust `db::imports::ImportPreviewData`). Nothing is written -
+ *  the user reviews and confirms before `importCommit`. */
+export interface ImportPreviewData {
+  rows: PreviewRow[];
+  errors: RowError[];
+  duplicateCount: number;
+  currency: Iso4217;
+}
+
+/** Input for `importCommit` (mirrors Rust `commands::import::ImportCommitInput`). `skipRows` are
+ *  the 0-based data-row indices the user chose not to import (e.g. a flagged duplicate). */
+export interface ImportCommitInput {
+  path: string;
+  format: ImportFormat;
+  accountId: number;
+  mapping: ColumnMappingInput;
+  skipRows: number[];
+}
+
+/** Result of committing an import (mirrors Rust `db::imports::ImportResultData`). */
+export interface ImportResultData {
+  inserted: number;
+  skipped: number;
+  malformed: number;
+}
+
 // ── Budgets / envelopes (FR-3.1) ──────────────────────────────────────────────────
 
 /** v1 supports monthly budgets only. Mirrors Rust `domain::budget::MONTHLY_PERIOD`. */

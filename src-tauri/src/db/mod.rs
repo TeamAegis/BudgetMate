@@ -10,6 +10,7 @@ pub mod budgets;
 pub mod categories;
 pub mod dashboard;
 pub mod goals;
+pub mod imports;
 pub mod recurring;
 pub mod reports;
 pub mod rules;

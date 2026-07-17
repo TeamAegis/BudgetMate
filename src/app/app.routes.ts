@@ -231,5 +231,12 @@ export const routes: Routes = [
     data: { title: 'Import', back: true },
     loadComponent: () => import('./features/import/import').then((m) => m.Import),
   },
+  {
+    // Bank-file import wizard (FR-2.2). CSV is wired; OFX/QFX are issue #13.
+    path: 'import/file',
+    canActivate: [unlockGuard],
+    data: { title: 'Import transactions', back: true },
+    loadComponent: () => import('./features/import/import-file').then((m) => m.ImportFile),
+  },
   { path: '**', redirectTo: 'home' },
 ];

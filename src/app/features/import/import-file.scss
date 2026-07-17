@@ -1,0 +1,234 @@
+.feature-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.note {
+  color: var(--c-text-muted);
+  font-size: var(--t-body);
+  text-align: center;
+  margin: 0;
+}
+
+.loading-accounts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.processing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-6) 0;
+  color: var(--c-text-muted);
+}
+
+.state-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  text-align: center;
+  padding: var(--space-5) var(--space-4);
+
+  h2 {
+    margin: 0;
+    font-size: var(--t-title);
+  }
+
+  p {
+    margin: 0;
+    color: var(--c-text-muted);
+    max-width: 36ch;
+  }
+}
+
+.state-icon {
+  color: var(--c-warning-700);
+
+  &.success {
+    color: var(--c-positive-700);
+  }
+}
+
+.state-actions,
+.wizard-actions {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: flex-end;
+  width: 100%;
+}
+
+.state-actions {
+  justify-content: center;
+}
+
+.sample-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
+  background: var(--c-surface);
+}
+
+.sample-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: var(--t-caption);
+
+  caption {
+    caption-side: top;
+    text-align: left;
+    padding: var(--space-2) var(--space-3) 0;
+    color: var(--c-text-muted);
+  }
+
+  th,
+  td {
+    padding: var(--space-2) var(--space-3);
+    white-space: nowrap;
+    text-align: left;
+  }
+
+  th {
+    color: var(--c-text-muted);
+    font-weight: var(--fw-medium);
+    border-bottom: 1px solid var(--c-border);
+  }
+}
+
+.preview-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.preview-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-left: 3px solid transparent; // reserved so toggling skip never shifts layout
+
+  // Left-out rows: a neutral surface tint + strikethrough (never opacity - opacity would drop the
+  // already-muted caption text below AA contrast, design#2). Paired with the toggle's icon + "Left
+  // out" label switch, never colour alone.
+  &.skipped {
+    background: var(--c-border);
+    border-left-color: var(--c-text-muted);
+
+    .row-title,
+    .row-amount {
+      text-decoration: line-through;
+    }
+  }
+}
+
+.row-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+  grid-column: 1;
+}
+
+.row-title {
+  font-weight: var(--fw-medium);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row-meta {
+  color: var(--c-text-muted);
+  font-size: var(--t-caption);
+}
+
+// The deterministic "why" for a suggested category or a possible-duplicate flag
+// (.claude/rules/design.md "Show the deterministic reason...") - small caption text under the row.
+.row-reason {
+  color: var(--c-text-muted);
+  font-size: var(--t-caption);
+}
+
+.dup-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  width: fit-content;
+  padding: var(--space-0-5) var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--c-warning-soft);
+  color: var(--c-warning-700);
+  font-size: var(--t-caption);
+  font-weight: var(--fw-medium);
+}
+
+.row-amount {
+  font-weight: var(--fw-semibold);
+  white-space: nowrap;
+}
+
+// The keep/skip control: a real button (not a bare checkbox) so the whole thing is >= the
+// tap-target-min floor (design#1) and carries a per-row accessible name (design#3, see the
+// template's [attr.aria-label]) instead of the generic "Import".
+.row-toggle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  min-width: var(--tap-target-min);
+  min-height: var(--tap-target-min);
+  padding: var(--space-1) var(--space-2);
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--c-text-muted);
+  font: inherit;
+  font-size: var(--t-caption);
+  cursor: pointer;
+
+  &[aria-pressed='true'] {
+    color: var(--c-positive-700);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--c-focus-ring);
+    outline-offset: 2px;
+  }
+}
+
+.malformed {
+  border-radius: var(--radius-md);
+  background: var(--c-danger-soft);
+  padding: var(--space-3) var(--space-4);
+
+  h2 {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin: 0 0 var(--space-2);
+    font-size: var(--t-section);
+    color: var(--c-danger-700);
+  }
+
+  ul {
+    margin: 0;
+    padding-left: var(--space-5);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    font-size: var(--t-body);
+    color: var(--c-text-muted);
+  }
+}

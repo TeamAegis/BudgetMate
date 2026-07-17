@@ -37,6 +37,12 @@ import type {
   UpdateBudget,
   EnvelopeSummary,
   ReceiptExtraction,
+  ImportFormat,
+  ImportHeaders,
+  ImportPreviewInput,
+  ImportPreviewData,
+  ImportCommitInput,
+  ImportResultData,
   ReportData,
   ReportPeriod,
   DashboardData,
@@ -258,6 +264,45 @@ export async function pickReceiptImage(): Promise<string | null> {
  */
 export function extractReceipt(imagePath: string): Promise<ReceiptExtraction> {
   return invoke<ReceiptExtraction>('extract_receipt', { imagePath });
+}
+
+// ── Bank-file import (FR-2.2) ────────────────────────────────────────────────────
+// CSV is wired end-to-end; OFX/QFX are reserved for a later change (issue #13). Nothing is
+// written until `importCommit` - the wizard always shows a reviewing step first.
+
+/**
+ * Open the native picker for a bank-statement file and return its local path (or `null` if
+ * cancelled). The file stays on-device; nothing is uploaded. Routed through the bridge so the
+ * dialog ACL stays auditable.
+ */
+export async function pickImportFile(): Promise<string | null> {
+  const selected = await openDialog({
+    multiple: false,
+    directory: false,
+    filters: [{ name: 'Bank statement (CSV)', extensions: ['csv', 'txt'] }],
+  });
+  return typeof selected === 'string' ? selected : null;
+}
+
+/** Read the header row + a few sample data rows of a picked file, for the column-mapping step. */
+export function importReadHeaders(path: string, format: ImportFormat): Promise<ImportHeaders> {
+  return invoke<ImportHeaders>('import_read_headers', { path, format });
+}
+
+/**
+ * Parse the file against a column mapping, apply the active rules + dedup, and return the rows
+ * for review. Writes nothing - the user confirms on the reviewing step (`importCommit`).
+ */
+export function importPreview(input: ImportPreviewInput): Promise<ImportPreviewData> {
+  return invoke<ImportPreviewData>('import_preview', { input });
+}
+
+/**
+ * Commit the import as one ACID batch, skipping any rows the user chose not to import. Malformed
+ * rows are never included - they were already excluded and reported at the preview step.
+ */
+export function importCommit(input: ImportCommitInput): Promise<ImportResultData> {
+  return invoke<ImportResultData>('import_commit', { input });
 }
 
 // ── Reporting (FR-3.3) ───────────────────────────────────────────────────────────

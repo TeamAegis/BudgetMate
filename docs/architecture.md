@@ -424,21 +424,26 @@ traceability table (`functional-requirements.md` §5) carries the same status pe
   user-entered fx rate + derived base amount), recurrence (lazy materialisation), savings goals,
   deterministic categorisation rules (management + `preview_rules`), accounts, categories, OCR
   field extraction (Android), passphrase/biometric unlock, lock-on-background, SQLCipher at rest,
-  schema migrations, envelope budgeting (FR-3.1; monthly caps per category, `list_envelopes`
+  schema migrations, **CSV bank-file import** (FR-2.2/2.3/2.4: `import_read_headers` /
+  `import_preview` / `import_commit`, column mapping, rule-engine category suggestion, dedup
+  review with a keep/skip toggle, ACID batch commit + `imports` audit row - see ADR 0010),
+  envelope budgeting (FR-3.1; monthly caps per category, `list_envelopes`
   aggregates `tx_splits` in base currency and classifies under/approaching/over), local
   reporting/analytics aggregations (FR-3.3), the home dashboard (`get_dashboard`), transaction
   export to CSV/XLSX (FR-4.2, desktop-first - `export_transactions` + the save dialog; ADR 0006),
   encrypted local backup (FR-4.1, desktop-first - `create_backup` + the save dialog; ADR 0007),
   and restore from backup (FR-4.3, desktop-first, REPLACE mode only - `restore_backup` + the open
   dialog; ADR 0008).
-- **Partial:** dedup (matcher written in `rules/dedup.rs`, not wired into import or manual entry);
+- **Partial:** dedup (matcher in `rules/dedup.rs`; wired into CSV import's preview/commit, still
+  not wired into manual entry); OFX/QFX import (the parser is built and unit-tested per ADR 0009,
+  but is not wired to the command surface - the `import_*` commands reject a non-CSV format);
   export (FR-4.2), backup (FR-4.1), and restore (FR-4.3) are all desktop-only - the Android
   SAF-backed save/open is a separate, device-verified follow-up for each (ADR 0006, ADR 0007, ADR
   0008); restore's Merge mode is also deferred (Replace only so far; issue #21 follow-up);
   performance metrics (web payload size tracked; Android install-size metric pending issue #4).
-- **Specified only (little or no runtime code):** the import pipeline + review UI (FR-2.2), the
-  income/onboarding profile (`set_onboarding_profile`), and savings-backed allowances (FR-3.4;
-  domain spec `docs/allowances.md` + ADR 0005, no schema or runtime code yet).
+- **Specified only (little or no runtime code):** the income/onboarding profile
+  (`set_onboarding_profile`), and savings-backed allowances (FR-3.4; domain spec
+  `docs/allowances.md` + ADR 0005, no schema or runtime code yet).
 
 ### 11.2 Open product questions (from the 2026-06 financial-domain review)
 Recorded so they are not lost. These are **observations and recommendations, not committed scope**

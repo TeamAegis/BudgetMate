@@ -8,6 +8,7 @@ import {
   LucideRepeat,
   LucideCoins,
   LucideFunnel,
+  LucideFileUp,
   LucidePiggyBank,
   LucideDownload,
   LucideDatabaseBackup,
@@ -29,6 +30,7 @@ import { PrivacyNote } from '../../shared/ui/privacy-note/privacy-note';
     LucideRepeat,
     LucideCoins,
     LucideFunnel,
+    LucideFileUp,
     LucidePiggyBank,
     LucideDownload,
     LucideDatabaseBackup,
@@ -67,6 +69,12 @@ import { PrivacyNote } from '../../shared/ui/privacy-note/privacy-note';
         <li>
           <a app-settings-row routerLink="/settings/rules" label="Rules" hint="Auto-categorise by merchant">
             <svg icon lucideFunnel [size]="24" aria-hidden="true"></svg>
+            <svg trailing lucideChevronRight [size]="18" aria-hidden="true"></svg>
+          </a>
+        </li>
+        <li>
+          <a app-settings-row routerLink="/import/file" label="Import transactions" hint="Bring in a CSV bank statement">
+            <svg icon lucideFileUp [size]="24" aria-hidden="true"></svg>
             <svg trailing lucideChevronRight [size]="18" aria-hidden="true"></svg>
           </a>
         </li>

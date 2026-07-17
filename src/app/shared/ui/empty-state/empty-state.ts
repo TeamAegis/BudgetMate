@@ -23,7 +23,7 @@ import { Button } from '../button/button';
       }
       <p>{{ message() }}</p>
       @if (cta(); as label) {
-        <app-button variant="primary" (click)="action.emit()">{{ label }}</app-button>
+        <app-button variant="primary" [loading]="ctaLoading()" (click)="action.emit()">{{ label }}</app-button>
       }
     </div>
   `,
@@ -36,5 +36,8 @@ export class EmptyState {
   readonly cta = input<string | null>(null);
   /** Grow to fill the parent and centre vertically (for screens that are only an empty state). */
   readonly fill = input(false);
+  /** In-flight CTA (e.g. a file/header read already running) - shows a spinner and disables the
+   *  button so it can't be re-tapped mid-operation. */
+  readonly ctaLoading = input(false);
   readonly action = output<void>();
 }

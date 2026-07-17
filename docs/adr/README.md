@@ -46,3 +46,8 @@ Consequences, and Alternatives considered.
   XML/SGML dependency); amounts route through `domain::money::parse_minor`, currency is never
   guessed, and malformed rows are reported as `RowError`s, never dropped. Command/DB wiring is a
   separate change (issue #12).
+- [0010](0010-csv-import-model.md): CSV import model (FR-2.2). Imported amounts keep the file's own
+  sign (no category-kind derivation); category resolves via the rule engine with a sign-aware
+  "Uncategorized" fallback; commands are stateless and re-parse the file on `preview`/`commit`. The
+  file read is platform-branched: `std::fs` on desktop, `tauri-plugin-android-fs` for Android's
+  `content://` URI. Wiring the OFX parser (ADR 0009) through the same pipeline is a follow-up.

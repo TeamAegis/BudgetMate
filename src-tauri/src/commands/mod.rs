@@ -8,6 +8,7 @@ pub mod categories;
 pub mod dashboard;
 pub mod export;
 pub mod goals;
+pub mod import;
 pub mod ocr;
 pub mod recurring;
 pub mod report;
