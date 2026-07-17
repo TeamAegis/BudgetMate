@@ -1,9 +1,12 @@
 <section class="feature-page">
-  <app-fab-menu
-    ariaLabel="Add a transaction or scan a receipt"
-    [items]="fabItems"
-    (selected)="onFabSelect($event)"
-  />
+  <!-- The FabMenu yields to the empty state's single CTA (one affordance at a time). -->
+  @if (loading() || transactions().length > 0 || error()) {
+    <app-fab-menu
+      ariaLabel="Add a transaction or scan a receipt"
+      [items]="fabItems"
+      (selected)="onFabSelect($event)"
+    />
+  }
 
   @if (savedNotice(); as msg) {
     <app-banner tone="success">{{ msg }}</app-banner>

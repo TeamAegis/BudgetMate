@@ -71,6 +71,22 @@
   border: 1px solid var(--c-border);
   border-radius: var(--radius-md);
   background: var(--c-surface);
+  // The design-system scroll-affordance EXCEPTION: wide data needs a visible position indicator
+  // (scrollbars are hidden app-wide for chrome, not for scannable data - design-system §4.5).
+  scrollbar-width: thin;
+  &::-webkit-scrollbar {
+    display: block;
+    height: var(--space-1);
+  }
+  &::-webkit-scrollbar-thumb {
+    background: var(--c-border);
+    border-radius: var(--radius-pill);
+  }
+}
+
+// Headers never truncate ("Amour"): columns take their content width and the wrap scrolls.
+.sample-table th {
+  white-space: nowrap;
 }
 
 .sample-table {
@@ -151,6 +167,19 @@
 .row-meta {
   color: var(--c-text-muted);
   font-size: var(--t-caption);
+}
+
+// Idle-state lede + supporting illustration (mirrors features/import/import.scss).
+.lede {
+  margin: 0;
+  font-size: var(--t-title);
+  color: var(--c-text);
+  text-align: center;
+}
+.idle-art {
+  align-self: center;
+  max-height: 200px;
+  max-width: 100%;
 }
 
 // The deterministic "why" for a suggested category or a possible-duplicate flag

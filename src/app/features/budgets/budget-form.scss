@@ -21,8 +21,10 @@
   gap: var(--space-4);
 }
 
+// Left-aligned like every other amount input in the app (audit finding 24) - right-alignment
+// is for read-only numeric COLUMNS, not a lone entry field.
 .numeric {
-  text-align: right;
+  text-align: left;
 }
 
 // Plain informational display for the read-only Category field on the edit page. Not an <input>

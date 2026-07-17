@@ -32,7 +32,7 @@
 
       <app-form-field
         label="Monthly limit"
-        [hint]="'In ' + baseCurrency() + ', your reporting currency'"
+        [hint]="'In ' + baseCurrency() + ' - the currency your reports add up in.'"
         [error]="capError()"
       >
         <input type="text" inputmode="decimal" formControlName="cap" placeholder="0.00" class="numeric" />

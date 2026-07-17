@@ -74,8 +74,12 @@ the UI/UX principles, UX laws, WCAG 2.2, and anti-patterns - lives in
   and every other add/edit form stay single pages. See `docs/design/screens.md` §4.2/§8.0.
 - **Buttons are slightly rounded** via `--radius-button` (14px) - not a full pill; the shared
   `Button` uses this token (the FormActions Save and the ActionTile/SettingsRow chrome all sit on it).
-- **Expenses primary action is a `FabMenu`** (`app-fab-menu`, tap-to-open, labelled *Add expense* /
-  *Scan receipt*), not the old long-press FAB; Goals keeps a simple single-action FAB.
+- **Quick-add is a `FabMenu` on Home and Expenses** (`app-fab-menu`, tap-to-open, labelled
+  *Add expense* / *Add income* / *Scan receipt* - the labelled item carries the ADR 0004 kind, so
+  it deep-links to that kind's category picker), not the old long-press FAB. **Every other list's
+  add action is a thumb-zone FAB** (Goals, Budgets, Accounts, Categories, Recurring, Rules) - never
+  a top-right Add button. FAB/FabMenu hide while an empty state's CTA is on screen (one affordance
+  at a time).
 - **Charts:** bundled **Chart.js (canvas)** only - never a remote chart script, never static
   image charts. (TrendChart, pie, line.)
 - BottomNav canonical tabs: **Home · Expenses · Goals · Analytics** (one label set - do not

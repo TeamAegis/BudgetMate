@@ -23,7 +23,7 @@
         />
       </app-form-field>
 
-      <app-form-field label="Currency" hint="3-letter ISO code, e.g. MUR" [error]="currencyError()">
+      <app-form-field label="Currency" hint="A currency code, like MUR or USD." [error]="currencyError()">
         <input type="text" formControlName="currency" maxlength="3" class="numeric" />
       </app-form-field>
     </form>

@@ -1,5 +1,8 @@
 <section class="feature-page">
-  <app-fab ariaLabel="Add budget" (action)="addBudget()" />
+  <!-- The FAB yields to the empty state's single CTA (one affordance at a time). -->
+  @if (loading() || envelopes().length > 0 || error()) {
+    <app-fab ariaLabel="Add budget" (action)="addBudget()" />
+  }
 
   @if (error(); as err) {
     <app-banner>{{ err }}</app-banner>

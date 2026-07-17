@@ -11,6 +11,21 @@
   margin: 0;
 }
 
+// Idle-state lede: the screen's one-line purpose, first thing on the page.
+.lede {
+  margin: 0;
+  font-size: var(--t-title);
+  color: var(--c-text);
+  text-align: center;
+}
+
+// Supporting illustration - capped so it never pushes the CTA below the fold.
+.idle-art {
+  align-self: center;
+  max-height: 200px;
+  max-width: 100%;
+}
+
 .processing {
   display: flex;
   flex-direction: column;
@@ -73,7 +88,7 @@
 
 .extracted-total-value {
   font-size: var(--t-title);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }
 
 .scan-form {

@@ -254,6 +254,7 @@ describe('ImportFile - states', () => {
     ];
     c.accounts.set(accounts);
 
-    expect(c.accountOptions()).toEqual([{ value: 7, label: 'Cash (MUR)' }]);
+    // "Cash · MUR" matches the account formatting used everywhere else in the app.
+    expect(c.accountOptions()).toEqual([{ value: 7, label: 'Cash · MUR' }]);
   });
 });

@@ -88,6 +88,9 @@ component that inlines a colour today blocks the v2 theme layer.
 Bundled Chart.js (canvas) only - never a remote chart script. Chart.js draws to a `<canvas>` 2D
 context, which does not resolve `var(--x)` itself, so `shared/charts/chart-setup.ts`'s `chartColor()`
 resolves these tokens to a literal colour once at render time; components still never hardcode a hex.
+**Chart accessibility:** the canvas `aria-label` carries the full label/amount data summary. Never
+use a `visually-hidden` DOM list for this - the release Android System WebView has rendered such
+nodes visibly (see `ux-blueprint.md` §7).
 | Token | Value | Use |
 |---|---|---|
 | `--chart-cat-1` .. `--chart-cat-4` | `--c-primary`, `--c-info`, `--c-positive`, `--c-warning` | Pie per-category slices 1-4 (large fills - `--c-primary` itself is allowed here, unlike small text/strokes; see §2.3). |
@@ -321,18 +324,24 @@ and the tokens it consumes. Components are dumb/presentational (`shared/`) unles
   `--c-danger-700`/`--c-text`. Income rows use the positive tint on the avatar **paired with the signed
   amount** - never colour alone.
 #### Actions and toggles
-- **SegmentedToggle** - Daily/Weekly/Monthly and Ongoing/Completed. Pill, active segment
-  `--c-primary-700` (white-on-coral clears AA; the lighter `--c-primary` failed it - see §2.3).
-- **FAB** - 60px coral circle, `+` icon, `--elev-float`. Goals uses a simple single-action FAB
-  (-> `/goals/new`); Expenses uses the **FabMenu** below instead. The **host list must reserve
-  bottom space** so the FAB/FabMenu never occludes the last row: `padding-bottom` ≥
-  `--layout-fab-size + --space-6` (≈84px). Without it the final transaction/goal hides behind the
-  button (ui-ux §2.10). See `screens.md` §4.1, §5.1.
-- **FabMenu** (`app-fab-menu`, `src/app/shared/ui/fab-menu/`) - the Expenses primary action: a
-  **tap**-to-open FAB that reveals **labelled** items *Add expense* (-> `/expenses/new`) and
-  *Scan receipt* (-> `/import`), replacing the old undiscoverable long-press FAB. Floats at
-  `--z-fab-menu` (between `--z-dropdown` and `--z-modal`), `--elev-float`. Each item is a labelled
-  Lucide icon + text (never icon-only); closes on item tap, Escape, or outside tap.
+- **SegmentedToggle** - period filters (Month / 3 months / Year / All time) and Ongoing/Completed.
+  Pill, active segment `--c-primary-700` (white-on-coral clears AA; the lighter `--c-primary`
+  failed it - see §2.3). Segments share the row (`flex: 1`) and labels never wrap to two lines
+  (`white-space: nowrap`) so four segments fit a 360px screen.
+- **FAB** - 60px coral circle, `+` icon, `--elev-float`. **The FAB is the one add-action
+  convention for every list screen** (Goals, Budgets, Accounts, Categories, Recurring, Rules ->
+  their `/new` routes; never a top-right Add button - the top corners are the hardest reach zone).
+  The FAB **hides while an empty state's CTA is on screen** (one affordance at a time). The **host
+  list must reserve bottom space** so the FAB/FabMenu never occludes the last row:
+  `padding-bottom` ≥ `--layout-fab-size + --space-6` (≈84px). Without it the final row hides
+  behind the button (ui-ux §2.10). See `screens.md` §4.1, §5.1.
+- **FabMenu** (`app-fab-menu`, `src/app/shared/ui/fab-menu/`) - the quick-add on Home and
+  Expenses: a **tap**-to-open FAB that reveals **labelled** items *Add expense*
+  (-> `/expenses/new/expense`), *Add income* (-> `/expenses/new/income`), and *Scan receipt*
+  (-> `/import`) - the labelled item carries the ADR 0004 kind decision, so it deep-links straight
+  to that kind's category picker. Floats at `--z-fab-menu` (between `--z-dropdown` and
+  `--z-modal`), `--elev-float`. Each item is a labelled Lucide icon + text (never icon-only);
+  closes on item tap, Escape, or outside tap; hides while an empty state's CTA is on screen.
 #### Forms and overlays
 - **Form page** (pattern, not a single component) - **every add/edit form is a full-screen routed
   page**, not a modal: a pair of lazy routes `<area>/new` and `<area>/:id/edit` with route data
