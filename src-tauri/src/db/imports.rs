@@ -744,3 +744,100 @@ mod tests {
         assert_eq!(count, 0);
     }
 }
+
+#[cfg(test)]
+mod desktop_file_read_tests {
+    use super::*;
+    use crate::import::csv::ColumnMapping;
+
+    /// The desktop read path the `import_*` commands use (`std::fs::read_to_string`), driven
+    /// against a REAL file on disk through the full preview -> commit pipeline. Android's
+    /// content-URI read is the same pipeline behind a different reader (see
+    /// `docs/adr/0010-csv-import-model.md`); only the read differs, so this covers the shared part.
+    #[test]
+    fn reads_a_real_file_from_disk_and_commits_it() {
+        let dir = std::env::temp_dir().join("bm-import-desktop-test");
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("statement.csv");
+        std::fs::write(
+            &path,
+            "Date,Description,Amount\n\
+             2026-06-01,WINNERS SUPERMARKET,-450.00\n\
+             2026-06-02,Salary June,20000.00\n\
+             2026-06-04,MALFORMED ROW,not-a-number\n\
+             2026-06-05,Winners Hypermarket,\"-1,250.75\"\n\
+             15/06/2026,Mauritius date format,-99.00\n",
+        )
+        .unwrap();
+
+        // Exactly what commands::import::read_file does on the desktop target.
+        let content = std::fs::read_to_string(&path).unwrap();
+
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch("PRAGMA foreign_keys = ON;").unwrap();
+        super::super::run_migrations(&conn, "2026-06-06T00:00:00Z").unwrap();
+        super::super::seed_defaults(&conn).unwrap();
+
+        let mapping =
+            ColumnMapping { date: 0, amount: 2, payee: Some(1), note: None, source_ref: None };
+
+        let pv = preview(&conn, &content, &mapping, 1, None).unwrap();
+        // 5 data rows, one of which (the bad amount) is reported, not dropped silently.
+        assert_eq!(pv.rows.len(), 4, "4 parsable rows");
+        assert_eq!(pv.errors.len(), 1, "malformed row reported, never dropped");
+        assert_eq!(pv.errors[0].row, 2, "0-based data-row index of the bad row");
+
+        // Sign comes from the FILE, not a category kind.
+        assert_eq!(pv.rows[0].amount_minor, -45000, "expense keeps its negative sign");
+        assert_eq!(pv.rows[1].amount_minor, 2_000_000, "income keeps its positive sign");
+        // Thousands comma + quoted field.
+        assert_eq!(pv.rows[2].amount_minor, -125_075, "'-1,250.75' -> minor units");
+        // Mauritius dd/mm/yyyy normalises to ISO.
+        assert_eq!(pv.rows[3].posted_date, "2026-06-15");
+
+        let before: i64 =
+            conn.query_row("SELECT count(*) FROM transactions", [], |r| r.get(0)).unwrap();
+        assert_eq!(before, 0, "preview writes NOTHING");
+
+        let res = commit(
+            &conn,
+            CommitInput {
+                content: &content,
+                mapping: &mapping,
+                account_id: 1,
+                filename: "statement.csv",
+                format: "csv",
+                skip_rows: &[1], // user skips the salary row
+                window_days: None,
+            },
+            "2026-06-06T00:00:00Z",
+        )
+        .unwrap();
+
+        assert_eq!(res.inserted, 3);
+        assert_eq!(res.skipped, 1);
+        assert_eq!(res.malformed, 1);
+
+        // The audit row records the file (FR-2.2 acceptance criterion).
+        let (fname, fmt, rows): (String, String, i64) = conn
+            .query_row("SELECT filename, format, row_count FROM imports", [], |r| {
+                Ok((r.get(0)?, r.get(1)?, r.get(2)?))
+            })
+            .unwrap();
+        assert_eq!((fname.as_str(), fmt.as_str(), rows), ("statement.csv", "csv", 3));
+
+        // Every inserted transaction has exactly one split summing to its parent.
+        let bad: i64 = conn
+            .query_row(
+                "SELECT count(*) FROM transactions t WHERE t.amount_minor <> \
+                 (SELECT COALESCE(SUM(s.amount_minor), 0) FROM tx_splits s \
+                  WHERE s.transaction_id = t.id)",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(bad, 0, "splits sum exactly to parent");
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+}
