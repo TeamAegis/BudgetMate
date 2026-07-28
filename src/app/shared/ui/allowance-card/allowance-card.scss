@@ -29,11 +29,15 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
+  // A long name plus "Weekly - next <date>" can outgrow one line at large OS font scale - wrap
+  // rather than clip.
+  flex-wrap: wrap;
 }
 .name {
   font-size: var(--t-title);
   font-weight: var(--fw-medium);
   color: var(--c-text);
+  min-width: 0;
 }
 .kind {
   font-size: var(--t-caption);
@@ -65,6 +69,9 @@
 }
 .fill.paused {
   background: var(--c-text-muted);
+}
+.fill.closed {
+  background: var(--c-positive);
 }
 
 .amounts {
@@ -102,4 +109,7 @@
 }
 .status-line.paused {
   color: var(--c-text-muted);
+}
+.status-line.closed {
+  color: var(--c-positive-700);
 }

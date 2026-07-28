@@ -72,6 +72,45 @@ describe('AllowanceCard', () => {
     expect(el.querySelector('.kind')!.textContent).toContain('One-time');
   });
 
+  it('suppresses the stale next-refresh date on a paused allowance (it would contradict "Paused")', () => {
+    const fixture = make({ active: false, reservedMinor: 0 });
+    const el = fixture.nativeElement as HTMLElement;
+    const kindText = el.querySelector('.kind')!.textContent!;
+    expect(kindText).toContain('Weekly');
+    expect(kindText).not.toContain('next');
+    expect(kindText).not.toContain('2026-08-03');
+  });
+
+  it('shows a distinct "Done" state for an auto-closed one-time allowance (fully used, not user-paused)', () => {
+    const fixture = make({
+      kind: 'one_time',
+      period: null,
+      nextRefreshDate: null,
+      active: false,
+      balanceMinor: 0,
+      reservedMinor: 0,
+    });
+    const el = fixture.nativeElement as HTMLElement;
+    const text = el.querySelector('.status-line')!.textContent!;
+    expect(text).toContain('Done');
+    expect(text).not.toContain('Paused');
+    expect(el.querySelector('.fill')!.classList).toContain('closed');
+  });
+
+  it('keeps the "Paused" copy for a user-paused one-time allowance with leftover balance', () => {
+    const fixture = make({
+      kind: 'one_time',
+      period: null,
+      nextRefreshDate: null,
+      active: false,
+      balanceMinor: 50_000,
+      reservedMinor: 0,
+    });
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.status-line')!.textContent).toContain('Paused');
+    expect(el.querySelector('.fill')!.classList).toContain('paused');
+  });
+
   it('clamps the fill width to 100% even if reserved exceeds target (a temporary refund)', () => {
     const fixture = make({ reservedMinor: 200_000, targetMinor: 150_000 });
     expect(fixture.componentInstance['barWidth']()).toBe(100);
@@ -88,5 +127,24 @@ describe('AllowanceCard', () => {
     fixture.componentInstance.open.subscribe(spy);
     (fixture.nativeElement as HTMLElement).querySelector('button')!.click();
     expect(spy).toHaveBeenCalled();
+  });
+
+  it('folds the reserved/target amounts and status into the aria-label (screen-reader detail)', () => {
+    const fixture = make({ reservedMinor: 40_000, underfunded: true });
+    const btn = (fixture.nativeElement as HTMLElement).querySelector('button')!;
+    const label = btn.getAttribute('aria-label')!;
+    expect(label).toContain('Personal');
+    expect(label).toContain('400'); // Rs 400.00 reserved
+    expect(label).toContain('1,500'); // Rs 1,500.00 target
+    expect(label).toContain('Tops back up');
+  });
+
+  it('describes the paused state (amounts + status) in the aria-label, not just a bare word', () => {
+    const fixture = make({ active: false, reservedMinor: 0 });
+    const btn = (fixture.nativeElement as HTMLElement).querySelector('button')!;
+    const label = btn.getAttribute('aria-label')!;
+    expect(label).toContain('Personal');
+    expect(label).toContain('set aside of');
+    expect(label).toContain('Paused');
   });
 });

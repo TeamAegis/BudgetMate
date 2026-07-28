@@ -8,11 +8,11 @@ import {
   output,
   signal,
 } from '@angular/core';
-import { LucidePause, LucideTriangleAlert, LucideInfo } from '@lucide/angular';
+import { LucidePause, LucideTriangleAlert, LucideInfo, LucideCircleCheck } from '@lucide/angular';
 import { MoneyPipe } from '../../pipes/money.pipe';
 import type { AllowanceKind, AllowancePeriod } from '../../../core/models';
 
-type AllowanceCardStatus = 'funded' | 'underfunded' | 'overspent' | 'paused';
+type AllowanceCardStatus = 'funded' | 'underfunded' | 'overspent' | 'paused' | 'closed';
 
 /**
  * Allowance (savings-backed envelope) card (FR-3.4, design-system §7 AllowanceCard). Mirrors the
@@ -20,8 +20,12 @@ type AllowanceCardStatus = 'funded' | 'underfunded' | 'overspent' | 'paused';
  * set-aside/target amounts - but the semantics are the imprest allowance model
  * (`docs/allowances.md`): the track fills with `Reserved / Target` (both derived/stored in Rust,
  * never computed here), and the status line is driven by the Rust-derived flags, in priority order:
- * - **paused** (`active === false`) - a muted "Paused" label (the set-aside pill is 0 while paused,
- *   since a paused allowance reserves nothing - `docs/allowances.md` §11).
+ * - **closed** (a one-time allowance that ran its course: `kind === 'one_time'`, `!active`, and
+ *   `balanceMinor <= 0`) - a gentle "Done - fully used" label. A DERIVED display-only state (not a
+ *   Rust flag): distinguishes natural completion from a user pausing the allowance, so completing a
+ *   one-time allowance never reads as an interruption.
+ * - **paused** (`active === false` and not `closed`) - a muted "Paused" label (the set-aside pill is
+ *   0 while paused, since a paused allowance reserves nothing - `docs/allowances.md` §11).
  * - **overspent** (`balanceMinor < 0`) - a gentle, informational "Rs X over" (never "overspent" or
  *   another judgemental word), matching the over-budget phrasing in `ux-blueprint.md` §5.
  * - **underfunded** (active, recurring, currently below target) - an informational note that it
@@ -39,7 +43,7 @@ type AllowanceCardStatus = 'funded' | 'underfunded' | 'overspent' | 'paused';
 @Component({
   selector: 'app-allowance-card',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MoneyPipe, LucidePause, LucideTriangleAlert, LucideInfo],
+  imports: [MoneyPipe, LucidePause, LucideTriangleAlert, LucideInfo, LucideCircleCheck],
   providers: [MoneyPipe],
   template: `
     <button
@@ -68,6 +72,9 @@ type AllowanceCardStatus = 'funded' | 'underfunded' | 'overspent' | 'paused';
       @if (statusLine(); as line) {
         <div class="status-line" [class]="status()">
           @switch (status()) {
+            @case ('closed') {
+              <svg lucideCircleCheck [size]="16" aria-hidden="true"></svg>
+            }
             @case ('paused') {
               <svg lucidePause [size]="16" aria-hidden="true"></svg>
             }
@@ -107,16 +114,27 @@ export class AllowanceCard {
   /** Flips true after first render so the fill transitions from 0 -> width (reduced-motion safe). */
   protected readonly ready = signal(false);
 
+  /** A one-time allowance that ran its course (fully used, then auto-closed by Rust) rather than
+   *  being paused by the user - a derived, display-only distinction (see the class doc). */
+  protected readonly closed = computed<boolean>(
+    () => this.kind() === 'one_time' && !this.active() && this.balanceMinor() <= 0,
+  );
+
   protected readonly kindLabel = computed(() => {
     if (this.kind() === 'one_time') return 'One-time';
     const period = this.period() === 'weekly' ? 'Weekly' : 'Monthly';
+    // A paused allowance's next-refresh date is stale (it won't actually refresh while paused) and
+    // would contradict the "Paused" status line below - show just the cadence while inactive.
+    if (!this.active()) return period;
     const next = this.nextRefreshDate();
     return next ? `${period} - next ${next}` : period;
   });
 
-  /** Priority order: paused overrides everything (nothing is reserved while paused), then the
-   *  gentle overspent flag, then the routine mid-period underfunded note, else nothing to flag. */
+  /** Priority order: closed (a one-time allowance that naturally completed) overrides paused, then
+   *  paused overrides the rest (nothing is reserved while paused), then the gentle overspent flag,
+   *  then the routine mid-period underfunded note, else nothing to flag. */
   protected readonly status = computed<AllowanceCardStatus>(() => {
+    if (this.closed()) return 'closed';
     if (!this.active()) return 'paused';
     if (this.overspent()) return 'overspent';
     if (this.underfunded()) return 'underfunded';
@@ -132,6 +150,8 @@ export class AllowanceCard {
 
   protected statusLine(): string | null {
     switch (this.status()) {
+      case 'closed':
+        return 'Done - fully used.';
       case 'paused':
         return 'Paused - not currently set aside.';
       case 'overspent': {
@@ -153,16 +173,17 @@ export class AllowanceCard {
     }
   }
 
+  /** Folds the reserved/target amounts and the status text into the accessible name (mirrors
+   *  `EnvelopeCard.ariaLabel()`) so a screen-reader user hears the same quantitative/status detail
+   *  a sighted user sees, not just the name and a bare status word. */
   protected ariaLabel(): string {
-    const statusText =
-      this.status() === 'paused'
-        ? 'paused'
-        : this.status() === 'overspent'
-          ? 'over'
-          : this.status() === 'underfunded'
-            ? 'topping up soon'
-            : 'fully set aside';
-    return `${this.name()}, ${statusText}`;
+    const reserved = this.money.transform({
+      amountMinor: this.reservedMinor(),
+      currency: this.currency(),
+    });
+    const target = this.money.transform({ amountMinor: this.targetMinor(), currency: this.currency() });
+    const status = this.statusLine() ?? 'fully set aside';
+    return `${this.name()}, ${reserved} set aside of ${target}, ${status}`;
   }
 
   constructor() {
