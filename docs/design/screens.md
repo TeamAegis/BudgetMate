@@ -402,9 +402,13 @@ in the current Figma - design them to this spec.
 - **List (`/allowances`):** a summary strip (**AllowanceSummaryStrip**, three compact stats - Total
   savings / Set aside / Free to spend, sourced from `AllowanceSummary`'s `totalMinor`/
   `reservedMinor`/`availableMinor`) above an `@for` of **AllowanceCard**s (name, kind + period/next-
-  refresh or "One-time", a `reservedMinor / targetMinor` pill track, and the set-aside/target amounts
-  via the money pipe). A single `app-fab` ("Add allowance") navigates to `/allowances/new`; a card
-  tap navigates to `/allowances/:id/edit`.
+  refresh or "One-time" - the next-refresh clause is suppressed while paused, since it would
+  contradict the "Paused" status line below it - a `reservedMinor / targetMinor` pill track, and the
+  set-aside/target amounts via the money pipe). A single `app-fab` ("Add allowance") navigates to
+  `/allowances/new`; a card tap navigates to `/allowances/:id/edit`. When more is set aside across
+  allowances than is actually free (`availableMinor < 0`), "Free to spend" shows a gentle
+  plain-language sentence ("Rs X more is set aside than is free right now.") instead of a bare
+  negative figure, mirroring Home's over-committed framing for goals.
 - **Add/edit (`/allowances/new`, `/allowances/:id/edit`):** the full-screen form-page pattern (§8.0).
   Create: name, target amount, kind (`SegmentedToggle` Recurring/One-time), period
   (`SegmentedToggle` Weekly/Monthly, shown only when Recurring), week-start day (`SelectField`
@@ -431,13 +435,15 @@ in the current Figma - design them to this spec.
   allowances are base-currency-only at creation) and so is excluded from the totals
   (`excludedAllowances`, mirrors Home's `excludedAccounts`/`excludedGoals` caveat note).
 - **The gentle over/under state (never colour alone):** each AllowanceCard's status line is driven by
-  Rust-derived flags, paired with an icon + plain-language label, in priority order - **paused**
-  (`active === false`, muted "Paused" label, the pill is empty since a paused allowance reserves
-  nothing), **overspent** (`balanceMinor < 0`, informational "Rs X over", never "overspent" or a red
-  alarm), **underfunded** (active + recurring + currently below target - the ordinary mid-period
-  state, not a warning - "Tops back up to your weekly/monthly amount on <date>."), else nothing to
-  flag (fully funded). Matches `ux-blueprint.md` §5's informational, non-punitive over-budget
-  guidance.
+  Rust-derived flags (plus one derived, display-only distinction - see **closed** below), paired with
+  an icon + plain-language label, in priority order - **closed** (a ONE-TIME allowance that ran its
+  course: `!active` and `balanceMinor <= 0` - "Done - fully used", so completing it never reads as an
+  interruption), **paused** (`active === false` and not closed, muted "Paused" label, the pill is
+  empty since a paused allowance reserves nothing), **overspent** (`balanceMinor < 0`, informational
+  "Rs X over", never "overspent" or a red alarm), **underfunded** (active + recurring + currently
+  below target - the ordinary mid-period state, not a warning - "Tops back up to your weekly/monthly
+  amount on <date>."), else nothing to flag (fully funded). Matches `ux-blueprint.md` §5's
+  informational, non-punitive over-budget guidance.
 - **Optional transaction tagging (`docs/allowances.md` §12):** the Add/Edit Transaction form
   (`transaction-form`) shows an "Allowance (optional)" context row (mirroring the category row, ADR
   0004) below the category/split block, for both create and edit. Tapping it opens
