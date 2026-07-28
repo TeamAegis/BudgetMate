@@ -94,6 +94,7 @@
   --progress-track-h: 8px;  // GoalProgressRow / EnvelopeCard pill track height
   --progress-knob-size: 16px;
   --size-avatar-sm: 38px;   // transaction-row monogram avatar (Home recent activity)
+  --stat-min-w: 7rem;       // AllowanceSummaryStrip stat min-width before it wraps to two rows
 
   // ---- Icons (all icons via @lucide/angular; see docs/design/design-system.md §5) ----
   --icon-size-sm: 24px;     // inline / action icons (nav uses 22-24)
