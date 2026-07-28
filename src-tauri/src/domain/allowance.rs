@@ -11,16 +11,27 @@
 //! refresh outcome, the delta-applied target edit, and the calendar-boundary helpers.
 //!
 //! **Anchor discipline (a load-bearing invariant, not explicit in the ADR's prose but required by
-//! it):** whenever `anchor_balance_minor` is (re)written - create, a funded refresh, or resume -
-//! `last_refresh_date` is set to the date of that write ("today"), never to the calendar period's
-//! boundary date. This is required so that reading the derived balance immediately after a funded
-//! refresh yields EXACTLY the target (the whole point of "set-to-target"): if `last_refresh_date`
-//! were instead pinned to the boundary (e.g. the past Monday) while `today` is mid-period (e.g.
-//! Wednesday), any transaction already tagged between the boundary and today - which was already
-//! folded into the pre-refresh balance used to size the top-up - would be summed a SECOND time by
-//! the post-refresh query, silently understating the balance (and overstating Available) right
-//! after a "successful" top-up. Only `next_refresh_date` uses calendar-boundary math (it must land
-//! on the next boundary strictly after today, per §9.1); `last_refresh_date` is always "now".
+//! it):** CREATE and RESUME anchor `last_refresh_date` at `today` (the date of that write) - a
+//! brand-new or freshly re-allocated allowance's period effectively starts now, so pre-existing
+//! spend must never retroactively count against it.
+//!
+//! A FUNDED REFRESH is different: it anchors `last_refresh_date` at the CURRENT PERIOD BOUNDARY
+//! (`current_boundary`, ADR 0012 §5), not at `today`. The lazy refresh normally runs whenever the app
+//! is next opened on or after the boundary (`today >= next_refresh_date`), which is usually strictly
+//! after the boundary itself - and a transaction dated in `[boundary, today)` can still be entered
+//! AFTER the refresh runs (a back-dated receipt, a delayed OCR confirmation). Anchoring at `today`
+//! would permanently exclude that transaction's `posted_date` from every future `derived_balance`
+//! read (it falls before `last_refresh_date`), silently overstating the balance for the rest of the
+//! period. Anchoring at the boundary keeps that window open, and it does NOT double-count: a funded
+//! refresh always sets the anchor to `target` FLAT (never additive to the pre-refresh balance, which
+//! is discarded entirely), so `post-refresh balance = target + SUM(posted in [boundary, today])` -
+//! each tagged transaction has exactly one `posted_date` and is counted 0 or 1 times, never twice, no
+//! matter when it is entered relative to the refresh. At the instant a refresh runs, `[boundary,
+//! today)` is normally still empty (no app-open happened in it yet), so the balance read immediately
+//! after a funded refresh still equals exactly `target` in the common case - identical to anchoring
+//! at `today` - while also correctly including any current-period spend entered later. Either way,
+//! `next_refresh_date` always uses calendar-boundary math (the next boundary strictly after today,
+//! per §9.1).
 
 use chrono::{Datelike, Months, NaiveDate, Weekday};
 use serde::{Deserialize, Serialize};

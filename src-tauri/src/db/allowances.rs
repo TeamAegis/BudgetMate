@@ -16,9 +16,9 @@ use rusqlite::{params, Connection};
 
 use super::DbError;
 use crate::domain::allowance::{
-    allowance_status, anchor_after_target_edit, next_boundary, parse_week_start, plan_refresh,
-    reserved_delta, savings_gate_ok, should_auto_close, validate_allowance, week_start_str,
-    Allowance, AllowanceKind, AllowanceLine, AllowancePeriod, AllowanceSummary,
+    allowance_status, anchor_after_target_edit, current_boundary, next_boundary, parse_week_start,
+    plan_refresh, reserved_delta, savings_gate_ok, should_auto_close, validate_allowance,
+    week_start_str, Allowance, AllowanceKind, AllowanceLine, AllowancePeriod, AllowanceSummary,
 };
 
 const ISO_DATE: &str = "%Y-%m-%d";
@@ -380,10 +380,13 @@ pub fn refresh_due(conn: &Connection, base_currency: &str, today: NaiveDate) -> 
         let new_next_refresh = next_boundary(period, week_start_day, today).to_string();
 
         if outcome.funded {
-            let today_str = today.format(ISO_DATE).to_string();
+            // Anchor at the CURRENT PERIOD BOUNDARY, not `today` (ADR 0012 §5; see the "Anchor
+            // discipline" doc in `domain::allowance`). A late lazy refresh (today strictly after the
+            // boundary) must not exclude a current-period transaction entered after the refresh runs.
+            let boundary = current_boundary(period, week_start_day, today);
             tx.execute(
                 "UPDATE allowances SET anchor_balance_minor = ?2, last_refresh_date = ?3, next_refresh_date = ?4 WHERE id = ?1",
-                params![row.id, outcome.new_balance_minor, today_str, new_next_refresh],
+                params![row.id, outcome.new_balance_minor, boundary.to_string(), new_next_refresh],
             )?;
         } else {
             // Warn-and-do-not-refill (§6.2 decision 2): anchor + last_refresh_date UNCHANGED, only
@@ -724,6 +727,70 @@ mod tests {
         let row = list(&conn).unwrap().into_iter().find(|r| r.id == a.id).unwrap();
         assert_eq!(row.anchor_balance_minor, 100_000);
         assert!(row.next_refresh_date.unwrap() > much_later.to_string());
+    }
+
+    #[test]
+    fn refresh_anchors_at_the_boundary_so_late_entered_spend_still_counts() {
+        // The T > B gap (Bug 1, ADR 0012 §5): the app is not opened exactly on the boundary day, so
+        // a funded refresh normally fires strictly after it. This test fails against the old
+        // `today`-anchored code (which would report the full 100_000 target, ignoring the spend
+        // below) and passes once `last_refresh_date` is anchored at the boundary instead.
+        let conn = db();
+        deposit(&conn, "5000.00", "2026-07-01"); // Total 500_000, well before any boundary
+        let created = NaiveDate::from_ymd_opt(2026, 7, 6).unwrap(); // a Monday
+        let a = create(
+            &conn, "MUR", created, "Groceries", "MUR", 100_000,
+            AllowanceKind::Recurring, Some(AllowancePeriod::Weekly), "monday", "2026-07-06T00:00:00Z",
+        )
+        .unwrap();
+        assert_eq!(a.next_refresh_date.as_deref(), Some("2026-07-13"));
+
+        // The app isn't opened again until Wednesday 2026-07-15 - strictly after the 2026-07-13
+        // boundary (T = 07-15 > B = 07-13). No overspend yet, so this refresh is funded trivially,
+        // but it must still anchor `last_refresh_date` at the boundary, not at `today`.
+        let t = NaiveDate::from_ymd_opt(2026, 7, 15).unwrap();
+        let touched = refresh_due(&conn, "MUR", t).unwrap();
+        assert_eq!(touched, 1);
+        let row = list(&conn).unwrap().into_iter().find(|r| r.id == a.id).unwrap();
+        assert_eq!(row.last_refresh_date, "2026-07-13", "anchored at the boundary, not today (ADR 0012 §5)");
+
+        // A tagged expense dated the boundary Monday, entered AFTER the refresh ran (a back-dated
+        // receipt / delayed OCR confirmation) - exactly the scenario the boundary fix protects.
+        expense_tagged(&conn, "300.00", "2026-07-13", Some(a.id));
+
+        let balance = derived_balance(&conn, a.id, row.anchor_balance_minor, &row.last_refresh_date, t).unwrap();
+        assert_eq!(
+            balance, 70_000,
+            "current-period spend entered after a late lazy refresh must still draw the balance \
+             down (this assertion fails under the old today-anchored code, which reports 100_000)"
+        );
+    }
+
+    #[test]
+    fn refresh_still_forgives_prior_period_spend_posted_before_the_boundary() {
+        // Companion to the test above: boundary-anchoring must NOT resurrect prior-period spend -
+        // set-to-target still discards the pre-refresh balance entirely.
+        let conn = db();
+        deposit(&conn, "5000.00", "2026-06-01");
+        let created = NaiveDate::from_ymd_opt(2026, 7, 6).unwrap(); // a Monday
+        let a = create(
+            &conn, "MUR", created, "Groceries", "MUR", 100_000,
+            AllowanceKind::Recurring, Some(AllowancePeriod::Weekly), "monday", "2026-07-06T00:00:00Z",
+        )
+        .unwrap();
+
+        // Overspend by 200 during week 1, before the boundary.
+        expense_tagged(&conn, "1200.00", "2026-07-08", Some(a.id));
+
+        let t = NaiveDate::from_ymd_opt(2026, 7, 15).unwrap(); // Wednesday, T > B (boundary 07-13)
+        refresh_due(&conn, "MUR", t).unwrap();
+        let row = list(&conn).unwrap().into_iter().find(|r| r.id == a.id).unwrap();
+        assert_eq!(row.last_refresh_date, "2026-07-13");
+
+        // The prior-period overspend is forgiven (set-to-target discards the pre-refresh balance);
+        // reading right after the refresh yields exactly target, not target minus that old spend.
+        let balance = derived_balance(&conn, a.id, row.anchor_balance_minor, &row.last_refresh_date, t).unwrap();
+        assert_eq!(balance, 100_000, "prior-period spend (posted before the boundary) is excluded/forgiven");
     }
 
     #[test]
