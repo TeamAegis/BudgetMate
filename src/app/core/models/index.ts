@@ -154,6 +154,10 @@ export interface Transaction {
   pendingReview: boolean;
   createdAt: string;
   splits: TxSplit[];
+  /** Optional allowance tag (FR-3.4, ADR 0012) - the id of the allowance this transaction draws
+   *  down, or `null` when untagged. Set only via `createTransaction`/`updateTransaction`; never
+   *  present on a recurring- or imported-sourced row. */
+  allowanceId: number | null;
 }
 
 /** One category line of a new/updated transaction (mirrors Rust `NewSplit`). */
@@ -180,9 +184,13 @@ export interface NewTransaction {
   splits: NewSplit[];
   payee?: string | null;
   note?: string | null;
+  /** Optional allowance tag (FR-3.4) - the id of an existing allowance to draw down. Tagging only
+   *  sets this column; it never mutates the allowance itself (ADR 0012). */
+  allowanceId?: number | null;
 }
 
-/** Input for update_transaction (mirrors Rust `UpdateTransaction`). */
+/** Input for update_transaction (mirrors Rust `UpdateTransaction`). `allowanceId` replaces the tag
+ *  wholesale (like `splits`) - omit/`null` clears it. */
 export interface UpdateTransaction extends NewTransaction {
   id: number;
 }
@@ -357,6 +365,95 @@ export interface NewGoal {
 /** Input for update_goal (mirrors Rust `UpdateGoal`). */
 export interface UpdateGoal extends NewGoal {
   id: number;
+}
+
+// ── Allowances (FR-3.4, imprest envelopes, mirrors domain::allowance / db::allowances) ──────────
+// The current balance is DERIVED, never stored (ADR 0012) - it is not a field on `Allowance` (the
+// raw row); read it from `AllowanceLine.balanceMinor` (`getAllowanceSummary`). Distinct from a
+// savings goal (accumulates up) and a category cap (reserves nothing) - see docs/allowances.md §3.
+
+/** Whether an allowance refreshes on a cadence or is a single allocation. Mirrors Rust
+ *  `AllowanceKind`. `period` is required for `'recurring'`, omitted for `'one_time'`. */
+export type AllowanceKind = 'recurring' | 'one_time';
+
+/** How a recurring allowance repeats. Mirrors Rust `AllowancePeriod`. */
+export type AllowancePeriod = 'weekly' | 'monthly';
+
+/** Where an allowance's derived balance sits (mirrors Rust `AllowanceStatus`). An overspent
+ *  balance reserves nothing (docs/allowances.md §13.3) - NEVER render this by colour alone, always
+ *  pair with an icon + a plain-language label (design.md). */
+export type AllowanceStatus = 'ok' | 'overspent';
+
+/** The raw `allowances` row (mirrors Rust `Allowance`) - editable fields for management/edit.
+ *  `weekStart` is an ISO-8601 weekday name ("monday".."sunday"); `period`/`nextRefreshDate` are
+ *  `null` for a one-time allowance (it never refreshes). */
+export interface Allowance {
+  id: number;
+  name: string;
+  currency: Iso4217;
+  targetMinor: number;
+  anchorBalanceMinor: number;
+  kind: AllowanceKind;
+  period: AllowancePeriod | null;
+  weekStart: string;
+  lastRefreshDate: string;
+  nextRefreshDate: string | null;
+  active: boolean;
+  createdAt: string;
+}
+
+/** One allowance's derived state for the summary read model (mirrors Rust `AllowanceLine`).
+ *  `balanceMinor` is derived on read and may be negative (overspent); `reservedMinor` is
+ *  `max(0, balanceMinor)` while active, `0` while paused. */
+export interface AllowanceLine {
+  id: number;
+  name: string;
+  currency: Iso4217;
+  targetMinor: number;
+  balanceMinor: number;
+  reservedMinor: number;
+  kind: AllowanceKind;
+  period: AllowancePeriod | null;
+  active: boolean;
+  status: AllowanceStatus;
+}
+
+/**
+ * The allowances-screen read model (mirrors Rust `AllowanceSummary`, from `getAllowanceSummary`):
+ * the vault-level Total/Reserved/Available (ADR 0012 - the SAME definition the savings gate
+ * enforces, shared with `DashboardData.allowancesReservedMinor`) plus every allowance's derived
+ * line (active and paused - only active ones count toward `reservedMinor`/`availableMinor`).
+ */
+export interface AllowanceSummary {
+  baseCurrency: Iso4217;
+  totalMinor: number;
+  reservedMinor: number;
+  availableMinor: number;
+  allowances: AllowanceLine[];
+}
+
+/** Input for create_allowance (mirrors Rust `NewAllowance`). `target` is a non-negative major-unit
+ *  string (e.g. "1000.00"); Rust parses it to minor units. `currency` MUST equal the vault's
+ *  current base currency (ADR 0012 decision 4) or the command rejects it. `period` is required
+ *  for `kind: 'recurring'`, omitted for `'one_time'`. `weekStart` defaults to `'monday'` when
+ *  omitted. */
+export interface NewAllowance {
+  name: string;
+  currency: Iso4217;
+  target: string;
+  kind: AllowanceKind;
+  period?: AllowancePeriod | null;
+  weekStart?: string | null;
+}
+
+/** Input for update_allowance (mirrors Rust `UpdateAllowance`). Only name + target are editable in
+ *  v1 - kind/period/weekStart are fixed at creation (pause/delete + recreate for those). The
+ *  target edit is delta-applied to the balance (docs/allowances.md §8), gated only on an increase. */
+export interface UpdateAllowance {
+  id: number;
+  name: string;
+  currency: Iso4217;
+  target: string;
 }
 
 // ── Bank-file import (FR-2.2, mirrors import:: / db::imports / commands::import) ──
@@ -571,9 +668,10 @@ export interface BalancePoint {
 /**
  * The Home dashboard aggregate (mirrors Rust `DashboardData`, from `get_dashboard`). All money is
  * integer minor units in `baseCurrency`. `usableBalanceMinor` MAY be negative (over-committed to
- * goals) - never clamp it. `excludedAccounts`/`excludedGoals` count non-archived accounts / ongoing
- * goals in a currency other than `baseCurrency` (their openings/reservations can't be honestly
- * converted, so they are left out of the totals) - the UI shows a caveat note when either is > 0.
+ * goals/allowances) - never clamp it. `excludedAccounts`/`excludedGoals` count non-archived
+ * accounts / ongoing goals in a currency other than `baseCurrency` (their openings/reservations
+ * can't be honestly converted, so they are left out of the totals) - the UI shows a caveat note
+ * when either is > 0.
  */
 export interface DashboardData {
   baseCurrency: Iso4217;
@@ -581,6 +679,9 @@ export interface DashboardData {
   usableBalanceMinor: number;
   /** The amount netted out of totalBalanceMinor to reach usableBalanceMinor ("set aside for goals"). */
   goalsReservedMinor: number;
+  /** The amount netted out of totalBalanceMinor for active, base-currency allowances (ADR 0012) -
+   *  the same figure `getAllowanceSummary().reservedMinor`'s allowance share uses. */
+  allowancesReservedMinor: number;
   thisMonthSpendMinor: number;
   /** Trailing 6 months, oldest first, last point = the current month. */
   balanceTrend: BalancePoint[];

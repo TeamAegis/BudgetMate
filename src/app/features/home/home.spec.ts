@@ -37,6 +37,7 @@ describe('Home', () => {
     totalBalanceMinor: 465_050,
     usableBalanceMinor: 425_025,
     goalsReservedMinor: 40_000,
+    allowancesReservedMinor: 0,
     thisMonthSpendMinor: 50_075,
     balanceTrend: [
       { label: 'Feb', amountMinor: 100_000 },
@@ -57,6 +58,7 @@ describe('Home', () => {
     totalBalanceMinor: 0,
     usableBalanceMinor: 0,
     goalsReservedMinor: 0,
+    allowancesReservedMinor: 0,
     thisMonthSpendMinor: 0,
     balanceTrend: [],
     goals: [],
@@ -80,6 +82,7 @@ describe('Home', () => {
     pendingReview: false,
     createdAt: '2026-07-05T00:00:00Z',
     splits: [{ id: 1, categoryId: 1, categoryName: 'Groceries', amountMinor: -5_000 }],
+    allowanceId: null,
   };
 
   type HomeInternals = {

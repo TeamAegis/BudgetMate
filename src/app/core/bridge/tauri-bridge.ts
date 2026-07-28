@@ -32,6 +32,10 @@ import type {
   Goal,
   NewGoal,
   UpdateGoal,
+  Allowance,
+  AllowanceSummary,
+  NewAllowance,
+  UpdateAllowance,
   Budget,
   NewBudget,
   UpdateBudget,
@@ -220,6 +224,36 @@ export function updateGoal(goal: UpdateGoal): Promise<Goal> {
 }
 export function deleteGoal(id: number): Promise<void> {
   return invoke<void>('delete_goal', { id });
+}
+
+// ── Allowances (FR-3.4, imprest envelopes) ──────────────────────────────────────
+// The current balance is DERIVED in Rust, never stored - read it from `AllowanceLine.balanceMinor`
+// (`getAllowanceSummary`), not from the raw `Allowance` row. The savings gate, refresh, and
+// Total/Reserved/Available math all happen in Rust; the frontend only renders and formats.
+
+/** Raw allowance rows (active first) - for management/edit-form preload. */
+export function listAllowances(): Promise<Allowance[]> {
+  return invoke<Allowance[]>('list_allowances');
+}
+/** The allowances-screen read model: Total/Reserved/Available plus every allowance's derived
+ *  balance/status, as of today. */
+export function getAllowanceSummary(): Promise<AllowanceSummary> {
+  return invoke<AllowanceSummary>('get_allowance_summary');
+}
+export function createAllowance(allowance: NewAllowance): Promise<Allowance> {
+  return invoke<Allowance>('create_allowance', { allowance });
+}
+export function updateAllowance(allowance: UpdateAllowance): Promise<Allowance> {
+  return invoke<Allowance>('update_allowance', { allowance });
+}
+/** Pause (`active: false`, never gated) or resume (`active: true`, re-allocates to target, gated
+ *  by Available at resume time). */
+export function setAllowanceActive(id: number, active: boolean): Promise<Allowance> {
+  return invoke<Allowance>('set_allowance_active', { id, active });
+}
+/** Hard delete - tagged historical transactions keep their now-dangling allowanceId for reporting. */
+export function deleteAllowance(id: number): Promise<void> {
+  return invoke<void>('delete_allowance', { id });
 }
 
 // ── Budgets / envelopes (FR-3.1) ────────────────────────────────────────────────
