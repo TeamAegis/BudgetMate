@@ -1,8 +1,8 @@
 import { TestBed } from '@angular/core/testing';
-import { ActivatedRoute, provideRouter, convertToParamMap } from '@angular/router';
+import { ActivatedRoute, Router, provideRouter, convertToParamMap } from '@angular/router';
 import { TransactionForm } from './transaction-form';
 import { CurrencyService } from '../../core/money/currency.service';
-import type { Account, TransactionPrefill } from '../../core/models';
+import type { Account, Category, Allowance, Transaction, TransactionPrefill } from '../../core/models';
 
 /**
  * Regression coverage for the multi-currency OCR prefill boundary (`patchForCreate`). The bridge
@@ -140,5 +140,222 @@ describe('TransactionForm - amount precision cap', () => {
     component.form.controls.amount.setValue('1.99');
 
     expect(component.form.controls.amount.hasError('maxFractionDigits')).toBeFalse();
+  });
+});
+
+/**
+ * Coverage for the FR-3.4 optional allowance tag on a transaction: the `allowanceId` control, the
+ * `allowanceOptions` computed (leading "not tagged" sentinel + every fetched allowance), and the
+ * `save()` payload mapping (sentinel `0` -> `null`, edit-load `t.allowanceId ?? 0`). `listAllowances`
+ * and the other bridge calls this form makes in `ngOnInit` are named ES-module exports Jasmine's
+ * `spyOn` cannot redefine (same limitation the file doc above and allowance-form.spec.ts note), so
+ * these tests stub the actual Tauri IPC seam (`window.__TAURI_INTERNALS__.invoke`) and let
+ * `ngOnInit`/`save()` run for real.
+ */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+describe('TransactionForm - allowance tagging (FR-3.4)', () => {
+  afterEach(() => {
+    delete (globalThis as any).__TAURI_INTERNALS__;
+  });
+
+  function account(): Account {
+    return { id: 1, name: 'Wallet', accountType: 'cash', currency: 'MUR', openingBalanceMinor: 0, archived: false };
+  }
+  function category(): Category {
+    return { id: 1, name: 'Groceries', parentId: null, kind: 'expense', archived: false };
+  }
+  function allowance(overrides: Partial<Allowance> = {}): Allowance {
+    return {
+      id: 2,
+      name: 'Personal',
+      currency: 'MUR',
+      targetMinor: 150_000,
+      balanceMinor: 30_000,
+      kind: 'recurring',
+      period: 'weekly',
+      weekStart: 1,
+      nextRefreshDate: '2026-08-03',
+      active: true,
+      createdAt: '2026-07-01T00:00:00Z',
+      reservedMinor: 30_000,
+      overspent: false,
+      underfunded: true,
+      ...overrides,
+    };
+  }
+  function transaction(overrides: Partial<Transaction> = {}): Transaction {
+    return {
+      id: 9,
+      accountId: 1,
+      postedDate: '2026-07-10',
+      amountMinor: -1000,
+      currency: 'MUR',
+      fxRate: '1',
+      baseAmountMinor: -1000,
+      payee: 'Winners',
+      note: null,
+      source: 'manual',
+      sourceRef: null,
+      pendingReview: false,
+      createdAt: '2026-07-10T00:00:00Z',
+      allowanceId: null,
+      splits: [{ id: 1, categoryId: 1, categoryName: 'Groceries', amountMinor: -1000 }],
+      ...overrides,
+    };
+  }
+
+  function stubInvoke(handlers: Record<string, (args: unknown) => unknown>): void {
+    (globalThis as any).__TAURI_INTERNALS__ = {
+      invoke: async (cmd: string, args: unknown) => {
+        const h = handlers[cmd];
+        if (!h) throw new Error(`unexpected invoke in test: ${cmd}`);
+        return h(args);
+      },
+    };
+  }
+
+  function baseHandlers(
+    overrides: Record<string, (args: unknown) => unknown> = {},
+  ): Record<string, (args: unknown) => unknown> {
+    return {
+      list_accounts: () => [account()],
+      list_categories: () => [category()],
+      get_settings: () => ({
+        idleTimeoutSecs: 120,
+        biometricEnabled: false,
+        baseCurrency: 'MUR',
+        dedupWindowDays: 3,
+      }),
+      list_allowances: () => ({
+        allowances: [allowance({ id: 2, name: 'Personal' }), allowance({ id: 3, name: 'Groceries fund' })],
+        totalMinor: 0,
+        reservedMinor: 0,
+        availableMinor: 0,
+        baseCurrency: 'MUR',
+        excludedAllowances: 0,
+      }),
+      ...overrides,
+    };
+  }
+
+  async function createForm(
+    routeParams: Record<string, string>,
+    handlers: Record<string, (args: unknown) => unknown>,
+  ) {
+    stubInvoke(handlers);
+    await TestBed.configureTestingModule({
+      imports: [TransactionForm],
+      providers: [
+        provideRouter([]),
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { paramMap: convertToParamMap(routeParams) } },
+        },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(TransactionForm);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  it('offers a leading "not tagged" sentinel plus every fetched allowance as tag options', async () => {
+    const fixture = await createForm({ kind: 'expense', categoryId: '1' }, baseHandlers());
+    const component = fixture.componentInstance as any;
+
+    expect(component.allowanceOptions()).toEqual([
+      { value: 0, label: 'Not counted against an allowance' },
+      { value: 2, label: 'Personal' },
+      { value: 3, label: 'Groceries fund' },
+    ]);
+  });
+
+  it('save() carries the chosen allowanceId in the create payload', async () => {
+    let created: unknown;
+    const fixture = await createForm(
+      { kind: 'expense', categoryId: '1' },
+      baseHandlers({
+        create_transaction: (args) => {
+          created = args;
+          return transaction({ allowanceId: 2 });
+        },
+      }),
+    );
+    const component = fixture.componentInstance as any;
+    const router = TestBed.inject(Router);
+    spyOn(router, 'navigate');
+    component.form.controls.accountId.setValue(1);
+    component.form.controls.amount.setValue('10.00');
+    component.setAllowanceTag(2);
+
+    await component.save();
+
+    expect((created as any).tx.allowanceId).toBe(2);
+  });
+
+  it('save() maps the "not tagged" sentinel (0) to null, never sending 0 as an id', async () => {
+    let created: unknown;
+    const fixture = await createForm(
+      { kind: 'expense', categoryId: '1' },
+      baseHandlers({
+        create_transaction: (args) => {
+          created = args;
+          return transaction();
+        },
+      }),
+    );
+    const component = fixture.componentInstance as any;
+    const router = TestBed.inject(Router);
+    spyOn(router, 'navigate');
+    component.form.controls.accountId.setValue(1);
+    component.form.controls.amount.setValue('10.00');
+    // allowanceId control defaults to the `0` sentinel - never explicitly tagged.
+
+    await component.save();
+
+    expect((created as any).tx.allowanceId).toBeNull();
+  });
+
+  it('edit-load maps an existing transaction.allowanceId back into the control', async () => {
+    const fixture = await createForm(
+      { id: '9' },
+      baseHandlers({ list_transactions: () => [transaction({ allowanceId: 3 })] }),
+    );
+    const component = fixture.componentInstance as any;
+
+    expect(component.form.controls.allowanceId.value).toBe(3);
+  });
+
+  it('edit-load maps a null (untagged) allowanceId back to the "not tagged" sentinel (0)', async () => {
+    const fixture = await createForm(
+      { id: '9' },
+      baseHandlers({ list_transactions: () => [transaction({ allowanceId: null })] }),
+    );
+    const component = fixture.componentInstance as any;
+
+    expect(component.form.controls.allowanceId.value).toBe(0);
+  });
+
+  it('save() carries the retagged allowanceId in the update payload on edit', async () => {
+    let updated: unknown;
+    const fixture = await createForm(
+      { id: '9' },
+      baseHandlers({
+        list_transactions: () => [transaction({ allowanceId: 2 })],
+        update_transaction: (args) => {
+          updated = args;
+          return transaction({ allowanceId: 3 });
+        },
+      }),
+    );
+    const component = fixture.componentInstance as any;
+    const router = TestBed.inject(Router);
+    spyOn(router, 'navigate');
+    component.setAllowanceTag(3);
+
+    await component.save();
+
+    expect((updated as any).tx.allowanceId).toBe(3);
   });
 });

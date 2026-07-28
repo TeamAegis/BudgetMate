@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, provideRouter, convertToParamMap } from '@angular/router';
 import { AllowanceForm } from './allowance-form';
+import { SAVINGS_GATE_MESSAGE } from '../../core/bridge';
 import type { Allowance, VaultSettings } from '../../core/models';
 
 /**
@@ -204,7 +205,7 @@ describe('AllowanceForm', () => {
 
     const el = fixture.nativeElement as HTMLElement;
     const banner = el.querySelector('.banner')!;
-    expect(banner.textContent).toContain("isn't enough free savings");
+    expect(banner.textContent).toContain(SAVINGS_GATE_MESSAGE);
     expect(banner.className).toContain('warning');
   });
 

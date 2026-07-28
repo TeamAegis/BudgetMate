@@ -9,6 +9,7 @@ import {
   getSettings,
   toUserMessage,
   isTauri,
+  SAVINGS_GATE_MESSAGE,
 } from '../../core/bridge';
 import type { Allowance, AllowanceKind, AllowancePeriod } from '../../core/models';
 import { HeaderActionService } from '../../core/layout/header-action.service';
@@ -23,11 +24,6 @@ import { SegmentedToggle, type SegmentOption } from '../../shared/ui/segmented-t
 import { SelectField, type SelectOption } from '../../shared/ui/select-field/select-field';
 
 const DECIMAL = /^\d+(\.\d+)?$/;
-
-/** The plain-language message `toUserMessage` returns for a savings-gate rejection (FR-3.4) - used
- *  only to pick the banner's tone (warning, not error); the message text itself still comes from
- *  `toUserMessage` so there is exactly one place that owns the copy. */
-const GATE_MESSAGE = "There isn't enough free savings for this right now.";
 
 /**
  * Full-screen Add/Edit Allowance page (FR-3.4). A pushed route (`allowances/new`,
@@ -184,9 +180,11 @@ export class AllowanceForm implements OnInit {
   }
 
   /** The banner tone: a savings-gate rejection is an advisory WARNING (nothing was changed, retry
-   *  with a smaller amount or free up savings first), any other failure is an error. */
+   *  with a smaller amount or free up savings first), any other failure is an error. Keyed off the
+   *  shared `SAVINGS_GATE_MESSAGE` constant (`core/bridge/error-message.ts`) - the single place that
+   *  owns this copy - so the tone can never silently drift from the text if the wording changes. */
   protected bannerTone(): BannerTone {
-    return this.error() === GATE_MESSAGE ? 'warning' : 'error';
+    return this.error() === SAVINGS_GATE_MESSAGE ? 'warning' : 'error';
   }
 
   async ngOnInit(): Promise<void> {

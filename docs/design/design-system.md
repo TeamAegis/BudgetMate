@@ -394,7 +394,11 @@ and the tokens it consumes. Components are dumb/presentational (`shared/`) unles
   and **paused** are icon + label, never colour alone - `lucideTriangleAlert` + "Rs X over" for a
   negative balance, `lucidePause` + "Paused - not set aside right now" for an inactive allowance
   (mirrors EnvelopeCard's icon-plus-label convention). Display-only; the whole row is a button that
-  emits `open` (the Allowances screen navigates to the allowance's edit page).
+  emits `open` (the Allowances screen navigates to the allowance's edit page). The over-allowance
+  status line intentionally uses the gentler amber `--c-warning-700` tone rather than the danger tone
+  EnvelopeCard uses when over budget, because an allowance self-heals at its next refresh (the
+  imprest model tops it back up), so going over is a lower-stakes, temporary state than an over-budget
+  category.
 
 ### New - required by FRs, absent in Figma (specified here, to design)
 - **LockScreen** - biometric prompt + passphrase fallback (FR-5.1). App entry gate.
