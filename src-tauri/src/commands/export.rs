@@ -113,6 +113,7 @@ mod tests {
                 splits: &[SplitInput { category_id: 1, amount: "15.00" }],
                 payee: Some("Corner Shop"),
                 note: None,
+                allowance_id: None,
             },
             "2026-06-01T09:00:00Z",
         )
@@ -131,6 +132,7 @@ mod tests {
                 ],
                 payee: Some("Market"),
                 note: Some("weekly"),
+                allowance_id: None,
             },
             "2026-06-05T09:00:00Z",
         )

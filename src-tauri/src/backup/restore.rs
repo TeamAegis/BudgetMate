@@ -234,8 +234,14 @@ fn swap_in_restored_copy(
     // lazily materialise recurring occurrences, mirroring `commands::vault::open_and_unlock`.
     let conn = db::open_encrypted(&db_p, key_hex).map_err(|_| RestoreError::KeyVerificationFailed)?;
     db::run_migrations(&conn, now).map_err(RestoreError::from)?;
-    if let Err(e) = db::recurring::materialise_due(&conn, chrono::Utc::now().date_naive()) {
+    let restore_today = chrono::Utc::now().date_naive();
+    if let Err(e) = db::recurring::materialise_due(&conn, restore_today) {
         log::warn!("recurring materialisation skipped after restore: {e}");
+    }
+    // Refresh due allowances (FR-3.4) AFTER recurring materialisation, same order as
+    // `commands::vault::open_and_unlock` (recurring can move `Total`; allowance refresh reads it).
+    if let Err(e) = db::allowances::refresh_due(&conn, base_currency, restore_today) {
+        log::warn!("allowance refresh skipped after restore: {e}");
     }
     let transaction_count: i64 = conn
         .query_row("SELECT count(*) FROM transactions", [], |r| r.get(0))

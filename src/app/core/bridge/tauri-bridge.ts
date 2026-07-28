@@ -32,6 +32,10 @@ import type {
   Goal,
   NewGoal,
   UpdateGoal,
+  Allowance,
+  AllowanceSummary,
+  NewAllowance,
+  UpdateAllowance,
   Budget,
   NewBudget,
   UpdateBudget,
@@ -220,6 +224,29 @@ export function updateGoal(goal: UpdateGoal): Promise<Goal> {
 }
 export function deleteGoal(id: number): Promise<void> {
   return invoke<void>('delete_goal', { id });
+}
+
+// ── Allowances (FR-3.4) ──────────────────────────────────────────────────────────
+// Savings-backed envelopes (docs/allowances.md). `Total`/`Available` are computed fresh in Rust on
+// every call - never cached here. Rust parses major-unit `target` strings + derives
+// reservedMinor/overspent/underfunded; no money math in TS.
+
+/** The full allowances aggregate: every allowance + the three balances. */
+export function listAllowances(): Promise<AllowanceSummary> {
+  return invoke<AllowanceSummary>('list_allowances');
+}
+/** Same aggregate as `listAllowances` - a named re-read after a mutating call. */
+export function getAllowanceSummary(): Promise<AllowanceSummary> {
+  return invoke<AllowanceSummary>('get_allowance_summary');
+}
+export function createAllowance(allowance: NewAllowance): Promise<Allowance> {
+  return invoke<Allowance>('create_allowance', { allowance });
+}
+export function updateAllowance(allowance: UpdateAllowance): Promise<Allowance> {
+  return invoke<Allowance>('update_allowance', { allowance });
+}
+export function deleteAllowance(id: number): Promise<void> {
+  return invoke<void>('delete_allowance', { id });
 }
 
 // ── Budgets / envelopes (FR-3.1) ────────────────────────────────────────────────

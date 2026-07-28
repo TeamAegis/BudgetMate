@@ -210,6 +210,7 @@ mod tests {
                 splits: &[SplitInput { category_id, amount }],
                 payee: None,
                 note: None,
+                allowance_id: None,
             },
             "2026-06-06T10:00:00Z",
         )
@@ -303,6 +304,7 @@ mod tests {
                 splits: &[SplitInput { category_id: 9, amount: "500.00" }],
                 payee: None,
                 note: None,
+                allowance_id: None,
             },
             "2026-06-06T10:00:00Z",
         )
@@ -327,6 +329,7 @@ mod tests {
                 splits: &[SplitInput { category_id: 1, amount: "100.00" }],
                 payee: None,
                 note: None,
+                allowance_id: None,
             },
             "2026-06-06T10:00:00Z",
         )
@@ -388,6 +391,7 @@ mod tests {
                 ],
                 payee: None,
                 note: None,
+                allowance_id: None,
             },
             "2026-06-06T10:00:00Z",
         )

@@ -165,6 +165,7 @@ mod tests {
             splits: Box::leak(Box::new([SplitInput { category_id, amount }])),
             payee: None,
             note: None,
+            allowance_id: None,
         }
     }
 
@@ -233,6 +234,7 @@ mod tests {
                 ],
                 payee: None,
                 note: None,
+                allowance_id: None,
             },
             "2026-07-05T00:00:00Z",
         )

@@ -19,16 +19,53 @@ const ISO_DATE: &str = "%Y-%m-%d";
 /// Top few ongoing goals shown in the Home preview.
 const GOALS_PREVIEW_COUNT: usize = 3;
 
-/// Aggregate the Home dashboard for `base_currency` as of `today`. Read-only (no transaction
-/// needed - see `.claude/rules/database.md`, ACID applies to writes).
-pub fn dashboard(conn: &Connection, base_currency: &str, today: NaiveDate) -> Result<DashboardData, DbError> {
-    // Base-currency accounts' opening balances - NOT filtered by archived (CLAUDE.md: archiving
-    // only hides an account from pickers; its historical money is still real).
+/// The base-currency savings `Total` as of `today` (docs/allowances.md §2, ADR 0012): base-currency
+/// accounts' opening balances (NOT filtered by archived - archiving only hides an account from
+/// pickers, its historical money is still real) PLUS every CONFIRMED (`pending_review = 0`),
+/// not-future-dated transaction's own (already fx-correct) `base_amount_minor`, across ALL accounts
+/// regardless of the account's own currency. This is the single source of truth for `Total` -
+/// `db::allowances` reuses it rather than re-deriving the savings balance (never store `Total`).
+pub(crate) fn total_balance_minor(
+    conn: &Connection,
+    base_currency: &str,
+    today: NaiveDate,
+) -> Result<i64, DbError> {
     let base_opening_sum: i64 = conn.query_row(
         "SELECT COALESCE(SUM(opening_balance_minor), 0) FROM accounts WHERE currency = ?1",
         params![base_currency],
         |r| r.get(0),
     )?;
+
+    let mut stmt =
+        conn.prepare("SELECT posted_date, base_amount_minor FROM transactions WHERE pending_review = 0")?;
+    let raw_rows = stmt
+        .query_map([], |row| {
+            let posted_date: String = row.get(0)?;
+            let base_amount_minor: i64 = row.get(1)?;
+            Ok((posted_date, base_amount_minor))
+        })?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+    drop(stmt);
+
+    let mut ledger_sum: i64 = 0;
+    for (date_str, amount_minor) in raw_rows {
+        let date = NaiveDate::parse_from_str(&date_str, ISO_DATE).map_err(|_| {
+            DbError::Invalid(format!("invalid posted date stored on a transaction: {date_str}"))
+        })?;
+        // Only rows dated on or before `today` count (see the module doc: a future-dated
+        // transaction has not happened yet).
+        if date > today {
+            continue;
+        }
+        ledger_sum += amount_minor;
+    }
+    Ok(base_opening_sum + ledger_sum)
+}
+
+/// Aggregate the Home dashboard for `base_currency` as of `today`. Read-only (no transaction
+/// needed - see `.claude/rules/database.md`, ACID applies to writes).
+pub fn dashboard(conn: &Connection, base_currency: &str, today: NaiveDate) -> Result<DashboardData, DbError> {
+    let total_balance_minor = total_balance_minor(conn, base_currency, today)?;
 
     // Non-archived accounts in a foreign currency - their openings can't be honestly converted (no
     // stored fx rate for an opening balance), so they are counted here for the UI's caveat note.
@@ -40,11 +77,9 @@ pub fn dashboard(conn: &Connection, base_currency: &str, today: NaiveDate) -> Re
 
     // Every CONFIRMED transaction's own (already fx-correct) base amount, across ALL accounts -
     // pending_review rows are unconfirmed dedup candidates and never count (matches db::reports).
-    // Only rows dated on or before `today` count: the dashboard is a balance "as of today", and a
-    // transaction dated in the future has not happened yet - counting it would inflate the hero
-    // total while `balance_trend`'s current-month point (which already caps at `today`) stayed
-    // lower, so the two would visibly disagree. Filtering here keeps the hero total and the
-    // trend's last point in exact agreement (see the regression test below).
+    // Re-read here (rather than threading `total_balance_minor`'s internal rows out) to also build
+    // `has_confirmed_transactions` and the `balance_trend` row list; see that function's doc for the
+    // future-dated filter this mirrors.
     let mut stmt =
         conn.prepare("SELECT posted_date, base_amount_minor FROM transactions WHERE pending_review = 0")?;
     let raw_rows = stmt
@@ -57,7 +92,6 @@ pub fn dashboard(conn: &Connection, base_currency: &str, today: NaiveDate) -> Re
     drop(stmt);
 
     let mut tx_rows: Vec<(NaiveDate, i64)> = Vec::with_capacity(raw_rows.len());
-    let mut ledger_sum: i64 = 0;
     for (date_str, amount_minor) in raw_rows {
         let date = NaiveDate::parse_from_str(&date_str, ISO_DATE).map_err(|_| {
             DbError::Invalid(format!("invalid posted date stored on a transaction: {date_str}"))
@@ -65,11 +99,17 @@ pub fn dashboard(conn: &Connection, base_currency: &str, today: NaiveDate) -> Re
         if date > today {
             continue;
         }
-        ledger_sum += amount_minor;
         tx_rows.push((date, amount_minor));
     }
     let has_confirmed_transactions = !tx_rows.is_empty();
-    let total_balance_minor = base_opening_sum + ledger_sum;
+
+    // base_opening_sum feeds `balance_trend`'s constant baseline; re-read it here rather than
+    // threading it out of `total_balance_minor` (a cheap, already-indexed aggregate).
+    let base_opening_sum: i64 = conn.query_row(
+        "SELECT COALESCE(SUM(opening_balance_minor), 0) FROM accounts WHERE currency = ?1",
+        params![base_currency],
+        |r| r.get(0),
+    )?;
 
     // Ongoing (not completed) goals, split by base- vs foreign-currency for the netting/caveat.
     let all_goals = super::goals::list(conn)?;
@@ -152,6 +192,7 @@ mod tests {
                 splits: &[SplitInput { category_id: 1, amount: "50.00" }],
                 payee: None,
                 note: None,
+                allowance_id: None,
             },
             "2026-07-05T00:00:00Z",
         )
@@ -168,6 +209,7 @@ mod tests {
                 splits: &[SplitInput { category_id: 9, amount: "5000.00" }],
                 payee: None,
                 note: None,
+                allowance_id: None,
             },
             "2026-07-06T00:00:00Z",
         )
@@ -187,6 +229,7 @@ mod tests {
                 splits: &[SplitInput { category_id: 1, amount: "10.00" }],
                 payee: None,
                 note: None,
+                allowance_id: None,
             },
             "2026-07-07T00:00:00Z",
         )
@@ -203,6 +246,7 @@ mod tests {
                 splits: &[SplitInput { category_id: 1, amount: "999.00" }],
                 payee: None,
                 note: None,
+                allowance_id: None,
             },
             "2026-07-08T00:00:00Z",
         )
@@ -263,6 +307,7 @@ mod tests {
                 splits: &[SplitInput { category_id: 9, amount: "1000.00" }],
                 payee: None,
                 note: None,
+                allowance_id: None,
             },
             "2026-07-13T00:00:00Z",
         )

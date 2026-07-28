@@ -79,6 +79,7 @@ describe('Home', () => {
     sourceRef: null,
     pendingReview: false,
     createdAt: '2026-07-05T00:00:00Z',
+    allowanceId: null,
     splits: [{ id: 1, categoryId: 1, categoryName: 'Groceries', amountMinor: -5_000 }],
   };
 
