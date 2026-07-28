@@ -246,9 +246,11 @@ pub fn update(
     }
 
     let new_anchor = anchor_after_target_edit(row.anchor_balance_minor, row.target_minor, target_minor);
+    // `currency` is validated above (must equal `base_currency`) but never written here - currency
+    // is immutable post-create (§8; pause/delete + recreate instead of changing it).
     let changed = conn.execute(
-        "UPDATE allowances SET name = ?2, currency = ?3, target_minor = ?4, anchor_balance_minor = ?5 WHERE id = ?1",
-        params![id, name.trim(), currency, target_minor, new_anchor],
+        "UPDATE allowances SET name = ?2, target_minor = ?3, anchor_balance_minor = ?4 WHERE id = ?1",
+        params![id, name.trim(), target_minor, new_anchor],
     )?;
     if changed == 0 {
         return Err(DbError::Invalid(format!("allowance {id} not found")));
