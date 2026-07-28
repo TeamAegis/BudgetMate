@@ -168,10 +168,13 @@ pub fn set_biometric_enabled<R: Runtime>(
 }
 
 /// Set the base (reporting) currency (FR-1.4). Validated as a 3-letter ISO-4217 code, and BLOCKED
-/// while any allowance is active (ADR 0012 decision 4): allowances are stored in whatever currency
-/// was the base at creation time, so silently changing the base would reinterpret their minor
-/// units at a different currency's scale (e.g. MUR to JPY is a 100x error) with no honest offline
-/// conversion available. The user pauses or deletes allowances first.
+/// while ANY allowance row exists - active OR paused (ADR 0012 decision 4): allowances are stored in
+/// whatever currency was the base at creation time, so silently changing the base would reinterpret
+/// their minor units at a different currency's scale (e.g. MUR to JPY is a 100x error) with no
+/// honest offline conversion available. A paused allowance is just as hazardous as an active one -
+/// resuming it later would gate its stale-currency minor units against the new base's Available -
+/// so pausing is not enough to lift the block; the user must delete the allowance(s) first (`resume`
+/// also re-checks currency as defense in depth - see `db::allowances::resume`).
 #[tauri::command]
 pub fn set_base_currency<R: Runtime>(
     app: AppHandle<R>,
@@ -184,10 +187,10 @@ pub fn set_base_currency<R: Runtime>(
             "currency must be a 3-letter ISO-4217 code (e.g. MUR)".to_string(),
         ));
     }
-    let has_active_allowance = db.with(|c| Ok(db::allowances::list(c)?.into_iter().any(|a| a.active)))?;
-    if has_active_allowance {
+    let has_any_allowance = db.with(db::allowances::any_exist)?;
+    if has_any_allowance {
         return Err(AppError::Validation(
-            "pause or delete all allowances before changing the base currency".to_string(),
+            "remove your allowances before changing the base currency".to_string(),
         ));
     }
     update_settings(&app, move |s| s.base_currency = code)

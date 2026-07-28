@@ -66,6 +66,17 @@ pub fn list(conn: &Connection) -> Result<Vec<Allowance>, DbError> {
     Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
 }
 
+/// Whether ANY allowance row exists, active or paused. Used by `commands::vault::set_base_currency`
+/// (ADR 0012 decision 4) to block a base-currency change while any allowance exists - a paused
+/// allowance is stale-currency-hazardous too (a later `resume` would gate its raw minor units
+/// against an Available denominated in a different currency, which `resume` also independently
+/// re-checks as defense in depth), so pausing must not be enough to lift the block; only deleting
+/// does.
+pub fn any_exist(conn: &Connection) -> Result<bool, DbError> {
+    let count: i64 = conn.query_row("SELECT COUNT(*) FROM allowances", [], |r| r.get(0))?;
+    Ok(count > 0)
+}
+
 /// The current balance for one allowance (ADR 0012 decision 3): the stored anchor plus every
 /// tagged, CONFIRMED (`pending_review = 0`), not-future-dated transaction's `base_amount_minor`
 /// posted on or after `last_refresh_date` (inclusive) and on or before `today`. Shares the
@@ -270,11 +281,21 @@ pub fn pause(conn: &Connection, id: i64) -> Result<Allowance, DbError> {
 /// Resume: re-allocate to target (anchor = target, `last_refresh_date` = today, `next_refresh_date`
 /// = the next boundary), GATED by Available at resume time (§11, §13.8) - a paused allowance
 /// contributes 0 to Reserved regardless of its stale stored balance, so this is exactly like a
-/// fresh allocation of the full target.
+/// fresh allocation of the full target. Also re-validates `currency == base_currency`: the base
+/// currency can change while an allowance is paused (`commands::vault::set_base_currency` used to
+/// only block on an ACTIVE allowance), and reactivating a stale-currency allowance would gate raw
+/// minor units against an Available denominated in a different currency (the 100x-scale hazard ADR
+/// 0012 decision 4 exists to prevent).
 pub fn resume(conn: &Connection, base_currency: &str, today: NaiveDate, id: i64) -> Result<Allowance, DbError> {
     let row = get_row(conn, id)?;
     if row.active {
         return Ok(row); // already active - idempotent no-op, not a re-allocation
+    }
+    if row.currency != base_currency {
+        return Err(DbError::Invalid(format!(
+            "allowances can only be active in the vault's base currency ({base_currency}); \
+             delete this allowance and create a new one instead"
+        )));
     }
 
     let available = available_minor(conn, base_currency, today)?;
@@ -633,6 +654,49 @@ mod tests {
         assert!(set_active(&conn, "MUR", today(), a.id, true).is_err());
         let row = list(&conn).unwrap().into_iter().find(|r| r.id == a.id).unwrap();
         assert!(!row.active, "a rejected resume must leave the allowance paused");
+    }
+
+    #[test]
+    fn resume_rejects_a_stale_currency_allowance_after_the_base_currency_changed() {
+        // Bug 2: create MUR, pause, then the vault's base currency changes to USD while paused (the
+        // hazard `commands::vault::set_base_currency` must now also block up front - see
+        // `any_exist`). Resuming must still be rejected even if that outer guard were ever bypassed,
+        // because raw MUR minor units must never be gated against a USD-denominated Available.
+        let conn = db();
+        deposit(&conn, "1000.00", "2026-07-01");
+        let a = create(
+            &conn, "MUR", today(), "Groceries", "MUR", 100_000,
+            AllowanceKind::OneTime, None, "monday", "2026-07-13T00:00:00Z",
+        )
+        .unwrap();
+        set_active(&conn, "MUR", today(), a.id, false).unwrap(); // pause
+
+        let err = resume(&conn, "USD", today(), a.id);
+        assert!(err.is_err(), "resuming a stale-currency (MUR) allowance against a USD base must be rejected");
+        let row = list(&conn).unwrap().into_iter().find(|r| r.id == a.id).unwrap();
+        assert!(!row.active, "a rejected resume must leave the allowance paused");
+    }
+
+    #[test]
+    fn any_exist_counts_a_paused_allowance_not_just_active_ones() {
+        // Bug 2: `set_base_currency` must block while ANY allowance exists (active or paused), not
+        // only an active one - `any_exist` is the query it now uses.
+        let conn = db();
+        assert!(!any_exist(&conn).unwrap(), "no allowances yet");
+
+        deposit(&conn, "1000.00", "2026-07-01");
+        let a = create(
+            &conn, "MUR", today(), "Groceries", "MUR", 100_000,
+            AllowanceKind::OneTime, None, "monday", "2026-07-13T00:00:00Z",
+        )
+        .unwrap();
+        assert!(any_exist(&conn).unwrap());
+
+        set_active(&conn, "MUR", today(), a.id, false).unwrap(); // pause
+        assert!(any_exist(&conn).unwrap(), "a paused allowance still counts");
+
+        delete(&conn, a.id).unwrap();
+        assert!(!any_exist(&conn).unwrap(), "deleting the only allowance clears the block");
     }
 
     #[test]
