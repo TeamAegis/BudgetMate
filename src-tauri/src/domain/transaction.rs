@@ -34,6 +34,8 @@ pub struct Transaction {
     pub source_ref: Option<String>,
     pub pending_review: bool,
     pub created_at: String,
+    /// Optional allowance envelope tag (FR-3.4); `None` for an untagged transaction.
+    pub allowance_id: Option<i64>,
     pub splits: Vec<TxSplit>,
 }
 

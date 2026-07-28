@@ -3,10 +3,15 @@
 //! stored signed (see `domain::transaction`); `base_amount_minor` is recomputed on every write.
 //! The transaction currency is the account's currency and `fx_rate` is "1" for now; the
 //! foreign-currency path (a user-entered rate) arrives with FR-1.4.
+//!
+//! `allowance_id` (FR-3.4) optionally tags a transaction to an allowance envelope. Tagging never
+//! changes the transaction's own money math - it only drives a side-effect update of the tagged
+//! allowance's `balance_minor` (`db::allowances::apply_tag_delta`), always inside the SAME
+//! transaction as the row write so a crash mid-save can never desync a balance from its ledger.
 
 use rusqlite::{params, Connection};
 
-use super::DbError;
+use super::{allowances, DbError};
 use crate::domain::category::CategoryKind;
 use crate::domain::money::{base_amount_minor, parse_minor};
 use crate::domain::transaction::{
@@ -36,10 +41,12 @@ pub struct TxInput<'a> {
     pub splits: &'a [SplitInput<'a>],
     pub payee: Option<&'a str>,
     pub note: Option<&'a str>,
+    /// Optional allowance envelope tag (FR-3.4). `None` for an untagged transaction.
+    pub allowance_id: Option<i64>,
 }
 
 const TX_COLUMNS: &str = "id, account_id, posted_date, amount_minor, currency, fx_rate, \
-    base_amount_minor, payee, note, source, source_ref, pending_review, created_at";
+    base_amount_minor, payee, note, source, source_ref, pending_review, created_at, allowance_id";
 
 fn row_to_tx(row: &rusqlite::Row<'_>) -> rusqlite::Result<Transaction> {
     Ok(Transaction {
@@ -56,6 +63,7 @@ fn row_to_tx(row: &rusqlite::Row<'_>) -> rusqlite::Result<Transaction> {
         source_ref: row.get("source_ref")?,
         pending_review: row.get::<_, i64>("pending_review")? != 0,
         created_at: row.get("created_at")?,
+        allowance_id: row.get("allowance_id")?,
         splits: Vec::new(),
     })
 }
@@ -174,7 +182,9 @@ fn clean(opt: Option<&str>) -> Option<String> {
 
 /// Insert a manual transaction + its splits on `conn` WITHOUT managing a transaction - the caller
 /// owns the surrounding `BEGIN`/`COMMIT`. `source_ref` carries provenance (e.g. a recurring-rule
-/// occurrence key); it is `NULL` for a plain manual entry. Returns the new row id.
+/// occurrence key); it is `NULL` for a plain manual entry. If `input.allowance_id` is tagged, the
+/// allowance's balance is adjusted by this row's signed `base_amount_minor` in the SAME caller
+/// transaction (FR-3.4 - see the module doc). Returns the new row id.
 pub(crate) fn insert_in_tx(
     conn: &Connection,
     input: &TxInput,
@@ -185,8 +195,8 @@ pub(crate) fn insert_in_tx(
     conn.execute(
         "INSERT INTO transactions
            (account_id, posted_date, amount_minor, currency, fx_rate, base_amount_minor,
-            payee, note, source, source_ref, pending_review, created_at)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 'manual', ?9, 0, ?10)",
+            payee, note, source, source_ref, pending_review, created_at, allowance_id)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 'manual', ?9, 0, ?10, ?11)",
         params![
             input.account_id,
             input.posted_date.trim(),
@@ -198,10 +208,14 @@ pub(crate) fn insert_in_tx(
             clean(input.note),
             source_ref,
             now_iso,
+            input.allowance_id,
         ],
     )?;
     let id = conn.last_insert_rowid();
     insert_splits(conn, id, &p.splits)?;
+    if let Some(allowance_id) = input.allowance_id {
+        allowances::apply_tag_delta(conn, allowance_id, p.base)?;
+    }
     Ok(id)
 }
 
@@ -225,15 +239,23 @@ pub fn create(conn: &Connection, input: TxInput, now_iso: &str) -> Result<Transa
 }
 
 /// Update a manual transaction, replacing its splits wholesale. `source`/`created_at` are
-/// preserved. All writes are in one transaction.
+/// preserved. All writes are in one transaction. The OLD `(allowance_id, base_amount_minor)` is
+/// read BEFORE the row is overwritten, then reversed, and the NEW tag (if any) is applied with the
+/// NEW signed base amount - this single reverse-old-then-apply-new sequence uniformly covers
+/// retagging, untagging, an amount change, and a sign change (see the module doc).
 pub fn update(conn: &Connection, id: i64, input: TxInput) -> Result<Transaction, DbError> {
     let p = prepare(conn, &input)?;
 
     let tx = conn.unchecked_transaction()?;
+    let (old_allowance_id, old_base_amount_minor): (Option<i64>, i64) = tx.query_row(
+        "SELECT allowance_id, base_amount_minor FROM transactions WHERE id = ?1",
+        params![id],
+        |r| Ok((r.get(0)?, r.get(1)?)),
+    )?;
     let changed = tx.execute(
         "UPDATE transactions
            SET account_id = ?2, posted_date = ?3, amount_minor = ?4, currency = ?5,
-               fx_rate = ?6, base_amount_minor = ?7, payee = ?8, note = ?9
+               fx_rate = ?6, base_amount_minor = ?7, payee = ?8, note = ?9, allowance_id = ?10
          WHERE id = ?1",
         params![
             id,
@@ -245,6 +267,7 @@ pub fn update(conn: &Connection, id: i64, input: TxInput) -> Result<Transaction,
             p.base,
             clean(input.payee),
             clean(input.note),
+            input.allowance_id,
         ],
     )?;
     if changed == 0 {
@@ -252,16 +275,38 @@ pub fn update(conn: &Connection, id: i64, input: TxInput) -> Result<Transaction,
     }
     tx.execute("DELETE FROM tx_splits WHERE transaction_id = ?1", params![id])?;
     insert_splits(&tx, id, &p.splits)?;
+
+    if let Some(old_id) = old_allowance_id {
+        allowances::apply_tag_delta(&tx, old_id, -old_base_amount_minor)?;
+    }
+    if let Some(new_id) = input.allowance_id {
+        allowances::apply_tag_delta(&tx, new_id, p.base)?;
+    }
+
     tx.commit()?;
     get(conn, id)
 }
 
-/// Delete a transaction; its splits cascade (FK `ON DELETE CASCADE`, foreign_keys ON).
+/// Delete a transaction; its splits cascade (FK `ON DELETE CASCADE`, foreign_keys ON). If it was
+/// tagged to an allowance, that reservation is reversed first - deletion mutates a balance, so the
+/// whole operation runs in ONE transaction (ACID).
 pub fn delete(conn: &Connection, id: i64) -> Result<(), DbError> {
-    let changed = conn.execute("DELETE FROM transactions WHERE id = ?1", params![id])?;
+    let tx = conn.unchecked_transaction()?;
+    let old: Option<(Option<i64>, i64)> = tx
+        .query_row(
+            "SELECT allowance_id, base_amount_minor FROM transactions WHERE id = ?1",
+            params![id],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .ok();
+    let changed = tx.execute("DELETE FROM transactions WHERE id = ?1", params![id])?;
     if changed == 0 {
         return Err(DbError::Invalid(format!("transaction {id} not found")));
     }
+    if let Some((Some(allowance_id), base_amount_minor)) = old {
+        allowances::apply_tag_delta(&tx, allowance_id, -base_amount_minor)?;
+    }
+    tx.commit()?;
     Ok(())
 }
 
@@ -291,6 +336,7 @@ mod tests {
             splits: Box::leak(Box::new([SplitInput { category_id, amount }])),
             payee: None,
             note: None,
+            allowance_id: None,
         }
     }
 
@@ -327,6 +373,7 @@ mod tests {
             ],
             payee: Some("Market"),
             note: None,
+            allowance_id: None,
         };
         let created = create(&conn, tx, "2026-06-06T10:00:00Z").unwrap();
         assert_eq!(created.amount_minor, -5_000, "parent is the signed sum");
@@ -350,6 +397,7 @@ mod tests {
             ],
             payee: None,
             note: None,
+            allowance_id: None,
         };
         assert!(create(&conn, bad_sum, "2026-06-06T10:00:00Z").is_err());
 
@@ -366,6 +414,7 @@ mod tests {
             ],
             payee: None,
             note: None,
+            allowance_id: None,
         };
         assert!(create(&conn, mixed, "2026-06-06T10:00:00Z").is_err());
     }
@@ -383,6 +432,7 @@ mod tests {
             splits: &[SplitInput { category_id: 1, amount: "100.00" }],
             payee: None,
             note: None,
+            allowance_id: None,
         };
         let created = create(&conn, tx, "2026-06-06T10:00:00Z").unwrap();
         assert_eq!(created.currency, "USD");

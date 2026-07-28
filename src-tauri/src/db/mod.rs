@@ -6,6 +6,7 @@ use rusqlite::Connection;
 use std::path::Path;
 
 pub mod accounts;
+pub mod allowances;
 pub mod budgets;
 pub mod categories;
 pub mod dashboard;
@@ -33,6 +34,7 @@ const MIGRATIONS: &[(i64, &str)] = &[
     (2, include_str!("migrations/0002_category_archived.sql")),
     (3, include_str!("migrations/0003_goals.sql")),
     (4, include_str!("migrations/0004_budgets.sql")),
+    (5, include_str!("migrations/0005_allowances.sql")),
 ];
 
 /// Highest schema version this build knows how to migrate to. Used by restore (FR-4.3) to reject a

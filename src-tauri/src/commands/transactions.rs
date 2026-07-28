@@ -31,6 +31,8 @@ pub struct NewTransaction {
     pub splits: Vec<NewSplit>,
     pub payee: Option<String>,
     pub note: Option<String>,
+    /// Optional allowance envelope tag (FR-3.4). `None`/omitted for an untagged transaction.
+    pub allowance_id: Option<i64>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -45,6 +47,7 @@ pub struct UpdateTransaction {
     pub splits: Vec<NewSplit>,
     pub payee: Option<String>,
     pub note: Option<String>,
+    pub allowance_id: Option<i64>,
 }
 
 fn split_inputs(splits: &[NewSplit]) -> Vec<SplitInput<'_>> {
@@ -78,6 +81,7 @@ pub fn create_transaction(
                 splits: &splits,
                 payee: tx.payee.as_deref(),
                 note: tx.note.as_deref(),
+                allowance_id: tx.allowance_id,
             },
             &now,
         )
@@ -103,6 +107,7 @@ pub fn update_transaction(
                 splits: &splits,
                 payee: tx.payee.as_deref(),
                 note: tx.note.as_deref(),
+                allowance_id: tx.allowance_id,
             },
         )
     })

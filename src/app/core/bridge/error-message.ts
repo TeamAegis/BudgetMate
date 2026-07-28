@@ -47,6 +47,11 @@ export function toUserMessage(e: unknown): string {
   if (lower.includes('decimal places')) {
     return 'That amount has too many decimal places for its currency. Remove the extra digits and try again.';
   }
+  // Allowance savings-gate failures (FR-3.4): allocate/increase/resume all reject when the derived
+  // savings Available can't cover the requested target (`db::allowances`).
+  if (lower.includes('available savings')) {
+    return "There isn't enough free savings for this right now.";
+  }
   // Generic validation failures from the domain layer.
   if (lower.includes('invalid') || lower.includes('validation') || lower.includes('must ')) {
     return 'Some of the details look off. Check the form and try again.';

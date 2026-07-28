@@ -153,6 +153,8 @@ export interface Transaction {
   sourceRef: string | null;
   pendingReview: boolean;
   createdAt: string;
+  /** Optional allowance envelope tag (FR-3.4); `null` for an untagged transaction. */
+  allowanceId: number | null;
   splits: TxSplit[];
 }
 
@@ -180,6 +182,8 @@ export interface NewTransaction {
   splits: NewSplit[];
   payee?: string | null;
   note?: string | null;
+  /** Optional allowance envelope tag (FR-3.4). Omit/`null` for an untagged transaction. */
+  allowanceId?: number | null;
 }
 
 /** Input for update_transaction (mirrors Rust `UpdateTransaction`). */
@@ -357,6 +361,85 @@ export interface NewGoal {
 /** Input for update_goal (mirrors Rust `UpdateGoal`). */
 export interface UpdateGoal extends NewGoal {
   id: number;
+}
+
+// ── Allowances (FR-3.4, mirror domain::allowance / db::allowances) ──────────────
+// Savings-backed envelopes (docs/allowances.md, ADR 0005/0012). `Total`/`Available` are NEVER
+// stored - `totalMinor`/`availableMinor` are computed fresh from the dashboard aggregation each
+// call. Allowances are base-currency only (validated at creation); `reservedMinor`/`overspent`/
+// `underfunded` are derived in Rust, never computed in TS.
+
+/** `"recurring"` refreshes to `targetMinor` on a cadence; `"one_time"` never refreshes and
+ *  auto-closes once spent to zero or below (mirrors Rust allowance `kind`). */
+export type AllowanceKind = 'recurring' | 'one_time';
+
+/** Refresh cadence for a recurring allowance - weekly or monthly only, never daily (mirrors the DB
+ *  `period` CHECK column; NOT the same enum as `Schedule`, which also allows daily for FR-1.3). */
+export type AllowancePeriod = 'weekly' | 'monthly';
+
+/** A savings-backed allowance envelope (mirrors Rust `Allowance`). All money is integer minor units
+ *  in `currency` (always the vault's base currency). `reservedMinor`/`overspent`/`underfunded` are
+ *  DERIVED in Rust on every read, never stored. */
+export interface Allowance {
+  id: number;
+  name: string;
+  currency: Iso4217;
+  targetMinor: number;
+  balanceMinor: number;
+  kind: AllowanceKind;
+  /** Set only for `'recurring'`; `null` for `'one_time'`. */
+  period: AllowancePeriod | null;
+  /** ISO weekday the allowance refreshes on (Mon=1..Sun=7); set only for a `'weekly'` period. */
+  weekStart: number | null;
+  /** `YYYY-MM-DD`; `null` for a one-time allowance (it never refreshes). */
+  nextRefreshDate: string | null;
+  active: boolean;
+  createdAt: string;
+  /** Derived: `max(0, balanceMinor)` while active, else `0`. */
+  reservedMinor: number;
+  /** Derived: `balanceMinor < 0`. */
+  overspent: boolean;
+  /** Derived: active, recurring, and currently below target (a refresh would top it up). */
+  underfunded: boolean;
+}
+
+/** The allowances-screen aggregate (mirrors Rust `AllowanceSummary`, from `listAllowances`/
+ *  `getAllowanceSummary`). `totalMinor` is the base-currency savings total as of today (NEVER
+ *  stored - ADR 0012); `reservedMinor`/`availableMinor` derive from it and the allowance list.
+ *  `excludedAllowances` counts active allowances in a currency other than `baseCurrency` (defensive
+ *  - allowances are base-currency only at creation - mirrors `DashboardData.excludedAccounts`). */
+export interface AllowanceSummary {
+  allowances: Allowance[];
+  totalMinor: number;
+  reservedMinor: number;
+  availableMinor: number;
+  baseCurrency: Iso4217;
+  excludedAllowances: number;
+}
+
+/** Input for create_allowance (mirrors Rust `NewAllowance`). `target` is a non-negative major-unit
+ *  string (e.g. "1500.00"); Rust parses it to minor units and gates the initial full-target
+ *  allocation against Available (all-or-nothing). `currency` must equal the vault's base currency. */
+export interface NewAllowance {
+  name: string;
+  target: string;
+  currency: Iso4217;
+  kind: AllowanceKind;
+  /** Required for `'recurring'`, omitted for `'one_time'`. */
+  period?: AllowancePeriod | null;
+  /** ISO weekday (Mon=1..Sun=7); required for a `'weekly'` period, omitted otherwise. */
+  weekStart?: number | null;
+}
+
+/** Input for update_allowance (mirrors Rust `UpdateAllowance`). Currency, kind, period, and
+ *  weekStart are fixed at creation - delete and recreate to change them. A target increase or a
+ *  resume (`active: false -> true`) is gated all-or-nothing against Available; a decrease or a
+ *  pause is never gated. */
+export interface UpdateAllowance {
+  id: number;
+  name: string;
+  target: string;
+  active: boolean;
 }
 
 // ── Bank-file import (FR-2.2, mirrors import:: / db::imports / commands::import) ──

@@ -61,6 +61,13 @@ These reserve money in opposite directions and must not be conflated:
 An allowance is a spending cap that **tops up** and **earmarks real savings**; a goal is a savings
 bucket that fills; a category cap only reports usage and reserves nothing.
 
+**Known v1 limitation - independent reservation.** Goals and allowances both reserve against the
+same underlying savings `Total`, but each does so independently: Home's usable balance subtracts
+only `goals_reserved`, and the allowance `Available` subtracts only allowance `Reserved`. Neither
+screen nets the other's reservation, so a user can earmark the same rupees via a goal and an
+allowance at once, and the two "free money" figures can overstate together. See ADR 0012
+Consequences; reconciling this into one shared figure is deferred to the Home-integration UI issue.
+
 ---
 
 ## 4. The model: three balances and core invariants
@@ -214,6 +221,11 @@ full new target and silently refund this period's spending.)
 4. Else (**insufficient savings**): **warn and do not refill.** Leave balance unchanged.
 5. Advance the schedule pointer to the current period either way (see §9.4).
 
+**Scarce-funds tie-break (v1):** when several allowances are due in the same pass and Available
+cannot fund all of them, they are processed in **ascending id (creation) order** - earlier-created
+allowances are topped up first; later ones are more likely to be left underfunded (step 4) in that
+pass. There is no user-configurable priority in v1.
+
 ### 9.3 Worked examples
 
 - **Carryover, sufficient savings.** End of week 1: balance 400, Reserved 400, Available 4,000, Total
@@ -241,6 +253,10 @@ is an intended property of the imprest model.
   is 0, or negative with the overspend already drawn from Available).
 - If **closed early manually** (or deleted/paused) with a positive balance, the leftover returns to
   Available (per decision 4).
+- **Auto-close is forward-only (locked behavior).** A later reversal - editing or deleting the
+  transaction that drove the balance to 0 or below, or a tagged refund that lifts it back above zero
+  - does **not** reactivate a closed one-time allowance. Recovering it requires a manual edit or a new
+  allowance; this is intended, not a bug.
 
 ---
 
@@ -261,6 +277,10 @@ is an intended property of the imprest model.
 - **Untagged spend:** reduces `Total` and `Available` directly (no envelope involved).
 - **Tagged refund / negative expense:** increases the allowance balance (may temporarily exceed
   target); the next refresh trims any excess back to target and returns it to Available.
+- **Known v1 limitation - one-time allowances never trim.** The trim above only happens on a
+  recurring allowance's next refresh. A **one-time** allowance never refreshes, so a tagged refund
+  can leave its balance above target indefinitely; the excess is freed only by manually editing,
+  pausing, or deleting the allowance.
 
 ---
 

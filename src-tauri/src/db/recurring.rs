@@ -166,6 +166,7 @@ pub fn materialise_due(conn: &Connection, today: NaiveDate) -> Result<usize, DbE
                 splits: &[SplitInput { category_id: rule.template.category_id, amount }],
                 payee: rule.template.payee.as_deref(),
                 note: rule.template.note.as_deref(),
+                allowance_id: None,
             };
             transactions::insert_in_tx(&tx, &input, Some(&key), &now_iso)?;
             inserted += 1;

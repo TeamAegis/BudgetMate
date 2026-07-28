@@ -55,3 +55,8 @@ Consequences, and Alternatives considered.
   preview/commit pipeline via a promoted `StagedRow`; a transaction whose own currency differs from
   the destination account's is reported as an error and never imported (imports carry no fx rate
   yet); OFX/QFX have no mapping step (the file is self-describing).
+- [0012](0012-allowance-total-is-derived-savings.md): Allowance `Total` source (FR-3.4). `Total` is
+  the existing dashboard total-balance aggregation (`db::dashboard::total_balance_minor`), computed
+  as of `today` and never stored; allowances are base-currency only, and `Reserved` sums only
+  active, base-currency allowances; editing/deleting a prior-period tagged transaction may push a
+  balance above target, trimmed at the next refresh (the same §12 refund rule).

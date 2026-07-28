@@ -58,8 +58,15 @@ fn open_and_unlock(
         .map_err(|_| AppError::KeyVerificationFailed)?;
     // Materialise any due recurring occurrences lazily on app open (FR-1.3) - no background
     // scheduler. Idempotent, so a failure here must never block unlock; log-and-continue.
-    if let Err(e) = db::recurring::materialise_due(&conn, chrono::Utc::now().date_naive()) {
+    let today = chrono::Utc::now().date_naive();
+    if let Err(e) = db::recurring::materialise_due(&conn, today) {
         log::warn!("recurring materialisation skipped: {e}");
+    }
+    // Refresh due allowances (FR-3.4) AFTER recurring materialisation - recurring occurrences can
+    // move `Total`, and allowance refresh reads `Total`, so it must run second. Also lazy, also
+    // log-and-continue (docs/allowances.md §9.1/§9.4).
+    if let Err(e) = db::allowances::refresh_due(&conn, &meta.settings.base_currency, today) {
+        log::warn!("allowance refresh skipped: {e}");
     }
     db.unlock(conn)
 }

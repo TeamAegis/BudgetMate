@@ -1,0 +1,29 @@
+---
+source: src/db/allowances.rs
+expression: "serde_json::to_string_pretty(&normalised).unwrap()"
+---
+{
+  "allowances": [
+    {
+      "id": 1,
+      "name": "Groceries",
+      "currency": "MUR",
+      "targetMinor": 30000,
+      "balanceMinor": 30000,
+      "kind": "one_time",
+      "period": null,
+      "weekStart": null,
+      "nextRefreshDate": null,
+      "active": true,
+      "createdAt": "2026-07-13T00:00:00Z",
+      "reservedMinor": 30000,
+      "overspent": false,
+      "underfunded": false
+    }
+  ],
+  "totalMinor": 100000,
+  "reservedMinor": 30000,
+  "availableMinor": 70000,
+  "baseCurrency": "MUR",
+  "excludedAllowances": 0
+}
