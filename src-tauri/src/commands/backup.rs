@@ -56,26 +56,32 @@ pub async fn create_backup<R: Runtime>(
 ) -> Result<BackupSummary, AppError> {
     let dir = app_data_dir(&app)?;
 
-    // Read the consistent, already-encrypted DB snapshot INSIDE the guarded scope so the
-    // std::sync::Mutex guard drops before the blocking base64/JSON/write work below - never hold
-    // it across an await.
-    let db_bytes = {
+    // Read the consistent, already-encrypted DB snapshot AND the meta sidecar INSIDE the same
+    // guarded scope/acquisition, so (db_bytes, meta) is one consistent snapshot relative to a
+    // concurrent restore (ADR 0008 point 4 / issue #116): a restore holds this same DbState mutex
+    // across writing the NEW meta (salt/kdf/base_currency) and swapping the restored DB file, so
+    // reading db_bytes and meta as two separate, unguarded acquisitions could interleave with a
+    // restore and pair OLD db bytes with the NEW meta's salt/kdf - a `.vaultbak` envelope whose
+    // carried salt/kdf cannot decrypt its own embedded db bytes. The std::sync::Mutex guard still
+    // drops at the end of this block, before the blocking base64/JSON/write work below - never
+    // hold it across an await.
+    let (db_bytes, meta) = {
         let guard = state.guard()?;
         let conn = guard.as_ref().ok_or(AppError::Locked)?;
         // Defensive checkpoint: a no-op in the default DELETE journal mode, but ensures the
         // on-disk file reflects every committed write if the journal mode ever changes.
         conn.execute_batch("PRAGMA wal_checkpoint(TRUNCATE);")
             .map_err(|e| AppError::Internal(e.to_string()))?;
-        std::fs::read(vault::db_path(&dir)).map_err(|e| AppError::Internal(e.to_string()))?
+        let db_bytes =
+            std::fs::read(vault::db_path(&dir)).map_err(|e| AppError::Internal(e.to_string()))?;
+        let meta = vault::read_meta(&dir)?;
+        (db_bytes, meta)
     };
 
     let now = chrono::Utc::now().to_rfc3339();
     let app_str = format!("BudgetMate {}", env!("CARGO_PKG_VERSION"));
     let path = dest_path.clone();
     let bytes = tauri::async_runtime::spawn_blocking(move || {
-        // `vault::read_meta` does blocking file I/O - keep it inside spawn_blocking with the
-        // envelope build/write below, never directly in the async command body.
-        let meta = vault::read_meta(&dir)?;
         let envelope = backup::build_envelope(db_bytes, &meta, &now, &app_str);
         let bytes = backup::to_bytes(&envelope)?;
         std::fs::write(&path, &bytes).map_err(|e| AppError::Internal(e.to_string()))?;

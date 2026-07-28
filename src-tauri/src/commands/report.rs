@@ -23,8 +23,15 @@ pub fn get_report<R: Runtime>(
     category_id: Option<i64>,
 ) -> Result<ReportData, AppError> {
     let dir = app_data_dir(&app)?;
-    let base_currency = vault::read_meta(&dir).map(|m| m.settings).unwrap_or_default().base_currency;
     let today = chrono::Utc::now().date_naive();
     let bounds = resolve_period(period, today);
-    state.with(|conn| crate::db::reports::report(conn, period, bounds, category_id, &base_currency))
+    // Read the base-currency label inside the same DbState guard as the DB query. A concurrent
+    // `restore_backup` writes the new meta AND swaps the DB file while holding this same mutex
+    // (see ADR 0008 point 4 / issue #116), so reading meta under the guard guarantees a
+    // consistent (meta, DB) pair - fully pre-restore or fully post-restore, never a stale label
+    // paired with freshly-restored rows (or vice versa).
+    state.with(|conn| {
+        let base_currency = vault::read_meta(&dir).map(|m| m.settings).unwrap_or_default().base_currency;
+        crate::db::reports::report(conn, period, bounds, category_id, &base_currency)
+    })
 }
