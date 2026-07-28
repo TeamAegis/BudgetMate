@@ -53,9 +53,12 @@ without moving `Total`, breaking `Available = Total - Reserved` (invariant §13.
    nothing against a base-currency Total and cannot be converted offline). Because the allowance is
    base-currency, `base_amount_minor` (already base-currency and fx-correct for foreign-currency
    rows) is the right quantity for the derived draw-down. `set_base_currency` is blocked with a
-   clear message while any active allowance exists, so a base change can never silently reinterpret
-   an allowance's minor units at a different currency scale (e.g. MUR to JPY is a 100x error); the
-   user pauses or deletes allowances first.
+   clear message while ANY allowance row exists - active OR PAUSED - so a base change can never
+   silently reinterpret an allowance's minor units at a different currency scale (e.g. MUR to JPY is
+   a 100x error); the user deletes allowances first. (A paused allowance is just as hazardous as an
+   active one: pausing alone must not be enough to lift the block, since a later `resume` would
+   otherwise gate stale-currency minor units against the new base's Available. `resume` also
+   re-validates `currency == base_currency` itself, as defense in depth.)
 
 5. **Refresh is calendar-aligned and does exactly one set-to-target top-up.** On unlock (after
    recurring materialisation, so income has landed), for each active recurring allowance where

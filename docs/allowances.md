@@ -247,7 +247,10 @@ is an intended property of the imprest model.
 ## 11. Pause and delete
 
 - **Pause:** deactivate the allowance; its Reserved balance returns to Available. (Resuming
-  re-allocates, gated by Available at resume time.)
+  re-allocates, gated by Available at resume time, and re-validates that the allowance's currency
+  still matches the vault's base currency - see §4.2/ADR 0012 decision 4. Changing the base currency
+  is blocked while any allowance exists, active or paused, so this should never actually fire in
+  practice; it is a defense-in-depth check.)
 - **Delete:** remove the allowance; its Reserved balance returns to Available.
 - In both cases, historical transactions tagged to it remain intact for reporting.
 
@@ -261,6 +264,17 @@ is an intended property of the imprest model.
 - **Untagged spend:** reduces `Total` and `Available` directly (no envelope involved).
 - **Tagged refund / negative expense:** increases the allowance balance (may temporarily exceed
   target); the next refresh trims any excess back to target and returns it to Available.
+- **Tagging targets an active allowance.** The UI category/allowance picker (issue #124) only offers
+  active allowances, so tagging to a paused one is a plausible but not a normal path (for example, an
+  older transaction edited after its allowance was paused). This is not enforced with a hard
+  active-check at the data layer: doing so would risk wrongly blocking an edit to a transaction whose
+  allowance happens to have been paused since it was tagged. A paused allowance's derived balance
+  still includes such tags; it simply does not count toward Reserved while paused (§11).
+- **A tag applies to the whole transaction, not to individual splits.** For a multi-category (split)
+  transaction, `transactions.allowance_id` is a single column on the parent row, so tagging an
+  allowance draws the transaction's full amount from that allowance, even though some splits may be
+  categorised elsewhere. This matches the imprest model (an allowance tracks money set aside for a
+  purpose, not a strict per-category ledger) and is not treated as a defect.
 
 ---
 
