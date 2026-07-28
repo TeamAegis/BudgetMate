@@ -15,8 +15,11 @@
 //!   carries its own `base_amount_minor`. Accounts are NOT filtered by `archived` - archiving only
 //!   hides an account from pickers; its historical money is still real.
 //! - **Usable balance** = total balance minus the `current_minor` of every ONGOING (not completed),
-//!   base-currency goal (foreign-currency goals are excluded from the netting, same fx reasoning).
-//!   It MAY be negative (over-committed) - never clamp it.
+//!   base-currency goal (foreign-currency goals are excluded from the netting, same fx reasoning),
+//!   minus `allowances_reserved_minor` (ADR 0012: `sum(max(0, derived balance))` over active,
+//!   base-currency allowances - the same figure the allowance savings gate enforces, computed once
+//!   in `db::allowances::allowances_reserved_minor`, never a second inlined copy). It MAY be
+//!   negative (over-committed) - never clamp it.
 //! - **Balance trend** is the TOTAL balance (never usable) at each of the trailing 6 months' ends,
 //!   as of `today` (never past it), because goals have no history table, so a past "usable balance"
 //!   is unreconstructable, while total balance IS exactly reconstructable from the ledger.
@@ -47,6 +50,10 @@ pub struct DashboardData {
     /// The amount netted out of `total_balance_minor` to reach `usable_balance_minor` (the
     /// "set aside for goals" figure) - the sum of ongoing, base-currency goals' `current_minor`.
     pub goals_reserved_minor: i64,
+    /// The amount netted out of `total_balance_minor` for active, base-currency allowances (ADR
+    /// 0012) - `sum(max(0, derived balance))`, the same figure `db::allowances::available_minor`
+    /// uses for the savings gate.
+    pub allowances_reserved_minor: i64,
     pub this_month_spend_minor: i64,
     /// Trailing 6 months, oldest first, last point = the current month.
     pub balance_trend: Vec<BalancePoint>,
@@ -183,8 +190,9 @@ mod tests {
         let data = DashboardData {
             base_currency: "MUR".into(),
             total_balance_minor: 465_000,
-            usable_balance_minor: 425_000,
+            usable_balance_minor: 415_000,
             goals_reserved_minor: 40_000,
+            allowances_reserved_minor: 10_000,
             this_month_spend_minor: 50_000,
             balance_trend: vec![BalancePoint { label: "Jul".into(), amount_minor: 465_000 }],
             goals: vec![Goal {
@@ -203,8 +211,9 @@ mod tests {
         let json = serde_json::to_value(&data).unwrap();
         assert_eq!(json["baseCurrency"], "MUR");
         assert_eq!(json["totalBalanceMinor"], 465_000);
-        assert_eq!(json["usableBalanceMinor"], 425_000);
+        assert_eq!(json["usableBalanceMinor"], 415_000);
         assert_eq!(json["goalsReservedMinor"], 40_000);
+        assert_eq!(json["allowancesReservedMinor"], 10_000);
         assert_eq!(json["thisMonthSpendMinor"], 50_000);
         assert_eq!(json["balanceTrend"][0]["label"], "Jul");
         assert_eq!(json["balanceTrend"][0]["amountMinor"], 465_000);

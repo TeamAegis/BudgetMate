@@ -31,6 +31,18 @@ pub fn list(conn: &Connection) -> Result<Vec<Goal>, DbError> {
     Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
 }
 
+/// Sum of `current_minor` across ongoing (not completed), `base_currency` goals - the "set aside
+/// for goals" figure netted out of `Total` in BOTH the dashboard (`goalsReservedMinor`) and the
+/// allowance savings gate/summary (ADR 0012 decision 2). The one place this sum is computed, so the
+/// two call sites can never drift apart.
+pub fn reserved_minor(conn: &Connection, base_currency: &str) -> Result<i64, DbError> {
+    Ok(list(conn)?
+        .into_iter()
+        .filter(|g| !g.completed && g.currency == base_currency)
+        .map(|g| g.current_minor)
+        .sum())
+}
+
 fn get(conn: &Connection, id: i64) -> Result<Goal, DbError> {
     conn.query_row(
         "SELECT id, name, target_minor, current_minor, currency, target_date FROM goals WHERE id = ?1",
@@ -122,6 +134,15 @@ mod tests {
         let goals = list(&conn).unwrap();
         assert_eq!(goals[0].name, "Active");
         assert_eq!(goals[1].name, "Done");
+    }
+
+    #[test]
+    fn reserved_minor_sums_ongoing_base_currency_goals_only() {
+        let conn = db();
+        create(&conn, "Vacation", 100_000, 40_000, "MUR", None).unwrap(); // ongoing, base -> counts
+        create(&conn, "Emergency fund", 50_000, 50_000, "MUR", None).unwrap(); // completed -> excluded
+        create(&conn, "Gadget", 20_000, 10_000, "USD", None).unwrap(); // ongoing, foreign -> excluded
+        assert_eq!(reserved_minor(&conn, "MUR").unwrap(), 40_000);
     }
 
     #[test]

@@ -7,6 +7,10 @@
 //! not counted yet (it has not happened), so it is filtered out of both `total_balance_minor` and
 //! `balance_trend` at the same point, keeping the hero total and the trend's current-month point
 //! in exact agreement.
+//!
+//! `total_balance` below is `Total` (ADR 0012 decision 1): the SAME base-currency ledger balance
+//! definition is used here AND by the allowance reservation engine (`db::allowances`) - never a
+//! second, separately-inlined copy of this accounting basis.
 
 use chrono::NaiveDate;
 use rusqlite::{params, Connection};
@@ -19,32 +23,22 @@ const ISO_DATE: &str = "%Y-%m-%d";
 /// Top few ongoing goals shown in the Home preview.
 const GOALS_PREVIEW_COUNT: usize = 3;
 
-/// Aggregate the Home dashboard for `base_currency` as of `today`. Read-only (no transaction
-/// needed - see `.claude/rules/database.md`, ACID applies to writes).
-pub fn dashboard(conn: &Connection, base_currency: &str, today: NaiveDate) -> Result<DashboardData, DbError> {
-    // Base-currency accounts' opening balances - NOT filtered by archived (CLAUDE.md: archiving
-    // only hides an account from pickers; its historical money is still real).
-    let base_opening_sum: i64 = conn.query_row(
+/// Base-currency accounts' opening balances - NOT filtered by archived (CLAUDE.md: archiving only
+/// hides an account from pickers; its historical money is still real).
+fn base_opening_sum(conn: &Connection, base_currency: &str) -> Result<i64, DbError> {
+    Ok(conn.query_row(
         "SELECT COALESCE(SUM(opening_balance_minor), 0) FROM accounts WHERE currency = ?1",
         params![base_currency],
         |r| r.get(0),
-    )?;
+    )?)
+}
 
-    // Non-archived accounts in a foreign currency - their openings can't be honestly converted (no
-    // stored fx rate for an opening balance), so they are counted here for the UI's caveat note.
-    let excluded_accounts: i64 = conn.query_row(
-        "SELECT count(*) FROM accounts WHERE currency != ?1 AND archived = 0",
-        params![base_currency],
-        |r| r.get(0),
-    )?;
-
-    // Every CONFIRMED transaction's own (already fx-correct) base amount, across ALL accounts -
-    // pending_review rows are unconfirmed dedup candidates and never count (matches db::reports).
-    // Only rows dated on or before `today` count: the dashboard is a balance "as of today", and a
-    // transaction dated in the future has not happened yet - counting it would inflate the hero
-    // total while `balance_trend`'s current-month point (which already caps at `today`) stayed
-    // lower, so the two would visibly disagree. Filtering here keeps the hero total and the
-    // trend's last point in exact agreement (see the regression test below).
+/// Every CONFIRMED transaction's own (already fx-correct) base amount, across ALL accounts, paired
+/// with its parsed posted date - pending_review rows are unconfirmed dedup candidates and never
+/// count (matches db::reports). Only rows dated on or before `today` count: a transaction dated in
+/// the future has not happened yet. This is the shared row source for `total_balance` and the
+/// dashboard's `balance_trend` - both must see the exact same set of rows.
+fn confirmed_ledger_rows(conn: &Connection, today: NaiveDate) -> Result<Vec<(NaiveDate, i64)>, DbError> {
     let mut stmt =
         conn.prepare("SELECT posted_date, base_amount_minor FROM transactions WHERE pending_review = 0")?;
     let raw_rows = stmt
@@ -56,8 +50,7 @@ pub fn dashboard(conn: &Connection, base_currency: &str, today: NaiveDate) -> Re
         .collect::<rusqlite::Result<Vec<_>>>()?;
     drop(stmt);
 
-    let mut tx_rows: Vec<(NaiveDate, i64)> = Vec::with_capacity(raw_rows.len());
-    let mut ledger_sum: i64 = 0;
+    let mut rows = Vec::with_capacity(raw_rows.len());
     for (date_str, amount_minor) in raw_rows {
         let date = NaiveDate::parse_from_str(&date_str, ISO_DATE).map_err(|_| {
             DbError::Invalid(format!("invalid posted date stored on a transaction: {date_str}"))
@@ -65,20 +58,53 @@ pub fn dashboard(conn: &Connection, base_currency: &str, today: NaiveDate) -> Re
         if date > today {
             continue;
         }
-        ledger_sum += amount_minor;
-        tx_rows.push((date, amount_minor));
+        rows.push((date, amount_minor));
     }
+    Ok(rows)
+}
+
+/// `Total` (ADR 0012 decision 1): the base-currency ledger balance as of `today` - base-currency
+/// account openings plus every confirmed, not-future-dated transaction's own base amount, across
+/// all accounts. The single definition of `Total` shared by the dashboard and the allowance
+/// reservation engine (`db::allowances::available_minor`) - never compute this a second way.
+pub fn total_balance(conn: &Connection, base_currency: &str, today: NaiveDate) -> Result<i64, DbError> {
+    let opening = base_opening_sum(conn, base_currency)?;
+    let ledger_sum: i64 = confirmed_ledger_rows(conn, today)?.iter().map(|(_, amount)| amount).sum();
+    Ok(opening + ledger_sum)
+}
+
+/// Aggregate the Home dashboard for `base_currency` as of `today`. Read-only (no transaction
+/// needed - see `.claude/rules/database.md`, ACID applies to writes).
+pub fn dashboard(conn: &Connection, base_currency: &str, today: NaiveDate) -> Result<DashboardData, DbError> {
+    let opening = base_opening_sum(conn, base_currency)?;
+
+    // Non-archived accounts in a foreign currency - their openings can't be honestly converted (no
+    // stored fx rate for an opening balance), so they are counted here for the UI's caveat note.
+    let excluded_accounts: i64 = conn.query_row(
+        "SELECT count(*) FROM accounts WHERE currency != ?1 AND archived = 0",
+        params![base_currency],
+        |r| r.get(0),
+    )?;
+
+    // Filtering to `posted_date <= today` here keeps the hero total and `balance_trend`'s
+    // current-month point in exact agreement (see the regression test below).
+    let tx_rows = confirmed_ledger_rows(conn, today)?;
     let has_confirmed_transactions = !tx_rows.is_empty();
-    let total_balance_minor = base_opening_sum + ledger_sum;
+    let ledger_sum: i64 = tx_rows.iter().map(|(_, amount)| amount).sum();
+    let total_balance_minor = opening + ledger_sum;
 
     // Ongoing (not completed) goals, split by base- vs foreign-currency for the netting/caveat.
     let all_goals = super::goals::list(conn)?;
     let ongoing: Vec<_> = all_goals.into_iter().filter(|g| !g.completed).collect();
     let has_ongoing_goals = !ongoing.is_empty();
+    // Same sum `db::goals::reserved_minor` computes - kept as a filter over the already-fetched
+    // `ongoing` list here (rather than a second query) since this function also needs `ongoing` for
+    // `excludedGoals` and the Home preview.
     let goals_reserved_minor: i64 =
         ongoing.iter().filter(|g| g.currency == base_currency).map(|g| g.current_minor).sum();
     let excluded_goals = ongoing.iter().filter(|g| g.currency != base_currency).count() as i64;
-    let usable_balance_minor = total_balance_minor - goals_reserved_minor;
+    let allowances_reserved_minor = super::allowances::allowances_reserved_minor(conn, base_currency, today)?;
+    let usable_balance_minor = total_balance_minor - goals_reserved_minor - allowances_reserved_minor;
     let goals_preview: Vec<_> = ongoing.into_iter().take(GOALS_PREVIEW_COUNT).collect();
 
     // This-month spend: reuse the tested Analytics aggregation rather than re-deriving spend logic.
@@ -86,7 +112,7 @@ pub fn dashboard(conn: &Connection, base_currency: &str, today: NaiveDate) -> Re
     let report = super::reports::report(conn, ReportPeriod::ThisMonth, bounds, None, base_currency)?;
     let this_month_spend_minor = report.total_spend_minor;
 
-    let balance_trend_points = balance_trend(today, base_opening_sum, &tx_rows);
+    let balance_trend_points = balance_trend(today, opening, &tx_rows);
 
     let is_empty = !has_confirmed_transactions
         && total_balance_minor == 0
@@ -98,6 +124,7 @@ pub fn dashboard(conn: &Connection, base_currency: &str, today: NaiveDate) -> Re
         total_balance_minor,
         usable_balance_minor,
         goals_reserved_minor,
+        allowances_reserved_minor,
         this_month_spend_minor,
         balance_trend: balance_trend_points,
         goals: goals_preview,
