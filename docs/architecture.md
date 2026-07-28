@@ -138,9 +138,14 @@ recurring_rules(id, template_json, schedule, next_run_date, last_materialised_da
 budgets(id, category_id, period, cap_minor)             -- envelope caps (FR-3.1); UNIQUE(category_id, period)
                                                     -- (migration 0004) - one cap per category/period
 goals(id, name, target_minor, current_minor, currency, target_date) -- savings goals (FR-3.2); `currency` added in migration 0003
-allowances(id, name, currency, target_minor, balance_minor, kind, period,
-           week_start, next_refresh_date, active, created_at) -- imprest envelopes (FR-3.4);
-                                                    -- kind: recurring|one_time; period: weekly|monthly
+allowances(id, name, currency, target_minor, anchor_balance_minor, kind, period,
+           week_start, last_refresh_date, next_refresh_date, active, created_at)
+                                                    -- imprest envelopes (FR-3.4, migration 0005);
+                                                    -- kind: recurring|one_time; period: weekly|monthly,
+                                                    -- NULL for one_time. The CURRENT balance is
+                                                    -- DERIVED (anchor_balance_minor + tagged,
+                                                    -- confirmed, not-future-dated transactions since
+                                                    -- last_refresh_date), never a stored column - ADR 0012.
 import_rules(id, ordinal, match_field, match_op, match_value, set_field, set_value, active)
 imports(id, filename, format, imported_at, row_count)   -- audit of file imports
 schema_migrations(version, applied_at)
@@ -153,11 +158,14 @@ schema_migrations(version, applied_at)
   double-insert (keyed on `recurring_rules.id` + occurrence date).
 - Dedup never deletes; it only sets a `pending_review` flag surfaced to the UI (FR-2.4).
 - Allowances (FR-3.4) hold the imprest invariants: `Available = Total - Reserved` where
-  `Reserved = sum of max(0, balance_minor)` over active allowances; `Total` (savings) changes only on
-  real cash events, never on allocation/refresh/edit/pause/delete (pure re-earmarking); an increase
-  to Reserved is gated all-or-nothing by Available; a refresh **sets** the balance to target
-  (carryover, no stacking, self-healing). Materialised lazily on app open (no scheduler), like
-  recurrence. Full rules and worked examples: `docs/allowances.md`; decision: ADR 0005.
+  `Reserved = sum of max(0, balance)` over active allowances and the derived balance shares the
+  dashboard's own accounting basis (confirmed, not-future-dated rows only - ADR 0012); `Total`
+  (savings) changes only on real cash events, never on allocation/refresh/edit/pause/delete (pure
+  re-earmarking); an increase to Reserved is gated all-or-nothing by Available; a refresh **sets**
+  the balance to target (carryover, no stacking, self-healing). Materialised lazily on app open (no
+  scheduler), like recurrence. Full rules and worked examples: `docs/allowances.md`; decisions: ADR
+  0005 (the imprest model) and ADR 0012 (Total's source, the derived balance, base-currency-only,
+  and the refresh schedule).
 
 ### 4.3 DTOs
 Rust structs (`serde`) are serialised to JSON across IPC. TS interfaces in
@@ -432,18 +440,24 @@ traceability table (`functional-requirements.md` §5) carries the same status pe
   reporting/analytics aggregations (FR-3.3), the home dashboard (`get_dashboard`), transaction
   export to CSV/XLSX (FR-4.2, desktop-first - `export_transactions` + the save dialog; ADR 0006),
   encrypted local backup (FR-4.1, desktop-first - `create_backup` + the save dialog; ADR 0007),
-  and restore from backup (FR-4.3, desktop-first, REPLACE mode only - `restore_backup` + the open
-  dialog; ADR 0008).
+  restore from backup (FR-4.3, desktop-first, REPLACE mode only - `restore_backup` + the open
+  dialog; ADR 0008), and the savings-backed allowance reservation engine (FR-3.4; schema
+  (migration 0005), the derived-balance/savings-gate/refresh engine in `domain::allowance` +
+  `db::allowances`, the `list_allowances` / `get_allowance_summary` / `create_allowance` /
+  `update_allowance` / `set_allowance_active` / `delete_allowance` commands, lazy refresh wired
+  into unlock after recurring materialisation, and the `set_base_currency` block while any
+  allowance is active - ADR 0012, issue #123; the UI is a separate, not-yet-built follow-up, issue
+  #124).
 - **Partial:** dedup (matcher in `rules/dedup.rs`; wired into CSV import's preview/commit, still
   not wired into manual entry); OFX/QFX import (the parser is built and unit-tested per ADR 0009,
   but is not wired to the command surface - the `import_*` commands reject a non-CSV format);
   export (FR-4.2), backup (FR-4.1), and restore (FR-4.3) are all desktop-only - the Android
   SAF-backed save/open is a separate, device-verified follow-up for each (ADR 0006, ADR 0007, ADR
   0008); restore's Merge mode is also deferred (Replace only so far; issue #21 follow-up);
-  performance metrics (web payload size tracked; Android install-size metric pending issue #4).
+  allowances has a Rust command surface but no Angular screen yet (issue #124); performance
+  metrics (web payload size tracked; Android install-size metric pending issue #4).
 - **Specified only (little or no runtime code):** the income/onboarding profile
-  (`set_onboarding_profile`), and savings-backed allowances (FR-3.4; domain spec
-  `docs/allowances.md` + ADR 0005, no schema or runtime code yet).
+  (`set_onboarding_profile`).
 
 ### 11.2 Open product questions (from the 2026-06 financial-domain review)
 Recorded so they are not lost. These are **observations and recommendations, not committed scope**
@@ -453,10 +467,11 @@ Recorded so they are not lost. These are **observations and recommendations, not
   take-home pay or pay cycle, and no "money in vs out" / "left to spend" view. A budget is
   conventionally built on net income (`financial-knowledge.md` §1, §2, §6); without it, 50/30/20,
   zero-based budgeting, and planned-vs-actual variance cannot be computed.
-- **Allowances specified, not built (FR-3.4).** The imprest allowance model is fully specified
-  (`docs/allowances.md`, ADR 0005) but has no schema or runtime code. It depends on a savings
-  `Total` / `Available` balance, so it intersects the income / cash-flow-spine gap above; pin down
-  the source of `Total` when scheduling it.
+- **Allowances backend built, UI pending (FR-3.4).** The reservation engine (schema, derived
+  balance, savings gate, lazy refresh) is built (issue #123); `Total` reuses the dashboard's
+  existing base-currency ledger aggregation rather than needing a new cash-flow spine (ADR 0012),
+  so this no longer intersects the income/cash-flow-spine gap above the way it once looked like it
+  would. The Angular screen (issue #124) is the remaining, not-yet-built piece.
 - **Reports/dashboard unbuilt.** No aggregation queries exist, so the home balance and analytics
   remain placeholders.
 - **Dedup not wired (FR-2.4).** The promise that duplicates are flagged is not yet met at runtime.
