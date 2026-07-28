@@ -1,0 +1,100 @@
+// AllowanceRow - name + cadence badge, an 8px (--progress-track-h) pill track (balance-of-target),
+// and a plain-language status line. Tokens only. The whole row is a single tappable button
+// (>= 44px target, mirrors EnvelopeCard/GoalProgressRow).
+
+:host {
+  display: block;
+}
+
+.allowance-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: var(--tap-target-min);
+  padding: var(--space-4);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
+  background: var(--c-bg);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.allowance-row:focus-visible {
+  outline: 2px solid var(--c-primary-700);
+  outline-offset: 1px;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.name {
+  font-size: var(--t-title);
+  font-weight: var(--fw-medium);
+  color: var(--c-text);
+}
+.name.paused {
+  color: var(--c-text-muted);
+}
+.cadence-badge {
+  flex: none;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--c-primary-10);
+  color: var(--c-text-muted);
+  font-size: var(--t-caption);
+  font-weight: var(--fw-medium);
+}
+
+.track {
+  position: relative;
+  height: var(--progress-track-h);
+  border-radius: var(--radius-pill);
+  background: var(--c-border);
+  overflow: hidden;
+}
+.fill {
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: var(--c-positive);
+  transition: width var(--motion-slow) var(--easing);
+}
+.track.paused .fill {
+  background: var(--c-text-muted);
+}
+
+.amounts {
+  display: flex;
+  gap: var(--space-1);
+  font-size: var(--t-body);
+}
+.amounts .balance {
+  color: var(--c-text);
+  font-weight: var(--fw-medium);
+}
+.amounts .sep,
+.amounts .target {
+  color: var(--c-text-muted);
+}
+.amounts.paused .balance {
+  color: var(--c-text-muted);
+}
+
+// Status line: plain/muted for the normal case; warning tone + icon for over, muted + icon for
+// paused - meaning is carried by the icon + text, never colour alone.
+.status-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--t-caption);
+  color: var(--c-text-muted);
+}
+.status-line svg {
+  flex: none;
+}
+.status-line.over {
+  color: var(--c-warning-700);
+}

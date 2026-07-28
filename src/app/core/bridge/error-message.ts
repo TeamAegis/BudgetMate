@@ -50,7 +50,7 @@ export function toUserMessage(e: unknown): string {
   // Allowance savings-gate failures (FR-3.4): allocate/increase/resume all reject when the derived
   // savings Available can't cover the requested target (`db::allowances`).
   if (lower.includes('available savings')) {
-    return "There isn't enough free savings for this right now.";
+    return SAVINGS_GATE_MESSAGE;
   }
   // Generic validation failures from the domain layer.
   if (lower.includes('invalid') || lower.includes('validation') || lower.includes('must ')) {
@@ -61,6 +61,15 @@ export function toUserMessage(e: unknown): string {
 }
 
 const GENERIC = 'Something went wrong - please try again.';
+
+/**
+ * The plain-language message for an allowance savings-gate rejection (FR-3.4): a target
+ * increase/resume rejected because Available can't cover it. Exported (not just a local literal) so
+ * `allowance-form.ts` can key its banner TONE (warning, not error) off this exact string without a
+ * second, driftable copy of the wording - single source of truth for both the text and the tone
+ * check.
+ */
+export const SAVINGS_GATE_MESSAGE = "There isn't enough free savings for this right now. Nothing was changed.";
 
 /** Best-effort extraction of a string from whatever a rejected `invoke` produced. */
 function rawText(e: unknown): string {

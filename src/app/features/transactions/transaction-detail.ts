@@ -3,12 +3,13 @@ import { ActivatedRoute, Router } from '@angular/router';
 import {
   listTransactions,
   listAccounts,
+  listAllowances,
   getSettings,
   deleteTransaction,
   toUserMessage,
   isTauri,
 } from '../../core/bridge';
-import type { Transaction, Account } from '../../core/models';
+import type { Transaction, Account, Allowance } from '../../core/models';
 import { HeaderActionService } from '../../core/layout/header-action.service';
 import { MoneyPipe } from '../../shared/pipes/money.pipe';
 import { Banner } from '../../shared/ui/banner/banner';
@@ -47,6 +48,8 @@ export class TransactionDetail implements OnInit {
 
   protected readonly tx = signal<Transaction | null>(null);
   protected readonly accounts = signal<Account[]>([]);
+  /** Best-effort (FR-3.4): only used to resolve the tagged allowance's name, never blocks the page. */
+  protected readonly allowances = signal<Allowance[]>([]);
   protected readonly baseCurrency = signal('MUR');
   protected readonly loading = signal(true);
   protected readonly busy = signal(false);
@@ -87,6 +90,11 @@ export class TransactionDetail implements OnInit {
       const [accts, settings] = await Promise.all([listAccounts(false), getSettings()]);
       this.accounts.set(accts);
       this.baseCurrency.set(settings.baseCurrency);
+      try {
+        this.allowances.set((await listAllowances()).allowances);
+      } catch {
+        // Best-effort - see the `allowances` doc comment above.
+      }
       const found =
         this.passedTx ?? (await listTransactions()).find((t) => t.id === this.id) ?? null;
       if (found) this.tx.set(found);
@@ -100,6 +108,11 @@ export class TransactionDetail implements OnInit {
 
   protected accountName(id: number): string {
     return this.accounts().find((a) => a.id === id)?.name ?? '-';
+  }
+
+  /** The tagged allowance's name (FR-3.4, optional), or `null` for an untagged entry. */
+  protected allowanceName(id: number): string | null {
+    return this.allowances().find((a) => a.id === id)?.name ?? null;
   }
 
   protected backToList(): void {

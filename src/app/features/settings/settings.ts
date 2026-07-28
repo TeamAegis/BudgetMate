@@ -10,6 +10,7 @@ import {
   LucideFunnel,
   LucideFileUp,
   LucidePiggyBank,
+  LucideHandCoins,
   LucideDownload,
   LucideDatabaseBackup,
   LucideCopy,
@@ -33,6 +34,7 @@ import { PrivacyNote } from '../../shared/ui/privacy-note/privacy-note';
     LucideFunnel,
     LucideFileUp,
     LucidePiggyBank,
+    LucideHandCoins,
     LucideDownload,
     LucideDatabaseBackup,
     LucideCopy,
@@ -59,6 +61,12 @@ import { PrivacyNote } from '../../shared/ui/privacy-note/privacy-note';
         <li>
           <a app-settings-row routerLink="/budgets" label="Budgets / Envelopes" hint="Set a monthly limit per category">
             <svg icon lucidePiggyBank [size]="24" aria-hidden="true"></svg>
+            <svg trailing lucideChevronRight [size]="18" aria-hidden="true"></svg>
+          </a>
+        </li>
+        <li>
+          <a app-settings-row routerLink="/allowances" label="Allowances" hint="Set aside savings for spending you know is coming">
+            <svg icon lucideHandCoins [size]="24" aria-hidden="true"></svg>
             <svg trailing lucideChevronRight [size]="18" aria-hidden="true"></svg>
           </a>
         </li>

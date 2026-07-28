@@ -1,0 +1,85 @@
+<section class="form-page">
+  @if (error(); as err) {
+    <app-banner [tone]="bannerTone()">{{ err }}</app-banner>
+  }
+
+  @if (loading()) {
+    <div class="form-loading" aria-busy="true">
+      <app-spinner [size]="28" label="Loading" />
+    </div>
+  } @else {
+    <!-- ngSubmit keeps Enter-to-save working; Save lives in the fixed bottom action bar. -->
+    <form class="form-body" [formGroup]="form" (ngSubmit)="save()">
+      <app-form-field label="Name" [error]="nameError()">
+        <input type="text" formControlName="name" placeholder="e.g. Weekly personal" />
+      </app-form-field>
+
+      <app-form-field
+        label="Target"
+        [hint]="'In ' + baseCurrency() + ', your reporting currency'"
+        [error]="targetError()"
+      >
+        <input type="text" inputmode="decimal" formControlName="target" placeholder="0.00" class="numeric" />
+      </app-form-field>
+
+      @if (editing()) {
+        <app-form-field label="How often" hint="Not editable - delete and re-add to change this">
+          <p class="context-value">{{ cadenceContext() }}</p>
+        </app-form-field>
+
+        <app-form-field label="Status">
+          <app-segmented-toggle
+            ariaLabel="Active or paused"
+            [options]="activeOptions"
+            [value]="form.controls.activeChoice.value"
+            (valueChange)="setActiveChoice($event)"
+          />
+        </app-form-field>
+      } @else {
+        <app-form-field label="Kind">
+          <app-segmented-toggle
+            ariaLabel="Recurring or one-time"
+            [options]="kindOptions"
+            [value]="form.controls.kind.value"
+            (valueChange)="setKind($event)"
+          />
+        </app-form-field>
+
+        @if (showPeriod()) {
+          <app-form-field label="Period" hint="Weekly or monthly only">
+            <app-segmented-toggle
+              ariaLabel="Weekly or monthly"
+              [options]="periodOptions"
+              [value]="form.controls.period.value"
+              (valueChange)="setPeriod($event)"
+            />
+          </app-form-field>
+        }
+
+        @if (showWeekStart()) {
+          <app-form-field label="Resets on">
+            <app-select-field
+              ariaLabel="Day the allowance resets"
+              [options]="weekStartOptions"
+              [value]="form.controls.weekStart.value"
+              (valueChange)="setWeekStart($event)"
+            />
+          </app-form-field>
+        }
+      }
+    </form>
+
+    <app-form-actions [loading]="busy()" (save)="save()" />
+  }
+
+  @if (confirmingDelete()) {
+    <app-confirm-dialog
+      title="Delete this allowance?"
+      message="This removes the allowance and returns anything set aside for it to your free savings. Past transactions tagged to it are unaffected. This can't be undone."
+      confirmLabel="Delete"
+      [busy]="busy()"
+      (confirm)="deleteConfirmed()"
+      (cancelled)="confirmingDelete.set(false)"
+    />
+  }
+</section>

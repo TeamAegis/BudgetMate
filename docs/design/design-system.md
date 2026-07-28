@@ -282,8 +282,8 @@ and the tokens it consumes. Components are dumb/presentational (`shared/`) unles
 > Banner, ListRow (with optional `[lead]` slot), SelectField, Skeleton, Spinner,
 > **Modal** (ConfirmDialog substrate only), **ConfirmDialog**, **FabMenu**, **GoalProgressRow**,
 > **FormActions** (bottom Save bar), **BalanceCard**, **ActionTile**, **SettingsRow**,
-> **EnvelopeCard**, **PrivacyNote** (`app-privacy-note`, static persistent trust/reassurance note -
-> not a live region, unlike the transient Banner).
+> **EnvelopeCard**, **AllowanceRow**, **PrivacyNote** (`app-privacy-note`, static persistent
+> trust/reassurance note - not a live region, unlike the transient Banner).
 > Reuse/extend these rather than re-inlining markup - see the `ui-component`
 > skill. The remaining entries below are still to be built as they're needed.
 
@@ -386,6 +386,19 @@ and the tokens it consumes. Components are dumb/presentational (`shared/`) unles
   an overflowing bar) - phrased as information, not punitively (see "Over-budget is gentle" below).
   Display-only; the whole card is a button that emits `open` (the Budgets screen navigates to the
   budget's edit page).
+- **AllowanceRow** (`app-allowance-row`, **built**, FR-3.4) - name + a cadence badge
+  (Weekly/Monthly/One-time), an 8px (`--progress-track-h`) balance-of-target pill track
+  (`--c-positive` fill, clamped 0-100), and a plain-language status line. The normal/underfunded
+  cases read as information ("Fully set aside for this period" / "Tops back up to your weekly or
+  monthly amount" / "Set aside to spend" for one-time - no icon, nothing alarming). **Over-allowance**
+  and **paused** are icon + label, never colour alone - `lucideTriangleAlert` + "Rs X over" for a
+  negative balance, `lucidePause` + "Paused - not set aside right now" for an inactive allowance
+  (mirrors EnvelopeCard's icon-plus-label convention). Display-only; the whole row is a button that
+  emits `open` (the Allowances screen navigates to the allowance's edit page). The over-allowance
+  status line intentionally uses the gentler amber `--c-warning-700` tone rather than the danger tone
+  EnvelopeCard uses when over budget, because an allowance self-heals at its next refresh (the
+  imprest model tops it back up), so going over is a lower-stakes, temporary state than an over-budget
+  category.
 
 ### New - required by FRs, absent in Figma (specified here, to design)
 - **LockScreen** - biometric prompt + passphrase fallback (FR-5.1). App entry gate.

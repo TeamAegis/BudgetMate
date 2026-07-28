@@ -432,8 +432,12 @@ traceability table (`functional-requirements.md` §5) carries the same status pe
   reporting/analytics aggregations (FR-3.3), the home dashboard (`get_dashboard`), transaction
   export to CSV/XLSX (FR-4.2, desktop-first - `export_transactions` + the save dialog; ADR 0006),
   encrypted local backup (FR-4.1, desktop-first - `create_backup` + the save dialog; ADR 0007),
-  and restore from backup (FR-4.3, desktop-first, REPLACE mode only - `restore_backup` + the open
-  dialog; ADR 0008).
+  restore from backup (FR-4.3, desktop-first, REPLACE mode only - `restore_backup` + the open
+  dialog; ADR 0008), and savings-backed allowances (FR-3.4; the imprest reservation engine +
+  schema + `list_allowances`/`get_allowance_summary`/`create_allowance`/`update_allowance`/
+  `delete_allowance`, and the Angular Allowances screens - add/edit, pause/resume, delete, the
+  all-or-nothing savings-gate warning, and optional transaction tagging - `docs/allowances.md`,
+  ADR 0005).
 - **Partial:** dedup (matcher in `rules/dedup.rs`; wired into CSV import's preview/commit, still
   not wired into manual entry); OFX/QFX import (the parser is built and unit-tested per ADR 0009,
   but is not wired to the command surface - the `import_*` commands reject a non-CSV format);
@@ -442,8 +446,7 @@ traceability table (`functional-requirements.md` §5) carries the same status pe
   0008); restore's Merge mode is also deferred (Replace only so far; issue #21 follow-up);
   performance metrics (web payload size tracked; Android install-size metric pending issue #4).
 - **Specified only (little or no runtime code):** the income/onboarding profile
-  (`set_onboarding_profile`), and savings-backed allowances (FR-3.4; domain spec
-  `docs/allowances.md` + ADR 0005, no schema or runtime code yet).
+  (`set_onboarding_profile`).
 
 ### 11.2 Open product questions (from the 2026-06 financial-domain review)
 Recorded so they are not lost. These are **observations and recommendations, not committed scope**
@@ -453,10 +456,6 @@ Recorded so they are not lost. These are **observations and recommendations, not
   take-home pay or pay cycle, and no "money in vs out" / "left to spend" view. A budget is
   conventionally built on net income (`financial-knowledge.md` §1, §2, §6); without it, 50/30/20,
   zero-based budgeting, and planned-vs-actual variance cannot be computed.
-- **Allowances specified, not built (FR-3.4).** The imprest allowance model is fully specified
-  (`docs/allowances.md`, ADR 0005) but has no schema or runtime code. It depends on a savings
-  `Total` / `Available` balance, so it intersects the income / cash-flow-spine gap above; pin down
-  the source of `Total` when scheduling it.
 - **Reports/dashboard unbuilt.** No aggregation queries exist, so the home balance and analytics
   remain placeholders.
 - **Dedup not wired (FR-2.4).** The promise that duplicates are flagged is not yet met at runtime.
