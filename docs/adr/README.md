@@ -55,3 +55,9 @@ Consequences, and Alternatives considered.
   preview/commit pipeline via a promoted `StagedRow`; a transaction whose own currency differs from
   the destination account's is reported as an error and never imported (imports carry no fx rate
   yet); OFX/QFX have no mapping step (the file is self-describing).
+- [0012](0012-allowance-total-source-and-derived-balance.md): Allowance Total source + derived
+  balance (FR-3.4). Extends 0005: `Total` is the derived base-currency ledger balance (no cash-flow
+  spine); allowance balance is derived from a stored refresh anchor plus tagged transactions (same
+  accounting basis as the dashboard, so `Available = Total - Reserved` holds); allowances are
+  base-currency only (base change blocked while active allowances exist); one calendar-aligned
+  set-to-target top-up per due period.
