@@ -56,10 +56,17 @@ fn open_and_unlock(
     let now = chrono::Utc::now().to_rfc3339();
     let conn = db::open_and_migrate(&vault::db_path(dir), &key_hex, &now)
         .map_err(|_| AppError::KeyVerificationFailed)?;
+    let today = chrono::Utc::now().date_naive();
     // Materialise any due recurring occurrences lazily on app open (FR-1.3) - no background
     // scheduler. Idempotent, so a failure here must never block unlock; log-and-continue.
-    if let Err(e) = db::recurring::materialise_due(&conn, chrono::Utc::now().date_naive()) {
+    if let Err(e) = db::recurring::materialise_due(&conn, today) {
         log::warn!("recurring materialisation skipped: {e}");
+    }
+    // Allowance refresh (FR-3.4) runs AFTER recurring, using the SAME `today`, so any income
+    // recurring just materialised is already reflected in Available before allowances top up
+    // (ADR 0012 decision 5). Also idempotent/lazy - a failure must never block unlock.
+    if let Err(e) = db::allowances::refresh_due(&conn, &meta.settings.base_currency, today) {
+        log::warn!("allowance refresh skipped: {e}");
     }
     db.unlock(conn)
 }
@@ -160,16 +167,27 @@ pub fn set_biometric_enabled<R: Runtime>(
     update_settings(&app, |s| s.biometric_enabled = enabled)
 }
 
-/// Set the base (reporting) currency (FR-1.4). Validated as a 3-letter ISO-4217 code.
+/// Set the base (reporting) currency (FR-1.4). Validated as a 3-letter ISO-4217 code, and BLOCKED
+/// while any allowance is active (ADR 0012 decision 4): allowances are stored in whatever currency
+/// was the base at creation time, so silently changing the base would reinterpret their minor
+/// units at a different currency's scale (e.g. MUR to JPY is a 100x error) with no honest offline
+/// conversion available. The user pauses or deletes allowances first.
 #[tauri::command]
 pub fn set_base_currency<R: Runtime>(
     app: AppHandle<R>,
+    db: State<'_, DbState>,
     currency: String,
 ) -> Result<vault::VaultSettings, AppError> {
     let code = currency.trim().to_uppercase();
     if !crate::domain::account::is_iso4217(&code) {
         return Err(AppError::Validation(
             "currency must be a 3-letter ISO-4217 code (e.g. MUR)".to_string(),
+        ));
+    }
+    let has_active_allowance = db.with(|c| Ok(db::allowances::list(c)?.into_iter().any(|a| a.active)))?;
+    if has_active_allowance {
+        return Err(AppError::Validation(
+            "pause or delete all allowances before changing the base currency".to_string(),
         ));
     }
     update_settings(&app, move |s| s.base_currency = code)

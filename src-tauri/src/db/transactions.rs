@@ -39,7 +39,7 @@ pub struct TxInput<'a> {
 }
 
 const TX_COLUMNS: &str = "id, account_id, posted_date, amount_minor, currency, fx_rate, \
-    base_amount_minor, payee, note, source, source_ref, pending_review, created_at";
+    base_amount_minor, payee, note, source, source_ref, pending_review, created_at, allowance_id";
 
 fn row_to_tx(row: &rusqlite::Row<'_>) -> rusqlite::Result<Transaction> {
     Ok(Transaction {
@@ -57,7 +57,24 @@ fn row_to_tx(row: &rusqlite::Row<'_>) -> rusqlite::Result<Transaction> {
         pending_review: row.get::<_, i64>("pending_review")? != 0,
         created_at: row.get("created_at")?,
         splits: Vec::new(),
+        allowance_id: row.get("allowance_id")?,
     })
+}
+
+/// An allowance with this id must exist before a transaction can be tagged to it - there is no
+/// enforced DB foreign key on `transactions.allowance_id` (migration 0005, so a later allowance
+/// delete can leave the tag dangling for reporting), so this is the only guard against tagging a
+/// typo'd/nonexistent id at write time.
+fn ensure_allowance_exists(conn: &Connection, allowance_id: i64) -> Result<(), DbError> {
+    let n: i64 = conn.query_row(
+        "SELECT count(*) FROM allowances WHERE id = ?1",
+        params![allowance_id],
+        |r| r.get(0),
+    )?;
+    if n == 0 {
+        return Err(DbError::Invalid(format!("allowance {allowance_id} not found")));
+    }
+    Ok(())
 }
 
 fn account_currency(conn: &Connection, account_id: i64) -> Result<String, DbError> {
@@ -224,12 +241,33 @@ pub fn create(conn: &Connection, input: TxInput, now_iso: &str) -> Result<Transa
     get(conn, id)
 }
 
-/// Update a manual transaction, replacing its splits wholesale. `source`/`created_at` are
-/// preserved. All writes are in one transaction.
-pub fn update(conn: &Connection, id: i64, input: TxInput) -> Result<Transaction, DbError> {
-    let p = prepare(conn, &input)?;
-
+/// As `create`, but also tags the new transaction to an allowance (FR-3.4) in the SAME transaction
+/// (ACID). Tagging ONLY ever sets `allowance_id` on this row - it never mutates the `allowances`
+/// row itself (ADR 0012); the derived balance is recomputed on read, not maintained here. This is
+/// the ONLY path that ever sets `allowance_id` on a manually-created transaction - recurring
+/// (`insert_in_tx` via `db::recurring`) and import never tag.
+pub fn create_tagged(
+    conn: &Connection,
+    input: TxInput,
+    allowance_id: Option<i64>,
+    now_iso: &str,
+) -> Result<Transaction, DbError> {
+    if let Some(aid) = allowance_id {
+        ensure_allowance_exists(conn, aid)?;
+    }
     let tx = conn.unchecked_transaction()?;
+    let id = insert_in_tx(&tx, &input, None, now_iso)?;
+    tx.execute("UPDATE transactions SET allowance_id = ?2 WHERE id = ?1", params![id, allowance_id])?;
+    tx.commit()?;
+    get(conn, id)
+}
+
+/// The mutating guts of `update`/`update_tagged` - no transaction of its own, so the caller can
+/// wrap it (and an allowance tag write) in ONE transaction. Replaces the row's fields + splits
+/// wholesale; `source`/`created_at`/`allowance_id` are left untouched by this step (the caller
+/// updates `allowance_id` separately, in the same transaction, when tagging).
+fn update_in_tx(tx: &Connection, id: i64, input: &TxInput) -> Result<(), DbError> {
+    let p = prepare(tx, input)?;
     let changed = tx.execute(
         "UPDATE transactions
            SET account_id = ?2, posted_date = ?3, amount_minor = ?4, currency = ?5,
@@ -251,7 +289,35 @@ pub fn update(conn: &Connection, id: i64, input: TxInput) -> Result<Transaction,
         return Err(DbError::Invalid(format!("transaction {id} not found")));
     }
     tx.execute("DELETE FROM tx_splits WHERE transaction_id = ?1", params![id])?;
-    insert_splits(&tx, id, &p.splits)?;
+    insert_splits(tx, id, &p.splits)?;
+    Ok(())
+}
+
+/// Update a manual transaction, replacing its splits wholesale. `source`/`created_at`/
+/// `allowance_id` are preserved. All writes are in one transaction.
+pub fn update(conn: &Connection, id: i64, input: TxInput) -> Result<Transaction, DbError> {
+    let tx = conn.unchecked_transaction()?;
+    update_in_tx(&tx, id, &input)?;
+    tx.commit()?;
+    get(conn, id)
+}
+
+/// As `update`, but also REPLACES the allowance tag (FR-3.4) in the SAME transaction (ACID) -
+/// `allowance_id` is set wholesale (including clearing it to `None`), matching the "replace
+/// wholesale" semantics `update` already uses for splits. See `create_tagged` for the tagging
+/// contract.
+pub fn update_tagged(
+    conn: &Connection,
+    id: i64,
+    input: TxInput,
+    allowance_id: Option<i64>,
+) -> Result<Transaction, DbError> {
+    if let Some(aid) = allowance_id {
+        ensure_allowance_exists(conn, aid)?;
+    }
+    let tx = conn.unchecked_transaction()?;
+    update_in_tx(&tx, id, &input)?;
+    tx.execute("UPDATE transactions SET allowance_id = ?2 WHERE id = ?1", params![id, allowance_id])?;
     tx.commit()?;
     get(conn, id)
 }
@@ -445,5 +511,75 @@ mod tests {
         assert!(create(&conn, single("0", 1), "2026-06-06T10:00:00Z").is_err());
         assert!(create(&conn, single("1.005", 1), "2026-06-06T10:00:00Z").is_err());
         assert!(update(&conn, 4242, single("15.00", 1)).is_err());
+    }
+
+    /// Insert a bare allowance row directly (this module doesn't need the full `db::allowances`
+    /// gate/refresh machinery - just an id `create_tagged`/`update_tagged` can reference).
+    fn bare_allowance(conn: &Connection) -> i64 {
+        conn.execute(
+            "INSERT INTO allowances
+               (name, currency, target_minor, anchor_balance_minor, kind, period, week_start,
+                last_refresh_date, next_refresh_date, active, created_at)
+             VALUES ('Groceries', 'MUR', 10000, 10000, 'one_time', NULL, 'monday', '2026-06-06', NULL, 1, '2026-06-06T00:00:00Z')",
+            [],
+        )
+        .unwrap();
+        conn.last_insert_rowid()
+    }
+
+    #[test]
+    fn create_tagged_sets_the_allowance_id_and_rejects_an_unknown_one() {
+        let conn = db();
+        let allowance_id = bare_allowance(&conn);
+
+        let tagged = create_tagged(&conn, single("15.00", 1), Some(allowance_id), "2026-06-06T10:00:00Z").unwrap();
+        assert_eq!(tagged.allowance_id, Some(allowance_id));
+
+        // An untagged create (via `create_tagged` with `None`, or plain `create`) leaves it `None`.
+        let untagged = create_tagged(&conn, single("5.00", 1), None, "2026-06-06T10:00:00Z").unwrap();
+        assert_eq!(untagged.allowance_id, None);
+        let via_create = create(&conn, single("5.00", 1), "2026-06-06T10:00:00Z").unwrap();
+        assert_eq!(via_create.allowance_id, None);
+
+        assert!(
+            create_tagged(&conn, single("5.00", 1), Some(999_999), "2026-06-06T10:00:00Z").is_err(),
+            "tagging a nonexistent allowance id must be rejected"
+        );
+    }
+
+    #[test]
+    fn update_tagged_replaces_the_tag_wholesale_including_clearing_it() {
+        let conn = db();
+        let allowance_id = bare_allowance(&conn);
+        let t = create(&conn, single("15.00", 1), "2026-06-06T10:00:00Z").unwrap();
+        assert_eq!(t.allowance_id, None);
+
+        let tagged = update_tagged(&conn, t.id, single("15.00", 1), Some(allowance_id)).unwrap();
+        assert_eq!(tagged.allowance_id, Some(allowance_id));
+
+        // Replacing wholesale with `None` clears the tag (mirrors how splits are replaced wholesale).
+        let cleared = update_tagged(&conn, t.id, single("15.00", 1), None).unwrap();
+        assert_eq!(cleared.allowance_id, None);
+
+        assert!(
+            update_tagged(&conn, t.id, single("15.00", 1), Some(999_999)).is_err(),
+            "tagging a nonexistent allowance id must be rejected"
+        );
+    }
+
+    #[test]
+    fn deleting_a_tagged_allowance_leaves_the_transactions_allowance_id_dangling() {
+        let conn = db();
+        let allowance_id = bare_allowance(&conn);
+        let t = create_tagged(&conn, single("15.00", 1), Some(allowance_id), "2026-06-06T10:00:00Z").unwrap();
+
+        conn.execute("DELETE FROM allowances WHERE id = ?1", params![allowance_id]).unwrap();
+
+        let reloaded = get(&conn, t.id).unwrap();
+        assert_eq!(
+            reloaded.allowance_id,
+            Some(allowance_id),
+            "the tag survives the parent allowance's deletion, dangling, for reporting (no enforced FK)"
+        );
     }
 }

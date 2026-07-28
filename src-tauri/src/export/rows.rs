@@ -118,6 +118,7 @@ mod tests {
             pending_review: false,
             created_at: "2026-06-06T10:00:00Z".into(),
             splits,
+            allowance_id: None,
         }
     }
 

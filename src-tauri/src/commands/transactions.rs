@@ -31,6 +31,9 @@ pub struct NewTransaction {
     pub splits: Vec<NewSplit>,
     pub payee: Option<String>,
     pub note: Option<String>,
+    /// Optional allowance tag (FR-3.4) - the id of an existing allowance to draw down. Tagging
+    /// only sets this column; it never mutates the allowance itself (ADR 0012).
+    pub allowance_id: Option<i64>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -45,6 +48,8 @@ pub struct UpdateTransaction {
     pub splits: Vec<NewSplit>,
     pub payee: Option<String>,
     pub note: Option<String>,
+    /// Replaces the allowance tag wholesale (like splits) - `null`/omitted clears it.
+    pub allowance_id: Option<i64>,
 }
 
 fn split_inputs(splits: &[NewSplit]) -> Vec<SplitInput<'_>> {
@@ -67,7 +72,7 @@ pub fn create_transaction(
     let now = chrono::Utc::now().to_rfc3339();
     let splits = split_inputs(&tx.splits);
     state.with(|c| {
-        transactions::create(
+        transactions::create_tagged(
             c,
             TxInput {
                 account_id: tx.account_id,
@@ -79,6 +84,7 @@ pub fn create_transaction(
                 payee: tx.payee.as_deref(),
                 note: tx.note.as_deref(),
             },
+            tx.allowance_id,
             &now,
         )
     })
@@ -91,7 +97,7 @@ pub fn update_transaction(
 ) -> Result<Transaction, AppError> {
     let splits = split_inputs(&tx.splits);
     state.with(|c| {
-        transactions::update(
+        transactions::update_tagged(
             c,
             tx.id,
             TxInput {
@@ -104,6 +110,7 @@ pub fn update_transaction(
                 payee: tx.payee.as_deref(),
                 note: tx.note.as_deref(),
             },
+            tx.allowance_id,
         )
     })
 }

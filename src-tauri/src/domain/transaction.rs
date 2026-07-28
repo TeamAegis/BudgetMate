@@ -35,6 +35,11 @@ pub struct Transaction {
     pub pending_review: bool,
     pub created_at: String,
     pub splits: Vec<TxSplit>,
+    /// Optional allowance tag (FR-3.4). Setting this ONLY draws down that allowance's DERIVED
+    /// balance (ADR 0012) - it never mutates the `allowances` row itself. Only the manual
+    /// create/update path ever sets it (`db::transactions::create_tagged`/`update_tagged`); recurring
+    /// and import transactions are never tagged.
+    pub allowance_id: Option<i64>,
 }
 
 /// One category line of a transaction (mirrors TS `TxSplit`). `category_name` is denormalised for
