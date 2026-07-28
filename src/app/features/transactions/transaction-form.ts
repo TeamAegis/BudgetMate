@@ -58,8 +58,9 @@ interface FormSnapshot {
 
 /**
  * Full-screen Add/Edit Transaction page (FR-1.1, splits FR-1.2, multi-currency FR-1.4). Replaces the
- * former centred modal: a pushed route (`expenses/new`, `expenses/:id/edit`) with Save in the app
- * header (so the Android soft keyboard can never hide it) and the back arrow as Cancel. Smart
+ * former centred modal: a pushed route (`expenses/new`, `expenses/:id/edit`) with Save in the fixed
+ * bottom action bar (`FormActions`, lifted by `--keyboard-inset` so the Android soft keyboard can
+ * never hide it - ADR 0003) and the back arrow as Cancel. Smart
  * component - reads reference data through the bridge and renders with shared/ui. All money parsing,
  * signing, the split-sum invariant, and `base_amount_minor` happen in Rust; TS only formats and
  * shows a live "remaining to allocate" hint (Rust re-validates). Field order is amount-first

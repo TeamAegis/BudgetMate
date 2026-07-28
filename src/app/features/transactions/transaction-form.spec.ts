@@ -1,8 +1,15 @@
 import { TestBed } from '@angular/core/testing';
-import { ActivatedRoute, provideRouter, convertToParamMap } from '@angular/router';
+import { ActivatedRoute, Router, provideRouter, convertToParamMap } from '@angular/router';
 import { TransactionForm } from './transaction-form';
 import { CurrencyService } from '../../core/money/currency.service';
-import type { Account, TransactionPrefill } from '../../core/models';
+import type {
+  Account,
+  AllowanceSummary,
+  Category,
+  Transaction,
+  TransactionPrefill,
+  VaultSettings,
+} from '../../core/models';
 
 /**
  * Regression coverage for the multi-currency OCR prefill boundary (`patchForCreate`). The bridge
@@ -140,5 +147,274 @@ describe('TransactionForm - amount precision cap', () => {
     component.form.controls.amount.setValue('1.99');
 
     expect(component.form.controls.amount.hasError('maxFractionDigits')).toBeFalse();
+  });
+});
+
+/**
+ * Regression coverage for issue #124's fix-up (allowance-tagging wiring, FR-3.4): the picker side
+ * (`allowance-picker.spec.ts`) is already covered - this covers the form side, which had no tests.
+ * `patchFromTransaction`/`patchFromResume` are exercised directly (same construction pattern as the
+ * `patchForCreate` suite above - constructing never runs `ngOnInit`, so no bridge call happens).
+ */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+describe('TransactionForm - allowanceId patch/resume (FR-3.4)', () => {
+  function createComponent(): any {
+    TestBed.configureTestingModule({
+      imports: [TransactionForm],
+      providers: [
+        provideRouter([]),
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: { paramMap: convertToParamMap({ kind: 'expense', categoryId: '0' }) },
+          },
+        },
+      ],
+    });
+    (TestBed.inject(CurrencyService) as any).digitsByCode.set('JPY', 0);
+    return TestBed.createComponent(TransactionForm).componentInstance;
+  }
+
+  function tx(overrides: Partial<Transaction> = {}): Transaction {
+    return {
+      id: 7,
+      accountId: 1,
+      postedDate: '2026-07-01',
+      amountMinor: -1_00000,
+      currency: 'MUR',
+      fxRate: '1',
+      baseAmountMinor: -1_00000,
+      payee: 'Winners',
+      note: null,
+      source: 'manual',
+      sourceRef: null,
+      pendingReview: false,
+      createdAt: '2026-07-01T00:00:00Z',
+      allowanceId: null,
+      splits: [{ id: 1, categoryId: 10, categoryName: 'Groceries', amountMinor: -1_00000 }],
+      ...overrides,
+    };
+  }
+
+  it('patchFromTransaction sets allowanceId() to the loaded transaction tag', () => {
+    const component = createComponent();
+    component.patchFromTransaction(tx({ allowanceId: 3 }));
+    expect(component.allowanceId()).toBe(3);
+  });
+
+  it('patchFromTransaction sets allowanceId() to null for an untagged transaction', () => {
+    const component = createComponent();
+    component.patchFromTransaction(tx({ allowanceId: null }));
+    expect(component.allowanceId()).toBeNull();
+  });
+
+  it('patchFromResume defaults allowanceId to null when the resumed snapshot omits it', () => {
+    const component = createComponent();
+    // Deliberately omits `allowanceId` (cast past the type) to exercise the runtime `?? null`
+    // default in `patchFromResume`, not just the compile-time contract.
+    const snapshot = {
+      accountId: 1,
+      postedDate: '2026-07-01',
+      amount: '10.00',
+      currency: 'MUR',
+      fxRate: '1',
+      payee: '',
+      note: '',
+      splits: [{ categoryId: 10, amount: '10.00' }],
+    } as any;
+    component.patchFromResume(snapshot);
+    expect(component.allowanceId()).toBeNull();
+  });
+
+  it('patchFromResume carries an explicit allowanceId through unchanged', () => {
+    const component = createComponent();
+    const snapshot = {
+      accountId: 1,
+      postedDate: '2026-07-01',
+      amount: '10.00',
+      currency: 'MUR',
+      fxRate: '1',
+      payee: '',
+      note: '',
+      splits: [{ categoryId: 10, amount: '10.00' }],
+      allowanceId: 5,
+    };
+    component.patchFromResume(snapshot);
+    expect(component.allowanceId()).toBe(5);
+  });
+});
+
+/**
+ * Regression coverage for issue #124's fix-up: `save()` must send `allowanceId` as an EXPLICIT key
+ * (null when untagged/cleared, never omitted) for both create and update. Same
+ * `__TAURI_INTERNALS__.invoke` stubbing approach as `allowance-form.spec.ts` (the bridge wrappers are
+ * named ES-module exports Jasmine's `spyOn` cannot redefine), so `ngOnInit` exercises the real bridge
+ * code path end to end.
+ */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+describe('TransactionForm - save() allowanceId wiring (FR-3.4)', () => {
+  afterEach(() => {
+    delete (globalThis as any).__TAURI_INTERNALS__;
+  });
+
+  const accounts: Account[] = [
+    { id: 1, name: 'Wallet', accountType: 'cash', currency: 'MUR', openingBalanceMinor: 0, archived: false },
+  ];
+  const categories: Category[] = [
+    { id: 10, name: 'Groceries', parentId: null, kind: 'expense', archived: false },
+  ];
+  const settings: VaultSettings = {
+    idleTimeoutSecs: 300,
+    biometricEnabled: false,
+    baseCurrency: 'MUR',
+    dedupWindowDays: 3,
+  };
+
+  function allowanceSummary(overrides: Partial<AllowanceSummary> = {}): AllowanceSummary {
+    return {
+      allowances: [],
+      totalMinor: 0,
+      reservedMinor: 0,
+      availableMinor: 0,
+      baseCurrency: 'MUR',
+      excludedAllowances: 0,
+      ...overrides,
+    };
+  }
+
+  function tx(overrides: Partial<Transaction> = {}): Transaction {
+    return {
+      id: 7,
+      accountId: 1,
+      postedDate: '2026-07-01',
+      amountMinor: -1_00000,
+      currency: 'MUR',
+      fxRate: '1',
+      baseAmountMinor: -1_00000,
+      payee: 'Winners',
+      note: null,
+      source: 'manual',
+      sourceRef: null,
+      pendingReview: false,
+      createdAt: '2026-07-01T00:00:00Z',
+      allowanceId: null,
+      splits: [{ id: 1, categoryId: 10, categoryName: 'Groceries', amountMinor: -1_00000 }],
+      ...overrides,
+    };
+  }
+
+  function stubInvoke(handlers: Record<string, (args: unknown) => unknown>): void {
+    (globalThis as any).__TAURI_INTERNALS__ = {
+      invoke: async (cmd: string, args: unknown) => {
+        const h = handlers[cmd];
+        if (!h) throw new Error(`unexpected invoke in test: ${cmd}`);
+        return h(args);
+      },
+    };
+  }
+
+  async function createForm(
+    routeParams: Record<string, string>,
+    handlers: Record<string, (args: unknown) => unknown>,
+  ) {
+    stubInvoke({
+      list_accounts: () => accounts,
+      list_categories: () => categories,
+      list_allowances: () => allowanceSummary(),
+      get_settings: () => settings,
+      ...handlers,
+    });
+    await TestBed.configureTestingModule({
+      imports: [TransactionForm],
+      providers: [
+        provideRouter([]),
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { paramMap: convertToParamMap(routeParams) } },
+        },
+      ],
+    }).compileComponents();
+    (TestBed.inject(CurrencyService) as any).digitsByCode.set('JPY', 0);
+    const fixture = TestBed.createComponent(TransactionForm);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  it('create: sends allowanceId: null (present, not omitted) for an untagged transaction', async () => {
+    let created: any;
+    const fixture = await createForm(
+      { kind: 'expense', categoryId: '10' },
+      { create_transaction: (args) => ((created = args), tx()) },
+    );
+    const component = fixture.componentInstance as any;
+    const router = TestBed.inject(Router);
+    const navSpy = spyOn(router, 'navigate');
+    component.form.controls.amount.setValue('10.00');
+
+    await component.save();
+
+    expect(created).toBeTruthy();
+    expect('allowanceId' in created.tx).toBeTrue();
+    expect(created.tx.allowanceId).toBeNull();
+    expect(navSpy).toHaveBeenCalledWith(['/expenses']);
+  });
+
+  it('create: sends the tagged allowanceId when one was picked', async () => {
+    let created: any;
+    const fixture = await createForm(
+      { kind: 'expense', categoryId: '10' },
+      { create_transaction: (args) => ((created = args), tx({ allowanceId: 3 })) },
+    );
+    const component = fixture.componentInstance as any;
+    spyOn(TestBed.inject(Router), 'navigate');
+    component.form.controls.amount.setValue('10.00');
+    component.allowanceId.set(3);
+
+    await component.save();
+
+    expect(created.tx.allowanceId).toBe(3);
+  });
+
+  it('update: sends allowanceId: null (present, not omitted) after clearing a previously tagged allowance', async () => {
+    let updated: any;
+    const loaded = tx({ id: 7, allowanceId: 3 });
+    const fixture = await createForm(
+      { id: '7' },
+      {
+        list_transactions: () => [loaded],
+        update_transaction: (args) => ((updated = args), loaded),
+      },
+    );
+    const component = fixture.componentInstance as any;
+    spyOn(TestBed.inject(Router), 'navigate');
+    expect(component.allowanceId()).toBe(3); // loaded from the fetched transaction
+
+    component.allowanceId.set(null); // user clears the tag via AllowancePicker's "None" row
+
+    await component.save();
+
+    expect(updated).toBeTruthy();
+    expect('allowanceId' in updated.tx).toBeTrue();
+    expect(updated.tx.allowanceId).toBeNull();
+  });
+
+  it('update: keeps sending the tagged allowanceId when it was not changed', async () => {
+    let updated: any;
+    const loaded = tx({ id: 7, allowanceId: 3 });
+    const fixture = await createForm(
+      { id: '7' },
+      {
+        list_transactions: () => [loaded],
+        update_transaction: (args) => ((updated = args), loaded),
+      },
+    );
+    const component = fixture.componentInstance as any;
+    spyOn(TestBed.inject(Router), 'navigate');
+
+    await component.save();
+
+    expect(updated.tx.allowanceId).toBe(3);
   });
 });

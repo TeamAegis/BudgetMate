@@ -66,7 +66,11 @@ import { Skeleton } from '../../shared/ui/skeleton/skeleton';
           }
         </ul>
         @if (allowances().length === 0 && !error()) {
-          <app-empty-state message="No active allowances yet. Add one from Settings to tag transactions." />
+          <app-empty-state
+            message="No active allowances yet. Add one from Settings to tag transactions."
+            cta="Add an allowance"
+            (action)="addAllowance()"
+          />
         }
       }
     </section>
@@ -134,6 +138,10 @@ export class AllowancePicker implements OnInit {
   protected hintFor(a: Allowance): string {
     if (a.kind === 'one_time') return 'One-time';
     return a.period === 'weekly' ? 'Weekly' : 'Monthly';
+  }
+
+  protected addAllowance(): void {
+    void this.router.navigate(['/allowances/new']);
   }
 
   /** The resumed form snapshot with only `allowanceId` overridden - forwarded verbatim otherwise. */
