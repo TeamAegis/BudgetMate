@@ -59,6 +59,9 @@
         </div>
       }
 
+      @if (t.allowanceId !== null && allowanceName(t.allowanceId); as name) {
+        <div app-detail-row label="Allowance" [value]="name"></div>
+      }
       @if (t.payee) {
         <div app-detail-row label="Payee" [value]="t.payee"></div>
       }

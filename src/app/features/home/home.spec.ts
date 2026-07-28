@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { Home } from './home';
-import type { DashboardData, Goal, Transaction } from '../../core/models';
+import type { AllowanceSummary, DashboardData, Goal, Transaction } from '../../core/models';
 
 /**
  * `getDashboard`/`listTransactions` are named exports of `core/bridge`, and Jasmine's `spyOn`
@@ -88,8 +88,35 @@ describe('Home', () => {
     error: { set(v: string | null): void };
     dashboard: { (): DashboardData | null; set(v: DashboardData | null): void };
     transactions: { set(v: Transaction[]): void };
+    allowanceSummary: { set(v: AllowanceSummary | null): void };
     refreshing: { set(v: boolean): void };
     reload(): Promise<void>;
+  };
+
+  const sampleAllowanceSummary: AllowanceSummary = {
+    allowances: [
+      {
+        id: 1,
+        name: 'Personal',
+        currency: 'MUR',
+        targetMinor: 150_000,
+        balanceMinor: 30_000,
+        kind: 'recurring',
+        period: 'weekly',
+        weekStart: 1,
+        nextRefreshDate: '2026-08-03',
+        active: true,
+        createdAt: '2026-07-01T00:00:00Z',
+        reservedMinor: 30_050,
+        overspent: false,
+        underfunded: true,
+      },
+    ],
+    totalMinor: 500_000,
+    reservedMinor: 30_050,
+    availableMinor: 469_950,
+    baseCurrency: 'MUR',
+    excludedAllowances: 0,
   };
 
   it('error state: outside the Tauri runtime, ngOnInit reports the plain-language message (no data)', () => {
@@ -210,6 +237,36 @@ describe('Home', () => {
 
     const host = fixture.nativeElement as HTMLElement;
     expect(host.textContent).toContain('is more than your free balance right now');
+  });
+
+  it('shows a separate "set aside across your allowances" line once the allowance summary loads', () => {
+    const fixture = createFixture();
+    fixture.detectChanges();
+    const component = fixture.componentInstance as unknown as HomeInternals;
+    component.loading.set(false);
+    component.error.set(null);
+    component.dashboard.set(sampleDashboard);
+    component.allowanceSummary.set(sampleAllowanceSummary);
+    fixture.detectChanges();
+
+    const host = fixture.nativeElement as HTMLElement;
+    // reservedMinor 30_050 minor -> Rs 300.50; never conflated with the goals ready-to-spend figure.
+    expect(host.textContent).toContain('300.50 set aside across your allowances');
+    expect(host.querySelector('a[href="/allowances"]')).not.toBeNull();
+  });
+
+  it('omits the allowances line entirely when the user has none yet (no clutter)', () => {
+    const fixture = createFixture();
+    fixture.detectChanges();
+    const component = fixture.componentInstance as unknown as HomeInternals;
+    component.loading.set(false);
+    component.error.set(null);
+    component.dashboard.set(sampleDashboard);
+    component.allowanceSummary.set({ ...sampleAllowanceSummary, allowances: [] });
+    fixture.detectChanges();
+
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.textContent).not.toContain('set aside across your allowances');
   });
 
   it('no ready-to-spend line when nothing has been set aside for goals', () => {

@@ -10,6 +10,7 @@ import {
   listTransactions,
   listAccounts,
   listCategories,
+  listAllowances,
   getSettings,
   previewRules,
   toUserMessage,
@@ -20,6 +21,7 @@ import type {
   Account,
   Category,
   CategoryKind,
+  Allowance,
   TransactionPrefill,
 } from '../../core/models';
 import { HeaderActionService } from '../../core/layout/header-action.service';
@@ -50,6 +52,9 @@ interface FormSnapshot {
   payee: string;
   note: string;
   splits: { categoryId: number | null; amount: string }[];
+  /** `0` = not tagged to an allowance (FR-3.4 optional tagging), matching the sentinel the
+   *  category-less-choice budget/split pickers use elsewhere in this form. */
+  allowanceId: number;
 }
 
 /**
@@ -125,6 +130,9 @@ export class TransactionForm implements OnInit {
 
   protected readonly accounts = signal<Account[]>([]);
   protected readonly categories = signal<Category[]>([]);
+  /** Allowances available to tag this entry against (FR-3.4, optional). Best-effort: a failed
+   *  fetch just leaves the tag picker showing "Not counted", it never blocks the whole form. */
+  protected readonly allowances = signal<Allowance[]>([]);
   protected readonly baseCurrency = signal('MUR');
   protected readonly loading = signal(true);
   protected readonly busy = signal(false);
@@ -147,6 +155,13 @@ export class TransactionForm implements OnInit {
       .map((c) => ({ value: c.id, label: c.name })),
   );
 
+  /** Allowance tag options (FR-3.4, optional): a leading "not tagged" sentinel (`0`) plus every
+   *  allowance, so an entry made against a now-paused allowance still shows its name on edit. */
+  protected readonly allowanceOptions = computed<SelectOption[]>(() => [
+    { value: 0, label: 'Not counted against an allowance' },
+    ...this.allowances().map((a) => ({ value: a.id, label: a.name })),
+  ]);
+
   protected readonly form = this.fb.group({
     accountId: this.fb.control<number | null>(null, Validators.required),
     postedDate: this.fb.nonNullable.control(this.today(), Validators.required),
@@ -163,6 +178,8 @@ export class TransactionForm implements OnInit {
     payee: this.fb.nonNullable.control(''),
     note: this.fb.nonNullable.control(''),
     splits: this.fb.array([this.newSplitGroup()]),
+    /** `0` = not tagged to an allowance (FR-3.4, optional). */
+    allowanceId: this.fb.nonNullable.control(0),
   });
 
   constructor() {
@@ -243,6 +260,13 @@ export class TransactionForm implements OnInit {
       this.accounts.set(accts);
       this.categories.set(cats);
       this.baseCurrency.set(settings.baseCurrency);
+      // Best-effort: the allowance tag picker is optional, so a failed fetch just leaves it
+      // showing "Not counted" rather than blocking the whole form.
+      try {
+        this.allowances.set((await listAllowances()).allowances);
+      } catch {
+        // ignore - see above
+      }
 
       const id = this.editingId();
       if (id !== null) {
@@ -362,6 +386,7 @@ export class TransactionForm implements OnInit {
         categoryId: s.categoryId,
         amount: this.majorAmount(s.amountMinor, t.currency),
       })),
+      allowanceId: t.allowanceId ?? 0,
     });
     // Fix the session kind from the loaded transaction's category (a transaction is one kind).
     const firstCat = this.categories().find((c) => c.id === t.splits[0]?.categoryId);
@@ -379,6 +404,7 @@ export class TransactionForm implements OnInit {
       payee: s.payee,
       note: s.note,
       splits: s.splits,
+      allowanceId: s.allowanceId,
     });
   }
 
@@ -391,6 +417,7 @@ export class TransactionForm implements OnInit {
     payee?: string;
     note?: string;
     splits?: { categoryId: number | null; amount: string }[];
+    allowanceId?: number;
   }): void {
     const splitData: { categoryId: number | null; amount: string }[] = opts.splits?.length
       ? opts.splits
@@ -409,6 +436,7 @@ export class TransactionForm implements OnInit {
       payee: opts.payee ?? '',
       note: opts.note ?? '',
       splits: splitData,
+      allowanceId: opts.allowanceId ?? 0,
     });
   }
 
@@ -418,6 +446,10 @@ export class TransactionForm implements OnInit {
   }
   protected setSplitCategory(i: number, v: number | string): void {
     this.splits.at(i).get('categoryId')!.setValue(Number(v));
+  }
+  /** FR-3.4 optional allowance tag; `0` clears it back to "not counted". */
+  protected setAllowanceTag(v: number | string): void {
+    this.form.controls.allowanceId.setValue(Number(v));
   }
 
   // -- Two-step category context (create, single-split) ------------------------------
@@ -481,6 +513,8 @@ export class TransactionForm implements OnInit {
         splits,
         payee: v.payee.trim() || null,
         note: v.note.trim() || null,
+        // `0` is the "not tagged" sentinel (FR-3.4, optional) - never sent to Rust as an id.
+        allowanceId: v.allowanceId || null,
       };
       const id = this.editingId();
       if (id === null) await createTransaction(input);

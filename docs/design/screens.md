@@ -149,9 +149,18 @@ in the current Figma - design them to this spec.
   the first line from the chosen category). Back arrow = *Cancel*; *Save* in the fixed bottom
   `FormActions` bar (keyboard-safe). On the edit page **Delete** is the header danger icon (`trash`,
   via `HeaderActionService`) → ConfirmDialog.
-- **Data:** draft transaction; categories (filtered by kind in the picker); accounts; rule preview.
-- **Commands:** `save_transaction(dto)` (ACID), `preview_rules(draft)`. (No new Rust: the flow is
-  presentation only - `list_categories` + `create_transaction` already carry everything.)
+- **Allowance tag (FR-3.4, optional, built 2026-07).** An "Count against an allowance (optional)"
+  field (SelectField, a leading "Not counted against an allowance" option clears it back to
+  untagged) appears once the vault has at least one allowance - on both add and edit (unlike the
+  category two-step, this field is a plain in-page picker in both cases, since it's optional and
+  needs no dedicated wizard). The read-only transaction detail shows the tagged allowance's name
+  when set. All money/reservation math (the split between "reduces the allowance balance" vs
+  "reduces free savings directly") happens in Rust on save; the form only sends `allowanceId`.
+- **Data:** draft transaction; categories (filtered by kind in the picker); accounts; allowances
+  (for the optional tag picker); rule preview.
+- **Commands:** `save_transaction(dto)` (ACID), `preview_rules(draft)`, `list_allowances()` (for the
+  tag picker). (No new Rust for the transaction flow itself: `list_categories` +
+  `create_transaction`/`update_transaction` already carry everything, including `allowanceId`.)
 - **States:** validation (amount>0, category chosen, split sum=0 remaining), rule-applied
   indicator, save error; the picker has loading / empty (no categories yet → add one) states.
 
@@ -393,6 +402,36 @@ in the current Figma - design them to this spec.
   an info banner on Android, mirroring Export/ADR 0006).
 - **States:** creating, written, restoring (busy, confirm-gated), restored (success banner + reload),
   wrong-passphrase/corrupt-backup error (plain-language, inline).
+
+### 7.6 Allowances
+- **FR:** FR-3.4 (implemented, 2026-07). Reached from Settings > "Allowances" (nested action, not
+  in the bottom nav - same placement as Budgets/Envelopes) and, when the vault has at least one
+  allowance, a small "Rs X set aside across your allowances" line + "Manage allowances" link on
+  Home (kept separate from the goals "ready to spend" line - allowances and goals each reserve
+  independently against the same savings total in v1, `docs/allowances.md` §3).
+- **Components:** a concise summary card up top ("Free to spend" = `availableMinor`, plus a hint
+  line naming `reservedMinor` of `totalMinor`), then `AllowanceRow` ×N - name, a cadence badge
+  (Weekly/Monthly/One-time), a balance-of-target pill track, and a plain-language status line
+  ("Fully set aside for this period" / "Tops back up to your weekly or monthly amount" /
+  "Set aside to spend" for one-time). The **over-allowance** state is an icon + "Rs X over" (gentle,
+  never colour alone, `ux-blueprint.md` §5); **paused** is an icon + "Paused" label, also never
+  colour alone. A simple single-action FAB adds (mirrors Goals, not the Expenses `FabMenu` - one
+  primary action here). Add/edit is a full-screen page pair (`allowances/new`,
+  `allowances/:id/edit`, §8.0 pattern): kind (Recurring/One-time) and, for Recurring, period
+  (Weekly/Monthly only, never daily) and a resets-on weekday picker are chosen once at creation and
+  shown read-only on the edit page (delete + re-add to change them); the edit page instead exposes
+  name, target, and an Active/Paused `SegmentedToggle` (pause/resume). The header danger icon
+  (`trash`) deletes the allowance via ConfirmDialog. A target increase or a resume is gated
+  all-or-nothing against Available - a rejection surfaces as a plain-language **warning**-tone
+  `app-banner` (never a partial apply).
+- **Commands:** `list_allowances()` / `get_allowance_summary()` (the same aggregate, the latter
+  named for the re-read after a mutation), `create_allowance(dto)`, `update_allowance(dto)`,
+  `delete_allowance(id)`.
+- **States:** loading (skeleton rows), empty (polished, no allowances yet + "Add your first
+  allowance" CTA), populated (summary card + AllowanceRow list, plus an info banner naming any
+  allowance excluded for being in another currency), error (plain-language + retry), busy (a
+  background reload keeps the existing rows visible with a small non-blocking "Updating…"
+  indicator, matching Budgets).
 
 ---
 

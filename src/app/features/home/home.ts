@@ -1,8 +1,8 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { LucidePlus, LucideTarget, LucideScanLine } from '@lucide/angular';
-import { getDashboard, listTransactions, toUserMessage, isTauri } from '../../core/bridge';
-import type { DashboardData, Goal, Transaction } from '../../core/models';
+import { getDashboard, listTransactions, getAllowanceSummary, toUserMessage, isTauri } from '../../core/bridge';
+import type { AllowanceSummary, DashboardData, Goal, Transaction } from '../../core/models';
 import { MoneyPipe } from '../../shared/pipes/money.pipe';
 import { ActionTile } from '../../shared/ui/action-tile/action-tile';
 import { Banner } from '../../shared/ui/banner/banner';
@@ -59,6 +59,9 @@ export class Home implements OnInit {
 
   protected readonly dashboard = signal<DashboardData | null>(null);
   protected readonly transactions = signal<Transaction[]>([]);
+  /** Best-effort (FR-3.4): a small free-vs-set-aside line, shown only once the user has at least
+   *  one allowance. A failed fetch just omits the line - it never blocks the rest of Home. */
+  protected readonly allowanceSummary = signal<AllowanceSummary | null>(null);
   protected readonly loading = signal(true);
   protected readonly refreshing = signal(false);
   protected readonly error = signal<string | null>(null);
@@ -111,6 +114,17 @@ export class Home implements OnInit {
     return `${parts.join(' and ')} in another currency ${verb} included in this total yet.`;
   });
 
+  /** "Rs X set aside across your allowances" - a small, separate informational line (never netted
+   *  into `readyToSpendLine` above: goals and allowances each reserve independently against the
+   *  same savings total in v1, see docs/allowances.md §3's "Known v1 limitation"). Omitted entirely
+   *  until the user has at least one allowance, so it adds nothing for the common case. */
+  protected readonly allowanceLine = computed<string | null>(() => {
+    const s = this.allowanceSummary();
+    if (!s || s.allowances.length === 0) return null;
+    const reserved = this.money.transform({ amountMinor: s.reservedMinor, currency: s.baseCurrency });
+    return `${reserved} set aside across your allowances`;
+  });
+
   protected readonly linePoints = computed<LinePoint[]>(
     () => this.dashboard()?.balanceTrend.map((p) => ({ label: p.label, amountMinor: p.amountMinor })) ?? [],
   );
@@ -146,6 +160,14 @@ export class Home implements OnInit {
       if (requestId !== this.latestRequestId) return;
       this.dashboard.set(dash);
       this.transactions.set(txs);
+      // Best-effort, non-blocking (FR-3.4): a failed fetch just omits `allowanceLine` above rather
+      // than failing the whole Home load.
+      try {
+        const allowances = await getAllowanceSummary();
+        if (requestId === this.latestRequestId) this.allowanceSummary.set(allowances);
+      } catch {
+        // ignore - see above
+      }
     } catch (e) {
       if (requestId !== this.latestRequestId) return;
       this.error.set(toUserMessage(e));

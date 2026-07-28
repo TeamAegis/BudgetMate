@@ -124,6 +124,20 @@
         <input type="date" formControlName="postedDate" />
       </app-form-field>
 
+      @if (allowances().length > 0) {
+        <app-form-field
+          label="Count against an allowance (optional)"
+          hint="Track this entry against money you've already set aside"
+        >
+          <app-select-field
+            ariaLabel="Allowance"
+            [options]="allowanceOptions()"
+            [value]="form.controls.allowanceId.value"
+            (valueChange)="setAllowanceTag($event)"
+          />
+        </app-form-field>
+      }
+
       <app-form-field label="Payee (optional)">
         <input type="text" formControlName="payee" placeholder="e.g. Winners" (blur)="suggestCategory()" />
       </app-form-field>
