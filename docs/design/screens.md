@@ -394,6 +394,58 @@ in the current Figma - design them to this spec.
 - **States:** creating, written, restoring (busy, confirm-gated), restored (success banner + reload),
   wrong-passphrase/corrupt-backup error (plain-language, inline).
 
+### 7.6 Allowances
+
+- **FR:** FR-3.4 (implemented, 2026-07). Domain spec: `docs/allowances.md`.
+- **Entry point:** Settings -> "Your money" -> **Allowances** row (`app-settings-row`, beside
+  Budgets / Envelopes), routing to `/allowances`.
+- **List (`/allowances`):** a summary strip (**AllowanceSummaryStrip**, three compact stats - Total
+  savings / Set aside / Free to spend, sourced from `AllowanceSummary`'s `totalMinor`/
+  `reservedMinor`/`availableMinor`) above an `@for` of **AllowanceCard**s (name, kind + period/next-
+  refresh or "One-time", a `reservedMinor / targetMinor` pill track, and the set-aside/target amounts
+  via the money pipe). A single `app-fab` ("Add allowance") navigates to `/allowances/new`; a card
+  tap navigates to `/allowances/:id/edit`.
+- **Add/edit (`/allowances/new`, `/allowances/:id/edit`):** the full-screen form-page pattern (§8.0).
+  Create: name, target amount, kind (`SegmentedToggle` Recurring/One-time), period
+  (`SegmentedToggle` Weekly/Monthly, shown only when Recurring), week-start day (`SelectField`
+  Monday..Sunday, shown only when Weekly) - `currency` is the vault's base currency, not user-picked.
+  Edit: name and target stay editable; a Pause/Resume `SegmentedToggle` drives `active`; kind/period/
+  week-start render as a read-only line (not editable - delete and re-add to change them). The header
+  Delete danger icon (`trash`, `HeaderActionService`) opens `app-confirm-dialog` before
+  `delete_allowance`.
+- **The savings gate (all-or-nothing):** creating, raising the target, or resuming an allowance is
+  gated against the vault's free savings (Available) - Rust rejects with a `Validation` `AppError`
+  ("not enough available savings...") when it doesn't fit, and the save is never partially applied.
+  The form shows this specific rejection as a gentle `tone="warning"` banner (e.g. "There isn't
+  enough free savings for this right now."), distinct from the default `tone="error"` banner used for
+  any other failure.
+- **Commands:** `list_allowances()` / `get_allowance_summary()` (same aggregate; the latter is the
+  named re-read after a mutating call), `create_allowance(dto)`, `update_allowance(dto)`,
+  `delete_allowance(id)`.
+- **States:** loading (`app-skeleton` rows, non-blocking), empty (`app-empty-state` - "Set money
+  aside for regular spending..." + "Add your first allowance" CTA), populated (summary strip +
+  AllowanceCard list), error (`app-banner` tone error + retry empty-state), busy (a background
+  reload after a mutation keeps the existing list visible with a small non-blocking "Updating..."
+  indicator, matching Budgets). A defensive `tone="info"` banner appears if any active allowance ends
+  up in a currency other than the current base currency (a later base-currency change, since
+  allowances are base-currency-only at creation) and so is excluded from the totals
+  (`excludedAllowances`, mirrors Home's `excludedAccounts`/`excludedGoals` caveat note).
+- **The gentle over/under state (never colour alone):** each AllowanceCard's status line is driven by
+  Rust-derived flags, paired with an icon + plain-language label, in priority order - **paused**
+  (`active === false`, muted "Paused" label, the pill is empty since a paused allowance reserves
+  nothing), **overspent** (`balanceMinor < 0`, informational "Rs X over", never "overspent" or a red
+  alarm), **underfunded** (active + recurring + currently below target - the ordinary mid-period
+  state, not a warning - "Tops back up to your weekly/monthly amount on <date>."), else nothing to
+  flag (fully funded). Matches `ux-blueprint.md` §5's informational, non-punitive over-budget
+  guidance.
+- **Optional transaction tagging (`docs/allowances.md` §12):** the Add/Edit Transaction form
+  (`transaction-form`) shows an "Allowance (optional)" context row (mirroring the category row, ADR
+  0004) below the category/split block, for both create and edit. Tapping it opens
+  **AllowancePicker** (`features/transactions/allowance-picker.ts`, route `expenses/allowance`) - a
+  plain navigation list of ACTIVE allowances plus a "None" row to clear the tag - and carries the
+  in-progress form via router state so picking (or clearing) an allowance is lossless. Tagging is
+  fully optional; `allowanceId` stays `null` unless the user picks one.
+
 ---
 
 ## 8. Forms, overlays & shared

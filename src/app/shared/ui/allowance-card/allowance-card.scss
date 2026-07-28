@@ -1,0 +1,105 @@
+// AllowanceCard - name + an 8px pill track (--progress-track-h) filled by Reserved/Target, plus a
+// status line. Tokens only. The whole card is a single tappable button (>= 44px target).
+
+:host {
+  display: block;
+}
+
+.allowance-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: var(--tap-target-min);
+  padding: var(--space-4);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
+  background: var(--c-bg);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.allowance-card:focus-visible {
+  outline: 2px solid var(--c-primary-700);
+  outline-offset: 1px;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.name {
+  font-size: var(--t-title);
+  font-weight: var(--fw-medium);
+  color: var(--c-text);
+}
+.kind {
+  font-size: var(--t-caption);
+  color: var(--c-text-muted);
+  flex: none;
+}
+
+// Neutral track; the fill colour changes by status (paused/overspent/underfunded/funded).
+.track {
+  position: relative;
+  height: var(--progress-track-h);
+  border-radius: var(--radius-pill);
+  background: var(--c-border);
+  overflow: hidden;
+}
+.fill {
+  height: 100%;
+  border-radius: var(--radius-pill);
+  transition: width var(--motion-slow) var(--easing);
+}
+.fill.funded {
+  background: var(--c-positive);
+}
+.fill.underfunded {
+  background: var(--c-info);
+}
+.fill.overspent {
+  background: var(--c-danger);
+}
+.fill.paused {
+  background: var(--c-text-muted);
+}
+
+.amounts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  font-size: var(--t-body);
+}
+.amounts .set-aside {
+  color: var(--c-text);
+  font-weight: var(--fw-medium);
+}
+.amounts .sep,
+.amounts .target {
+  color: var(--c-text-muted);
+}
+
+// Status line: muted for paused; informational/danger tone + icon for underfunded/overspent -
+// meaning is carried by the icon + text, never colour alone.
+.status-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--t-caption);
+  color: var(--c-text-muted);
+}
+.status-line svg {
+  flex: none;
+}
+.status-line.underfunded {
+  color: var(--c-info-700);
+}
+.status-line.overspent {
+  color: var(--c-danger-700);
+}
+.status-line.paused {
+  color: var(--c-text-muted);
+}

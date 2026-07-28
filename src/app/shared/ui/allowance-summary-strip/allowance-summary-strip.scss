@@ -1,0 +1,35 @@
+// Three compact stats side by side; wraps to two rows on very narrow screens rather than
+// truncating a figure. Tokens only.
+
+:host {
+  display: block;
+}
+
+.strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  flex: 1 1 0;
+  min-width: 7rem;
+  padding: var(--space-3);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
+  background: var(--c-surface);
+}
+
+.stat-label {
+  font-size: var(--t-caption);
+  color: var(--c-text-muted);
+}
+
+.stat-figure {
+  font-size: var(--t-title);
+  font-weight: var(--fw-medium);
+  color: var(--c-text);
+}

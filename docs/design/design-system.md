@@ -282,8 +282,9 @@ and the tokens it consumes. Components are dumb/presentational (`shared/`) unles
 > Banner, ListRow (with optional `[lead]` slot), SelectField, Skeleton, Spinner,
 > **Modal** (ConfirmDialog substrate only), **ConfirmDialog**, **FabMenu**, **GoalProgressRow**,
 > **FormActions** (bottom Save bar), **BalanceCard**, **ActionTile**, **SettingsRow**,
-> **EnvelopeCard**, **PrivacyNote** (`app-privacy-note`, static persistent trust/reassurance note -
-> not a live region, unlike the transient Banner).
+> **EnvelopeCard**, **AllowanceCard**, **AllowanceSummaryStrip**, **PrivacyNote**
+> (`app-privacy-note`, static persistent trust/reassurance note - not a live region, unlike the
+> transient Banner).
 > Reuse/extend these rather than re-inlining markup - see the `ui-component`
 > skill. The remaining entries below are still to be built as they're needed.
 
@@ -386,6 +387,22 @@ and the tokens it consumes. Components are dumb/presentational (`shared/`) unles
   an overflowing bar) - phrased as information, not punitively (see "Over-budget is gentle" below).
   Display-only; the whole card is a button that emits `open` (the Budgets screen navigates to the
   budget's edit page).
+- **AllowanceCard** (`app-allowance-card`, **built**, FR-3.4) - a savings-backed allowance envelope
+  (`docs/allowances.md`): name, kind (period + next-refresh date, or "One-time"), a
+  `--progress-track-h` pill track filled by `Reserved / Target` (both Rust-derived), and the
+  set-aside/target amounts via the money pipe. The status line is driven by Rust-derived flags, in
+  priority order: **paused** (`active === false`, muted "Paused", the pill empty since a paused
+  allowance reserves nothing), **overspent** (`balanceMinor < 0`, gentle informational "Rs X over" -
+  never "overspent"), **underfunded** (active + recurring + below target - the ordinary mid-period
+  state, an informational "Tops back up to your weekly/monthly amount on <date>", not a warning), else
+  nothing to flag. Meaning is never colour-alone, matching EnvelopeCard's convention. Display-only;
+  the whole card is a button that emits `open` (the Allowances screen navigates to the allowance's
+  edit page).
+- **AllowanceSummaryStrip** (`app-allowance-summary-strip`, **built**, FR-3.4) - the Allowances-screen
+  summary: three compact stats (Total savings / Set aside / Free to spend, from `AllowanceSummary`'s
+  `totalMinor`/`reservedMinor`/`availableMinor`) in a row of small bordered cells (`--c-surface`,
+  `--radius-md`), wrapping on narrow screens. Lighter-weight than BalanceCard (a single large hero
+  figure) - this is three small stats, not one. Display-only, via the money pipe.
 
 ### New - required by FRs, absent in Figma (specified here, to design)
 - **LockScreen** - biometric prompt + passphrase fallback (FR-5.1). App entry gate.

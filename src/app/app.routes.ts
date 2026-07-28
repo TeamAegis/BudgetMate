@@ -77,6 +77,15 @@ export const routes: Routes = [
       import('./features/transactions/transaction-form').then((m) => m.TransactionForm),
   },
   {
+    // Optional allowance tag (FR-3.4): reached from the transaction form's "Allowance" context row,
+    // for both the create and edit routes - see `TransactionForm.changeAllowance()`.
+    path: 'expenses/allowance',
+    canActivate: [unlockGuard],
+    data: { title: 'Allowance', back: true, hideNav: true },
+    loadComponent: () =>
+      import('./features/transactions/allowance-picker').then((m) => m.AllowancePicker),
+  },
+  {
     // Read-only detail (issue I5): the list card taps here; Edit -> :id/edit, Delete = header icon.
     // Declared AFTER expenses/new* so the literal add routes still win over this :id param route.
     path: 'expenses/:id',
@@ -224,6 +233,26 @@ export const routes: Routes = [
     canActivate: [unlockGuard],
     data: { title: 'Edit budget', back: true, hideNav: true },
     loadComponent: () => import('./features/budgets/budget-form').then((m) => m.BudgetForm),
+  },
+  {
+    path: 'allowances',
+    canActivate: [unlockGuard],
+    data: { title: 'Allowances', back: true },
+    loadComponent: () => import('./features/allowances/allowances').then((m) => m.Allowances),
+  },
+  {
+    path: 'allowances/new',
+    canActivate: [unlockGuard],
+    data: { title: 'Add allowance', back: true, hideNav: true },
+    loadComponent: () =>
+      import('./features/allowances/allowance-form').then((m) => m.AllowanceForm),
+  },
+  {
+    path: 'allowances/:id/edit',
+    canActivate: [unlockGuard],
+    data: { title: 'Edit allowance', back: true, hideNav: true },
+    loadComponent: () =>
+      import('./features/allowances/allowance-form').then((m) => m.AllowanceForm),
   },
   {
     path: 'import',

@@ -111,6 +111,26 @@
       </div>
       }
 
+      <!-- Optional allowance tag (FR-3.4) - a tappable context row, mirroring the category row.
+      Shown for both the simple and split-editor cases, and on edit, since the tag is a whole-
+      transaction property, not a per-split one. -->
+      <div class="category-block">
+        <button type="button" class="cat-context" (click)="changeAllowance()">
+          <span class="cat-ic">
+            <svg lucideWalletCards [size]="22" aria-hidden="true"></svg>
+          </span>
+          <span class="cat-text">
+            <span class="cat-label">Allowance (optional)</span>
+            @if (selectedAllowance(); as al) {
+              <span class="cat-name">{{ al.name }}</span>
+            } @else {
+              <span class="cat-name cat-empty">None</span>
+            }
+          </span>
+          <svg class="cat-chev" lucideChevronRight [size]="18" aria-hidden="true"></svg>
+        </button>
+      </div>
+
       <app-form-field label="Account">
         <app-select-field
           ariaLabel="Account"

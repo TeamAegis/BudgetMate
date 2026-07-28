@@ -1,0 +1,39 @@
+// Full-screen Add/Edit Allowance page. The page scrolls inside .app-content; Save is the fixed
+// bottom action bar (FormActions), so this is just a stacked field layout.
+
+.form-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  // Clear the fixed bottom Save bar (FormActions) so the last field is never hidden behind it.
+  padding-bottom: calc(var(--space-8) + var(--tap-target-min) + var(--safe-area-bottom));
+}
+
+.form-loading {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-8) 0;
+}
+
+.form-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.numeric {
+  text-align: right;
+}
+
+// Plain informational display for the read-only Type field on the edit page (kind/period/week
+// start are fixed at creation). Not an <input> - just styled to read as part of the form; the
+// value is announced normally by a screen reader and the hint stays associated via the
+// surrounding app-form-field label.
+.readonly-value {
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  background: var(--c-surface);
+  color: var(--c-text);
+}

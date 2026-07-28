@@ -2,7 +2,7 @@ import { Component, DestroyRef, OnInit, computed, effect, inject, signal } from 
 import { ActivatedRoute, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { LucidePlus, LucideX, LucideTag, LucideChevronRight } from '@lucide/angular';
+import { LucidePlus, LucideX, LucideTag, LucideWalletCards, LucideChevronRight } from '@lucide/angular';
 import {
   createTransaction,
   updateTransaction,
@@ -10,6 +10,7 @@ import {
   listTransactions,
   listAccounts,
   listCategories,
+  listAllowances,
   getSettings,
   previewRules,
   toUserMessage,
@@ -18,6 +19,7 @@ import {
 import type {
   Transaction,
   Account,
+  Allowance,
   Category,
   CategoryKind,
   TransactionPrefill,
@@ -37,9 +39,9 @@ import { SelectField, type SelectOption } from '../../shared/ui/select-field/sel
 const DECIMAL = /^\d+(\.\d+)?$/;
 
 /**
- * A snapshot of the in-progress form, carried in nav state when the user taps the category row to
- * change it (form -> picker -> form). Restoring it makes changing the category lossless. Matches
- * `form.getRawValue()`.
+ * A snapshot of the in-progress form, carried in nav state when the user taps the category row (or
+ * the allowance row, FR-3.4) to change it (form -> picker -> form). Restoring it makes changing the
+ * category/allowance lossless. `form.getRawValue()` plus the out-of-form `allowanceId` signal.
  */
 interface FormSnapshot {
   accountId: number | null;
@@ -50,6 +52,8 @@ interface FormSnapshot {
   payee: string;
   note: string;
   splits: { categoryId: number | null; amount: string }[];
+  /** Optional allowance envelope tag (FR-3.4); `null` for an untagged transaction. */
+  allowanceId: number | null;
 }
 
 /**
@@ -60,6 +64,11 @@ interface FormSnapshot {
  * signing, the split-sum invariant, and `base_amount_minor` happen in Rust; TS only formats and
  * shows a live "remaining to allocate" hint (Rust re-validates). Field order is amount-first
  * (genre quick-entry); Split/FX are progressively disclosed.
+ *
+ * Tagging an allowance (FR-3.4, `docs/allowances.md` §12) is optional and shown as a context row
+ * (mirroring the category row) below the category/split block; tapping it opens
+ * `AllowancePicker`, carrying the in-progress form via `FormSnapshot` so changing (or clearing) the
+ * tag is lossless, for both the create and edit routes.
  */
 @Component({
   selector: 'app-transaction-form',
@@ -69,6 +78,7 @@ interface FormSnapshot {
     LucidePlus,
     LucideX,
     LucideTag,
+    LucideWalletCards,
     LucideChevronRight,
     IconButton,
     Banner,
@@ -125,6 +135,12 @@ export class TransactionForm implements OnInit {
 
   protected readonly accounts = signal<Account[]>([]);
   protected readonly categories = signal<Category[]>([]);
+  /** Every allowance (not just active ones) - so an already-tagged paused allowance still resolves
+   *  to a name here; the picker itself lists active allowances only. */
+  protected readonly allowances = signal<Allowance[]>([]);
+  /** The optional allowance tag (FR-3.4) - `null` for an untagged transaction. Kept outside the
+   *  reactive form (like `formKind`) since it isn't a per-split concern. */
+  protected readonly allowanceId = signal<number | null>(null);
   protected readonly baseCurrency = signal('MUR');
   protected readonly loading = signal(true);
   protected readonly busy = signal(false);
@@ -235,26 +251,34 @@ export class TransactionForm implements OnInit {
       return;
     }
     try {
-      const [accts, cats, settings] = await Promise.all([
+      const [accts, cats, allowanceSummary, settings] = await Promise.all([
         listAccounts(false),
         listCategories(false),
+        listAllowances(),
         getSettings(),
       ]);
       this.accounts.set(accts);
       this.categories.set(cats);
+      this.allowances.set(allowanceSummary.allowances);
       this.baseCurrency.set(settings.baseCurrency);
 
       const id = this.editingId();
       if (id !== null) {
-        const tx = this.passedTx ?? (await listTransactions()).find((t) => t.id === id) ?? null;
-        if (!tx) {
-          this.error.set('That transaction could not be found.');
+        if (this.resume) {
+          // Returning from the category/allowance picker mid-edit (lossless "change" round trip) -
+          // the in-progress form already has everything; no need to refetch the transaction.
+          this.patchFromResume(this.resume);
         } else {
-          this.patchFromTransaction(tx);
+          const tx = this.passedTx ?? (await listTransactions()).find((t) => t.id === id) ?? null;
+          if (!tx) {
+            this.error.set('That transaction could not be found.');
+          } else {
+            this.patchFromTransaction(tx);
+          }
         }
       } else {
-        // Restore an in-progress entry when changing the category; otherwise start fresh (or from
-        // an OCR prefill). The two-step add picks the category first, so it is preset here.
+        // Restore an in-progress entry when changing the category/allowance; otherwise start fresh
+        // (or from an OCR prefill). The two-step add picks the category first, so it is preset here.
         if (this.resume) this.patchFromResume(this.resume);
         else this.patchForCreate(this.pendingPrefill);
 
@@ -347,6 +371,7 @@ export class TransactionForm implements OnInit {
         prefill?.totalMinor != null ? this.majorAmount(prefill.totalMinor, currency) : undefined,
       payee: prefill?.payee ?? undefined,
     });
+    this.allowanceId.set(null);
   }
 
   private patchFromTransaction(t: Transaction): void {
@@ -363,12 +388,12 @@ export class TransactionForm implements OnInit {
         amount: this.majorAmount(s.amountMinor, t.currency),
       })),
     });
-    // Fix the session kind from the loaded transaction's category (a transaction is one kind).
-    const firstCat = this.categories().find((c) => c.id === t.splits[0]?.categoryId);
-    if (firstCat) this.formKind.set(firstCat.kind);
+    this.allowanceId.set(t.allowanceId);
+    this.syncFormKindFromFirstSplit();
   }
 
-  /** Restore a snapshot handed back from the category picker (lossless "change category"). */
+  /** Restore a snapshot handed back from the category or allowance picker (lossless "change
+   *  category"/"change allowance"), for both the create and edit routes. */
   private patchFromResume(s: FormSnapshot): void {
     this.resetForm({
       accountId: s.accountId,
@@ -380,6 +405,17 @@ export class TransactionForm implements OnInit {
       note: s.note,
       splits: s.splits,
     });
+    this.allowanceId.set(s.allowanceId ?? null);
+    this.syncFormKindFromFirstSplit();
+  }
+
+  /** Fix `formKind` from the first split's category (a transaction is a single kind for the whole
+   *  session) - shared by `patchFromTransaction` and `patchFromResume` (an edit-mode "change
+   *  allowance/category" round trip resumes without refetching the transaction). */
+  private syncFormKindFromFirstSplit(): void {
+    const firstCategoryId = this.splits.at(0).get('categoryId')!.value as number | null;
+    const firstCat = this.categories().find((c) => c.id === firstCategoryId);
+    if (firstCat) this.formKind.set(firstCat.kind);
   }
 
   private resetForm(opts: {
@@ -452,7 +488,32 @@ export class TransactionForm implements OnInit {
    */
   protected changeCategory(): void {
     void this.router.navigate(['/expenses/new', this.kind()], {
-      state: { resume: this.form.getRawValue() },
+      state: { resume: { ...this.form.getRawValue(), allowanceId: this.allowanceId() } },
+      replaceUrl: true,
+    });
+  }
+
+  // -- Optional allowance tagging (FR-3.4, docs/allowances.md §12) -------------------
+
+  /** The allowance currently tagged, resolved for display in the context row (or `null`). */
+  protected selectedAllowance(): Allowance | null {
+    const id = this.allowanceId();
+    if (id == null) return null;
+    return this.allowances().find((a) => a.id === id) ?? null;
+  }
+
+  /**
+   * Open the picker to tag (or clear) an allowance, carrying the in-progress entry so nothing is
+   * lost - works from both the create and edit routes since `returnTo` is just this form's own
+   * current URL. `replaceUrl` swaps the form out of history (the picker re-adds it on pick), so
+   * repeatedly changing the tag never stacks up entries the Back button has to unwind.
+   */
+  protected changeAllowance(): void {
+    void this.router.navigate(['/expenses/allowance'], {
+      state: {
+        returnTo: this.router.url,
+        resume: { ...this.form.getRawValue(), allowanceId: this.allowanceId() },
+      },
       replaceUrl: true,
     });
   }
@@ -481,6 +542,7 @@ export class TransactionForm implements OnInit {
         splits,
         payee: v.payee.trim() || null,
         note: v.note.trim() || null,
+        allowanceId: this.allowanceId(),
       };
       const id = this.editingId();
       if (id === null) await createTransaction(input);
