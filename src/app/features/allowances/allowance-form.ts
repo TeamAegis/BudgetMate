@@ -13,6 +13,7 @@ import {
 } from '../../core/bridge';
 import type { Allowance, AllowanceKind, AllowancePeriod } from '../../core/models';
 import { HeaderActionService } from '../../core/layout/header-action.service';
+import { readOrigin, returnTo } from '../../core/navigation/origin';
 import { CurrencyService } from '../../core/money/currency.service';
 import { maxFractionDigits } from '../../core/money/amount-validators';
 import { Banner, type BannerTone } from '../../shared/ui/banner/banner';
@@ -65,6 +66,13 @@ export class AllowanceForm implements OnInit {
   private readonly passedAllowance =
     (this.nav?.extras.state?.['allowance'] as Allowance | undefined) ?? null;
 
+  /**
+   * Where to go after a successful save/delete. Read at construction (while this is still the
+   * current navigation), so opening the form from Home's quick-add returns to Home rather than
+   * dropping the user on the Allowances list they never visited. See core/navigation/origin.ts.
+   */
+  private readonly origin = readOrigin(this.router);
+
   /** Edit id from the route (`allowances/:id/edit`); null on the add route. */
   protected readonly editingId = signal<number | null>(
     this.route.snapshot.paramMap.has('id')
@@ -82,13 +90,16 @@ export class AllowanceForm implements OnInit {
   /** Read-only cadence context shown on the edit page (kind/period/weekStart are fixed at creation). */
   protected readonly cadenceContext = signal<string>('');
 
+  // Kind and Period render as stacked rows (`layout="list"`), not the pill: both are form answers
+  // that reveal further fields, and the rows have room for a plain-language hint explaining what
+  // each choice actually does. The Status toggle below stays a pill (it reveals nothing).
   protected readonly kindOptions: SegmentOption[] = [
-    { value: 'recurring', label: 'Recurring' },
-    { value: 'one_time', label: 'One-time' },
+    { value: 'recurring', label: 'Recurring', hint: 'Refills on its own every week or month' },
+    { value: 'one_time', label: 'One-time', hint: 'A single amount you set aside once' },
   ];
   protected readonly periodOptions: SegmentOption[] = [
-    { value: 'weekly', label: 'Weekly' },
-    { value: 'monthly', label: 'Monthly' },
+    { value: 'weekly', label: 'Weekly', hint: 'Refills every week' },
+    { value: 'monthly', label: 'Monthly', hint: 'Refills every month' },
   ];
   protected readonly activeOptions: SegmentOption[] = [
     { value: 'active', label: 'Active' },
@@ -273,7 +284,7 @@ export class AllowanceForm implements OnInit {
           active: v.activeChoice === 'active',
         });
       }
-      await this.router.navigate(['/allowances']);
+      await this.router.navigate([returnTo(this.origin, '/allowances')]);
     } catch (e) {
       this.error.set(toUserMessage(e));
     } finally {
@@ -288,7 +299,7 @@ export class AllowanceForm implements OnInit {
     this.error.set(null);
     try {
       await deleteAllowance(id);
-      await this.router.navigate(['/allowances']);
+      await this.router.navigate([returnTo(this.origin, '/allowances')]);
     } catch (e) {
       this.error.set(toUserMessage(e));
       this.confirmingDelete.set(false);

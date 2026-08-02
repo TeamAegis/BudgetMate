@@ -1,9 +1,16 @@
 <section class="feature-page">
-  <app-fab-menu
-    ariaLabel="Add a transaction or scan a receipt"
-    [items]="fabItems"
-    (selected)="onFabSelect($event)"
-  />
+  <!-- The FabMenu yields to the empty state's single CTA (one affordance at a time). -->
+  @if (loading() || transactions().length > 0 || error()) {
+    <app-fab-menu
+      ariaLabel="Add a transaction or scan a receipt"
+      [items]="fabItems"
+      (selected)="onFabSelect($event)"
+    />
+  }
+
+  @if (savedNotice(); as msg) {
+    <app-banner tone="success">{{ msg }}</app-banner>
+  }
 
   @if (error(); as err) {
     <app-banner>{{ err }}</app-banner>
@@ -31,7 +38,7 @@
   } @else {
     @for (group of grouped(); track group.date) {
       <div class="date-group">
-        <h2 class="date-heading">{{ group.date }}</h2>
+        <h2 class="date-heading">{{ group.date | friendlyDate }}</h2>
         <ul class="rows">
           @for (t of group.items; track t.tx.id) {
             <li
@@ -47,12 +54,15 @@
               (keydown.enter)="openTransaction(t.tx)"
               (keydown.space)="openTransaction(t.tx); $event.preventDefault()"
             >
-              <span lead class="avatar" [class.income]="t.tx.amountMinor > 0">{{ monogram(rowName(t.tx)) }}</span>
+              <span lead class="avatar" [class.income]="t.tx.amountMinor > 0 && !isTransfer(t.tx)">{{ monogram(rowName(t.tx)) }}</span>
               <span amount class="amount-cell">
+                <!-- A transfer leg is neither spending nor income, so it gets NEITHER the red nor the
+                     green tint - it reads neutral, and the [Transfer] badge in the meta line carries
+                     the meaning as text (never colour alone). -->
                 <span
                   class="amount numeric"
-                  [class.income]="t.tx.amountMinor > 0"
-                  [class.expense]="t.tx.amountMinor < 0"
+                  [class.income]="t.tx.amountMinor > 0 && !isTransfer(t.tx)"
+                  [class.expense]="t.tx.amountMinor < 0 && !isTransfer(t.tx)"
                   >{{ { amountMinor: t.tx.amountMinor, currency: t.tx.currency } | money: true }}</span
                 >
                 @if (t.tx.currency !== baseCurrency()) {

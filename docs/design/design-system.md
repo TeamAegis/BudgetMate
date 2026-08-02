@@ -282,7 +282,8 @@ and the tokens it consumes. Components are dumb/presentational (`shared/`) unles
 > Banner, ListRow (with optional `[lead]` slot), SelectField, Skeleton, Spinner,
 > **Modal** (ConfirmDialog substrate only), **ConfirmDialog**, **FabMenu**, **GoalProgressRow**,
 > **FormActions** (bottom Save bar), **BalanceCard**, **ActionTile**, **SettingsRow**,
-> **EnvelopeCard**, **AllowanceRow**, **PrivacyNote** (`app-privacy-note`, static persistent
+> **EnvelopeCard**, **AllowanceRow**, **AllowanceSummaryCard**, **NavDrawer** (secondary-destination
+> navigation sheet, ADR 0013), **PrivacyNote** (`app-privacy-note`, static persistent
 > trust/reassurance note - not a live region, unlike the transient Banner).
 > Reuse/extend these rather than re-inlining markup - see the `ui-component`
 > skill. The remaining entries below are still to be built as they're needed.
@@ -299,11 +300,25 @@ and the tokens it consumes. Components are dumb/presentational (`shared/`) unles
   Note: Figma inconsistently labels the 4th tab "Charts" on some screens and "Analytics" on
   others, and tab x-positions drift between screens - **normalise to evenly-spaced flexbox
   and one label ("Analytics")**.
+  The active tab comes from `NavTabService` (`core/layout/nav-tab.service.ts`), **not** from
+  `routerLinkActive`. URL-prefix matching alone lit no tab at all on the routes outside the four tab
+  prefixes (`/settings/**`, `/budgets/**`, `/allowances/**`, `/import/**`), so a pushed screen looked
+  like it had lost its place. Resolution order: the route's `data.tab` override, else the URL's first
+  segment when it is a tab root, else that area's owner (`settings`/`budgets`/`allowances` -> Home,
+  `import` -> Expenses), else nothing (correct for the chromeless lock screens). The back arrow is
+  unaffected and stays history-based (`Location.back()`, ADR 0004); for "return to where I came
+  from" after a save, see `core/navigation/origin.ts`.
 #### Home and data surfaces
-- **BalanceCard** (`app-balance-card`, **built**) - the Home hero. `--c-primary-40` fill,
-  `--radius-lg`, `--elev-card` (the signature offset pink shadow). Renders an optional money figure
-  (`--t-balance`, via the money pipe) when one is supplied; otherwise an honest caption (the
-  count-based summary used until the deferred `get_dashboard` total exists). Display-only.
+- **BalanceCard** (`app-balance-card`, **built**) - the Home hero, and a **self-contained** one.
+  `--c-primary-40` fill, `--radius-lg`, `--elev-card` (the signature offset pink shadow). Renders an
+  optional money figure (`--t-balance`, via the money pipe) when one is supplied; otherwise an honest
+  caption. Also takes a **`note`** (the plain-language explainer for the figure, e.g. what it already
+  sets aside) and projects a **`[footer]` slot** for the compact secondary figures (Spent this month /
+  Total balance), separated by a hairline in `--c-on-primary-rule`; the footer collapses via `:empty`
+  when nothing is projected. Hierarchy is one step per level - uppercase caption label -> figure ->
+  note -> rule -> footer stats - so nothing competes with the headline. The note and footer live INSIDE
+  the card deliberately: they used to sit under it as loose muted text and separate stat cards of
+  competing weight, which left the hero a flat slab trailing debris. Display-only.
 - **ActionTile** (`app-action-tile`, **built**) - labelled Home quick-action tile, `--c-primary-05`,
   `--radius-button`, Lucide icon + caption (the old-MCB-Juice Home grid; labelled tiles only, never
   icon-only). Real actions: *Add expense* (-> `/expenses/new`), *Scan receipt* (-> `/import`),
@@ -321,18 +336,42 @@ and the tokens it consumes. Components are dumb/presentational (`shared/`) unles
   `--c-danger-700`/`--c-text`. Income rows use the positive tint on the avatar **paired with the signed
   amount** - never colour alone.
 #### Actions and toggles
-- **SegmentedToggle** - Daily/Weekly/Monthly and Ongoing/Completed. Pill, active segment
-  `--c-primary-700` (white-on-coral clears AA; the lighter `--c-primary` failed it - see §2.3).
+- **SegmentedToggle** - two visual treatments behind one behaviour and one a11y contract (a
+  `radiogroup` of `radio`s, arrow-key navigable, roving tabindex):
+  - `layout="pill"` (**default**) - Daily/Weekly/Monthly and Ongoing/Completed. Pill, active segment
+    `--c-primary-700` (white-on-coral clears AA; the lighter `--c-primary` failed it - see §2.3).
+    Use for **filters and mode switches**: what you are looking at. Segment labels never wrap.
+  - `layout="list"` - full-width stacked rows at `--radius-md`, each with an optional plain-language
+    `hint` line and a filled/hollow circle glyph marking the selection (shape + tint + `aria-checked`,
+    never colour alone). Use for a **form answer**, above all one that reveals or hides other fields.
+    Rationale: GOV.UK builds its conditionally-revealed-question pattern on stacked radios and warns
+    against revealing follow-ups from inline side-by-side options; Material 3 recommends vertically
+    listed radios for a single choice of <= 5 and advises against horizontal radio lists. The rows
+    also fit a hint, which the pill cannot - and that serves low-financial-literacy users
+    (`financial-knowledge.md` §9). Applied to the Allowance form's **Kind** and **Period**.
+  - Choose by asking "is this an answer I am saving, or a view I am switching?" Do not flip the
+    default: the filters are textbook-correct as pills.
 - **FAB** - 60px coral circle, `+` icon, `--elev-float`. Goals uses a simple single-action FAB
   (-> `/goals/new`); Expenses uses the **FabMenu** below instead. The **host list must reserve
   bottom space** so the FAB/FabMenu never occludes the last row: `padding-bottom` ≥
   `--layout-fab-size + --space-6` (≈84px). Without it the final transaction/goal hides behind the
   button (ui-ux §2.10). See `screens.md` §4.1, §5.1.
-- **FabMenu** (`app-fab-menu`, `src/app/shared/ui/fab-menu/`) - the Expenses primary action: a
-  **tap**-to-open FAB that reveals **labelled** items *Add expense* (-> `/expenses/new`) and
-  *Scan receipt* (-> `/import`), replacing the old undiscoverable long-press FAB. Floats at
-  `--z-fab-menu` (between `--z-dropdown` and `--z-modal`), `--elev-float`. Each item is a labelled
-  Lucide icon + text (never icon-only); closes on item tap, Escape, or outside tap.
+- **FabMenu** (`app-fab-menu`, `src/app/shared/ui/fab-menu/`) - the quick-add on **Home and
+  Expenses**: a **tap**-to-open FAB that reveals **labelled** items, replacing the old
+  undiscoverable long-press FAB. Floats at `--z-fab-menu` (between `--z-dropdown` and `--z-modal`),
+  `--elev-float`. Each item is a labelled Lucide icon + text (never icon-only); closes on item tap,
+  Escape, or outside tap. Items are supplied by the host, so the two menus differ:
+  - **Expenses** - *Add expense*, *Add income*, *Scan receipt* (-> `/import`).
+  - **Home** - the same three plus *Add allowance* (-> `/allowances/new`) and *Add budget*
+    (-> `/budgets/new`), which are otherwise reachable only by digging through Settings. The
+    allowance/budget items reuse the glyphs their Settings rows use (`lucideHandCoins` /
+    `lucidePiggyBank`) so the same destination looks the same everywhere.
+  - *Add expense* / *Add income* deep-link past the kind chooser (`/expenses/new/expense`,
+    `/expenses/new/income`) - picking the labelled item **is** that decision (ADR 0004).
+  - The menu **yields to a teaching empty state**: while an empty state's CTA is on screen the
+    FabMenu is not rendered, so only one add affordance shows at a time.
+  - Home keeps its labelled quick-action **tile grid** as well: the tiles are the discoverable,
+    read-while-scrolling entry point, the FAB is the thumb-zone shortcut.
 #### Forms and overlays
 - **Form page** (pattern, not a single component) - **every add/edit form is a full-screen routed
   page**, not a modal: a pair of lazy routes `<area>/new` and `<area>/:id/edit` with route data
@@ -361,10 +400,23 @@ and the tokens it consumes. Components are dumb/presentational (`shared/`) unles
   by its title, focus trap + restore, body scroll-lock, dismiss on Escape / backdrop-click
   (suppressed while `busy`), enter animation `scrim-in` + `modal-enter` (reduced-motion honoured).
   **Retired as a form container** - do not use `app-modal` for forms (forms are pages, see above).
-- **ConfirmDialog** (`app-confirm-dialog`) - the **only overlay in the app**: a small, content-sized
-  centred dialog built on `app-modal`, with `role="alertdialog"` and its message wired via
+- **ConfirmDialog** (`app-confirm-dialog`) - the **only centred dialog in the app**: a small,
+  content-sized centred dialog built on `app-modal`, with `role="alertdialog"` and its message wired via
   `aria-describedby`. Two-button (title, message, danger confirm + ghost cancel). Used before delete /
   archive / restore-replace / over-budget acknowledgement (§8.2). Emits `confirm` / `cancelled`.
+- **NavDrawer** (`app-nav-drawer`, **built**) - the navigation sheet for the app's **secondary**
+  destinations (ADR 0013), opened by a leading hamburger in the header on top-level tabs only (a screen
+  with Back keeps Back in that slot). Slides in from the leading edge over a dimmed + blurred scrim
+  (`--c-scrim` + `--backdrop-blur`, `--z-drawer`, between the FabMenu and `--z-modal` so a
+  ConfirmDialog still layers over it). Width is `--layout-drawer-w` (screen width minus 56px, capped at
+  280px - Material's phone modal-drawer rule), leaving a strip of page visible so it reads as a sheet,
+  not a page. Rows are `--tap-target-min` tall with icon + label + hint; the current destination gets
+  `aria-current="page"` plus a heavier label, never a tint alone. Behaviour matches `app-modal`
+  (`role="dialog"` + `aria-modal`, focus trap + restore, body scroll-lock, dismiss on Escape / scrim);
+  any navigation closes it, which also covers Android hardware Back. Enter animation `drawer-in` +
+  `scrim-in`; under reduced motion it cross-fades in place instead of sliding. Contents come from
+  `core/layout/nav-destinations.ts` (shared with the Settings list) and **exclude the four BottomNav
+  tabs** on purpose. It is a navigation surface only - never a form or content host.
 #### Lists, inputs and empty states
 - **EmptyState** - centred illustration + message + CTA ("No goals? Create one!",
   "Tap the Button below…", "No Data").
@@ -377,11 +429,20 @@ and the tokens it consumes. Components are dumb/presentational (`shared/`) unles
   + optional hint + a trailing chevron or inline control. Used to build the grouped Settings screen
   (Your money / General / Security - see `screens.md` §7.1). Display/presentational; the feature
   feeds it data and handles the tap.
+  A **wide trailing control wraps onto its own line** (`flex-wrap` on the host, `min-width: 12rem` on
+  the text column, `margin-left: auto` on the trailing slot). Without this, a row pairing a hint with
+  a `SelectField` (Base currency, Auto-lock, Duplicate detection) squeezed the label and hint into a
+  one-word-per-line column with the control overlapping them.
 - **EnvelopeCard** (`app-envelope-card`, **built**, FR-3.1) - category name, cap/spent amounts (via
   the money pipe) and an 8px (`--progress-track-h`) pill track. Three Rust-computed states: **under**
   (`--c-positive` fill, no icon - nothing to flag), **approaching** (`--c-warning` fill +
   `lucideTriangleAlert` + "Rs X left"), **over** (`--c-danger` fill + icon + "Rs Y over"). Meaning is
   never colour-alone - approaching/over always pair the fill with the icon + a plain-language label.
+  Next to the category name sits a **status tag in words** ("on track" / "getting close" / "over"),
+  tinted to match the fill; the **percent figure moves to the right of the amounts row**, so the head
+  carries the state and the amounts row carries the numbers. The **over** state additionally tints the
+  whole card (`--c-danger-soft` + a danger-tinted border) so the state reads as tone and shape, not
+  only as a bar colour - a third reinforcement, never the sole cue.
   The bar visually clamps at 100% width even when over (the label/percent carry "how much over", not
   an overflowing bar) - phrased as information, not punitively (see "Over-budget is gentle" below).
   Display-only; the whole card is a button that emits `open` (the Budgets screen navigates to the
@@ -399,6 +460,16 @@ and the tokens it consumes. Components are dumb/presentational (`shared/`) unles
   EnvelopeCard uses when over budget, because an allowance self-heals at its next refresh (the
   imprest model tops it back up), so going over is a lower-stakes, temporary state than an over-budget
   category.
+- **AllowanceSummaryCard** (`app-allowance-summary-card`, **built**, FR-3.4) - Home's allowances card:
+  a title row (`lucideHandCoins` + chevron), a "Rs X used of Rs Y" figure pair, an 8px
+  (`--progress-track-h`) used-of-set-aside pill track (`--c-positive` fill, clamped 0-100), and a
+  plain-language line ("Rs X left across N allowances"). **Over** is gentle and icon + label, never
+  colour alone: `lucideTriangleAlert` + "Rs X over what you set aside" with the fill switching to
+  `--c-warning` (the same lower-stakes amber AllowanceRow uses, for the same self-healing reason).
+  Both figures come from Rust (`AllowanceSummary.usedMinor` / `.targetTotalMinor`) - the component only
+  formats and clamps geometry. Replaces the loose "Rs X set aside across your allowances" sentence that
+  used to trail the Home hero. The whole card is a button emitting `open` (Home navigates to
+  `/allowances`).
 
 ### New - required by FRs, absent in Figma (specified here, to design)
 - **LockScreen** - biometric prompt + passphrase fallback (FR-5.1). App entry gate.

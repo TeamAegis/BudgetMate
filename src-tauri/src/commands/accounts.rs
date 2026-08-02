@@ -32,11 +32,15 @@ pub fn list_accounts(
     state: State<'_, DbState>,
     include_archived: Option<bool>,
 ) -> Result<Vec<Account>, AppError> {
-    state.with(|c| accounts::list(c, include_archived.unwrap_or(false)))
+    // `today` gates the derived per-account balance: a future-dated transaction has not happened
+    // yet, so it must not count (same rule as `db::dashboard`).
+    let today = chrono::Utc::now().date_naive();
+    state.with(|c| accounts::list(c, include_archived.unwrap_or(false), today))
 }
 
 #[tauri::command]
 pub fn create_account(state: State<'_, DbState>, account: NewAccount) -> Result<Account, AppError> {
+    let today = chrono::Utc::now().date_naive();
     state.with(|c| {
         accounts::create(
             c,
@@ -44,12 +48,14 @@ pub fn create_account(state: State<'_, DbState>, account: NewAccount) -> Result<
             account.account_type,
             &account.currency,
             account.opening_balance_minor,
+            today,
         )
     })
 }
 
 #[tauri::command]
 pub fn update_account(state: State<'_, DbState>, account: UpdateAccount) -> Result<Account, AppError> {
+    let today = chrono::Utc::now().date_naive();
     state.with(|c| {
         accounts::update(
             c,
@@ -58,6 +64,7 @@ pub fn update_account(state: State<'_, DbState>, account: UpdateAccount) -> Resu
             account.account_type,
             &account.currency,
             account.opening_balance_minor,
+            today,
         )
     })
 }

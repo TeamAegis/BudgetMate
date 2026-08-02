@@ -47,7 +47,7 @@ describe('TransactionForm - patchForCreate multi-currency prefill', () => {
 
   it('same-currency prefill: renders the amount and currency as printed (MUR account, MUR prefill)', () => {
     const accounts: Account[] = [
-      { id: 1, name: 'Wallet', accountType: 'cash', currency: 'MUR', openingBalanceMinor: 0, archived: false },
+      { id: 1, name: 'Wallet', accountType: 'cash', currency: 'MUR', openingBalanceMinor: 0, archived: false, balanceMinor: 0 },
     ];
     const prefill: TransactionPrefill = {
       totalMinor: 138_00,
@@ -68,7 +68,7 @@ describe('TransactionForm - patchForCreate multi-currency prefill', () => {
 
   it('base != first-account currency: honors prefill.currency instead of reinterpreting against the default account (JPY prefill, USD-only accounts)', () => {
     const accounts: Account[] = [
-      { id: 2, name: 'US card', accountType: 'bank', currency: 'USD', openingBalanceMinor: 0, archived: false },
+      { id: 2, name: 'US card', accountType: 'bank', currency: 'USD', openingBalanceMinor: 0, archived: false, balanceMinor: 0 },
     ];
     const prefill: TransactionPrefill = {
       totalMinor: 2000,
@@ -159,7 +159,7 @@ describe('TransactionForm - allowance tagging (FR-3.4)', () => {
   });
 
   function account(): Account {
-    return { id: 1, name: 'Wallet', accountType: 'cash', currency: 'MUR', openingBalanceMinor: 0, archived: false };
+    return { id: 1, name: 'Wallet', accountType: 'cash', currency: 'MUR', openingBalanceMinor: 0, archived: false, balanceMinor: 0 };
   }
   function category(): Category {
     return { id: 1, name: 'Groceries', parentId: null, kind: 'expense', archived: false };
@@ -199,6 +199,7 @@ describe('TransactionForm - allowance tagging (FR-3.4)', () => {
       pendingReview: false,
       createdAt: '2026-07-10T00:00:00Z',
       allowanceId: null,
+      transferGroupId: null,
       splits: [{ id: 1, categoryId: 1, categoryName: 'Groceries', amountMinor: -1000 }],
       ...overrides,
     };

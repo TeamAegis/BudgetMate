@@ -91,7 +91,9 @@
 }
 .amounts .sep,
 .amounts .target {
-  color: var(--c-primary-700); // AA coral for the small target figure
+  // Muted, not coral: colour is reserved for signals, and a target amount is context, not a
+  // signal (audit finding 26). Hierarchy comes from value colour (current dark, target quiet).
+  color: var(--c-text-muted);
 }
 .amounts.done {
   text-decoration: line-through;

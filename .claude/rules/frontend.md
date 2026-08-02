@@ -73,7 +73,8 @@ that lifts with `--keyboard-inset` so the Android soft keyboard never hides it. 
 action (Delete/Archive) is a danger icon-button at the top-right of the header, published via
 `HeaderActionService` (`core/layout/header-action.service.ts`) with an optional
 `icon: 'trash' | 'archive'` - not Save-in-the-header. Never a centred modal. `ConfirmDialog` is the
-only overlay in the app. See `docs/design/screens.md` §8.0 and ADR 0003 (form action placement,
+only centred dialog in the app; the only other overlay is the `NavDrawer` navigation sheet (ADR 0013),
+which never hosts a form. See `docs/design/screens.md` §8.0 and ADR 0003 (form action placement,
 superseding `docs/adr/0002-page-based-forms-no-modals.md` on Save/Delete placement).
 
 **Adding a transaction is a two-step flow before the form** (ADR 0004): a kind chooser

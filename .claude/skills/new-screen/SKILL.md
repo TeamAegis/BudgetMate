@@ -37,8 +37,9 @@ TS model → bridge wrapper), then build the view here.
   `prefers-reduced-motion`.
 - **Add/edit forms are full-screen pages (routes `<area>/new` + `<area>/:id/edit`,
   data `{ back, hideNav }`), not modals** - *Save* is published into the global header via
-  `HeaderActionService`. `ConfirmDialog` is the only overlay in the app. See
-  `docs/design/screens.md` §8.0 and `docs/adr/0002-page-based-forms-no-modals.md`.
+  `HeaderActionService`. `ConfirmDialog` is the only centred dialog in the app; the only other overlay
+  is the `NavDrawer` navigation sheet (ADR 0013), which never hosts a form. See
+  `docs/design/screens.md` §7.0/§8.0 and `docs/adr/0002-page-based-forms-no-modals.md`.
 - **Standalone component**, signals for state, typed reactive forms for input. Heavy screens
   (OCR/charts) get a lazy route.
 

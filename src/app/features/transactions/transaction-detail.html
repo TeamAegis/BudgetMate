@@ -39,7 +39,7 @@
 
     <div class="detail-list">
       <div app-detail-row label="Type" [value]="typeLabel()"></div>
-      <div app-detail-row label="Date" [value]="t.postedDate"></div>
+      <div app-detail-row label="Date" [value]="t.postedDate | friendlyDate"></div>
       <div app-detail-row label="Account" [value]="accountName(t.accountId)"></div>
 
       @if (t.splits.length <= 1) {

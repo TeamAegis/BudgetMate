@@ -24,6 +24,8 @@ expression: "serde_json::to_string_pretty(&normalised).unwrap()"
   "totalMinor": 100000,
   "reservedMinor": 30000,
   "availableMinor": 70000,
+  "targetTotalMinor": 30000,
+  "usedMinor": 0,
   "baseCurrency": "MUR",
   "excludedAllowances": 0
 }

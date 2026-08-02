@@ -69,4 +69,29 @@ describe('FabMenu', () => {
     expect(fixture.nativeElement.querySelectorAll('.fab-item').length).toBe(0);
     expect(trigger.getAttribute('aria-expanded')).toBe('false');
   });
+
+  it('renders a glyph for every supported icon, including allowance and budget', () => {
+    const fixture = TestBed.createComponent(Host);
+    fixture.componentInstance.items = [
+      { id: 'add', label: 'Add expense', icon: 'plus' },
+      { id: 'scan', label: 'Scan receipt', icon: 'scan' },
+      { id: 'file', label: 'Import a file', icon: 'import' },
+      { id: 'goal', label: 'Add goal', icon: 'goal' },
+      { id: 'allowance', label: 'Add allowance', icon: 'allowance' },
+      { id: 'budget', label: 'Add budget', icon: 'budget' },
+    ];
+    fixture.detectChanges();
+    fixture.nativeElement.querySelector('.fab').click();
+    fixture.detectChanges();
+
+    const items = fixture.nativeElement.querySelectorAll('.fab-item');
+    expect(items.length).toBe(6);
+    // Every icon in the union must resolve to a rendered glyph - a missing @switch arm would leave
+    // the label with no icon beside it rather than failing the build.
+    for (const item of Array.from(items) as HTMLElement[]) {
+      expect(item.querySelector('.fab-item-glyph svg')).not.toBeNull();
+    }
+    expect(items[4].textContent).toContain('Add allowance');
+    expect(items[5].textContent).toContain('Add budget');
+  });
 });

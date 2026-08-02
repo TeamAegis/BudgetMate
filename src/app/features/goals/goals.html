@@ -1,5 +1,8 @@
 <section class="feature-page">
-  <app-fab ariaLabel="Add goal" (action)="addGoal()" />
+  <!-- The FAB yields to the empty state's single CTA (one affordance at a time). -->
+  @if (loading() || goals().length > 0 || error()) {
+    <app-fab ariaLabel="Add goal" (action)="addGoal()" />
+  }
 
   @if (error(); as err) {
     <app-banner>{{ err }}</app-banner>

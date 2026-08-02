@@ -1,7 +1,6 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import {
-  LucidePlus,
   LucidePencil,
   LucideChevronUp,
   LucideChevronDown,
@@ -17,7 +16,7 @@ import {
   isTauri,
 } from '../../core/bridge';
 import type { ImportRule, RulePreview } from '../../core/models';
-import { Button } from '../../shared/ui/button/button';
+import { Fab } from '../../shared/ui/fab/fab';
 import { IconButton } from '../../shared/ui/icon-button/icon-button';
 import { Card } from '../../shared/ui/card/card';
 import { Banner } from '../../shared/ui/banner/banner';
@@ -35,13 +34,12 @@ import { Skeleton } from '../../shared/ui/skeleton/skeleton';
 @Component({
   selector: 'app-rules',
   imports: [
-    LucidePlus,
     LucidePencil,
     LucideChevronUp,
     LucideChevronDown,
     LucidePlay,
     LucidePause,
-    Button,
+    Fab,
     IconButton,
     Card,
     Banner,

@@ -15,6 +15,7 @@ pub mod recurring;
 pub mod report;
 pub mod rules;
 pub mod transactions;
+pub mod transfers;
 pub mod vault;
 
 use serde::Serialize;

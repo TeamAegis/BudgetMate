@@ -27,6 +27,29 @@ describe('EnvelopeCard', () => {
     expect(el.querySelector('.fill')!.classList).toContain('under');
   });
 
+  it('labels the state in words next to the name, so it never rests on the fill colour', () => {
+    const cases: Array<[EnvelopeStatus, string]> = [
+      ['under', 'on track'],
+      ['approaching', 'getting close'],
+      ['over', 'over'],
+    ];
+    for (const [status, expected] of cases) {
+      const el = make(8_000, 10_000, status).nativeElement as HTMLElement;
+      const tag = el.querySelector('.head .tag');
+      expect(tag).not.toBeNull();
+      expect(tag!.textContent!.trim()).toBe(expected);
+      expect(tag!.classList).toContain(status);
+      // The whole card also carries the status, for the soft state tint.
+      expect(el.querySelector('.envelope-card')!.classList).toContain(status);
+    }
+  });
+
+  it('keeps the percent figure, moved out of the head into the amounts row', () => {
+    const el = make(6_200, 10_000, 'under').nativeElement as HTMLElement;
+    expect(el.querySelector('.head .percent')).toBeNull();
+    expect(el.querySelector('.amounts .percent')!.textContent).toContain('62%');
+  });
+
   it('renders the approaching state with an icon + label (not colour alone)', () => {
     const fixture = make(8_000, 10_000, 'approaching');
     const el = fixture.nativeElement as HTMLElement;

@@ -21,9 +21,9 @@
   gap: var(--space-4);
 }
 
-.numeric {
-  text-align: right;
-}
+// Amounts keep tabular figures (the global `.numeric`) but read left-aligned, like every other
+// field on the page - a lone right-aligned value in a stack of left-aligned inputs reads as a
+// misalignment rather than as a ledger column.
 
 // Plain informational display for the read-only Cadence field on the edit page (kind/period/
 // weekStart are fixed at creation). Not an <input> (never disabled/unavailable to assistive tech) -

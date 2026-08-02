@@ -73,8 +73,30 @@ fn active_base_reserved_sum(conn: &Connection, base_currency: &str) -> Result<i6
     .map_err(Into::into)
 }
 
-/// The full allowance-screen aggregate (list + the three balances + the foreign-currency caveat
-/// count). `total_minor` is `db::dashboard::total_balance_minor` as of `today` - NEVER stored.
+/// `(sum(target_minor), sum(target_minor - balance_minor))` over ACTIVE, `base_currency` allowances
+/// - the period's total allowance and how much of it has been spent, for the Home allowances card.
+///
+/// "Used" is deliberately NOT clamped per row: a row spent past its target has a negative
+/// `balance_minor`, and letting that push `used` above `target_total` is what lets the UI say
+/// honestly that the user is over. The total is floored at 0 so an all-untouched set reads as 0
+/// rather than a negative figure. Computed at the SQL layer, like `active_base_reserved_sum`.
+fn active_base_target_and_used(
+    conn: &Connection,
+    base_currency: &str,
+) -> Result<(i64, i64), DbError> {
+    conn.query_row(
+        "SELECT COALESCE(SUM(target_minor), 0), \
+                MAX(COALESCE(SUM(target_minor - balance_minor), 0), 0) \
+         FROM allowances WHERE active = 1 AND currency = ?1",
+        params![base_currency],
+        |r| Ok((r.get(0)?, r.get(1)?)),
+    )
+    .map_err(Into::into)
+}
+
+/// The full allowance-screen aggregate (list + the three balances + the period's target/used pair +
+/// the foreign-currency caveat count). `total_minor` is `db::dashboard::total_balance_minor` as of
+/// `today` - NEVER stored.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AllowanceSummary {
@@ -82,6 +104,11 @@ pub struct AllowanceSummary {
     pub total_minor: i64,
     pub reserved_minor: i64,
     pub available_minor: i64,
+    /// Sum of `target_minor` over ACTIVE, base-currency allowances - the period's total allowance.
+    pub target_total_minor: i64,
+    /// How much of `target_total_minor` has been spent. May EXCEED it when an allowance is
+    /// overspent; floored at 0. Derived in Rust so no caller has to do money math.
+    pub used_minor: i64,
     pub base_currency: String,
     /// Count of ACTIVE allowances in a currency other than `base_currency` (allowances are
     /// base-currency only at creation, §6 - this defends against a future base-currency change
@@ -98,6 +125,7 @@ pub fn summary(
     let total_minor = super::dashboard::total_balance_minor(conn, base_currency, today)?;
     let reserved_minor = active_base_reserved_sum(conn, base_currency)?;
     let available_minor = total_minor - reserved_minor;
+    let (target_total_minor, used_minor) = active_base_target_and_used(conn, base_currency)?;
     let excluded_allowances: i64 = conn.query_row(
         "SELECT count(*) FROM allowances WHERE active = 1 AND currency != ?1",
         params![base_currency],
@@ -108,6 +136,8 @@ pub fn summary(
         total_minor,
         reserved_minor,
         available_minor,
+        target_total_minor,
+        used_minor,
         base_currency: base_currency.to_string(),
         excluded_allowances,
     })
@@ -1039,6 +1069,8 @@ mod tests {
         assert_eq!(json["totalMinor"], 100_000);
         assert_eq!(json["reservedMinor"], 30_000);
         assert_eq!(json["availableMinor"], 70_000);
+        assert_eq!(json["targetTotalMinor"], 30_000);
+        assert_eq!(json["usedMinor"], 0, "nothing spent against it yet");
         assert_eq!(json["baseCurrency"], "MUR");
         assert_eq!(json["excludedAllowances"], 0);
         assert_eq!(json["allowances"][0]["targetMinor"], 30_000);
@@ -1047,6 +1079,55 @@ mod tests {
 
         let back: AllowanceSummary = serde_json::from_value(json).unwrap();
         assert_eq!(back, s);
+    }
+
+    /// The Home allowances card's progress figures (`target_total_minor` / `used_minor`) come from
+    /// Rust, never from TS arithmetic. Covers the cases the card renders: untouched, partly spent,
+    /// spent past the target (where `used` MUST be allowed to exceed the target), and paused.
+    ///
+    /// Uses a RECURRING allowance deliberately: a `one_time` one auto-closes when it is spent to
+    /// zero or below (§ the `kind` contract), which would drop it out of the active pool and make the
+    /// overspend case untestable here.
+    #[test]
+    fn summary_reports_period_target_and_used() {
+        let conn = db();
+        fund(&conn, "1000.00");
+        let today = date("2026-07-13");
+        let a = create(
+            &conn,
+            "MUR",
+            today,
+            "Groceries",
+            "MUR",
+            30_000,
+            "recurring",
+            Some("monthly"),
+            None,
+        )
+        .unwrap();
+
+        let s = summary(&conn, "MUR", today).unwrap();
+        assert_eq!(s.target_total_minor, 30_000);
+        assert_eq!(s.used_minor, 0, "allocated but untouched");
+
+        spend(&conn, "100.00", Some(a.id)); // -10_000 minor, tagged.
+        let s = summary(&conn, "MUR", today).unwrap();
+        assert_eq!(s.target_total_minor, 30_000);
+        assert_eq!(s.used_minor, 10_000, "target 30_000 - balance 20_000");
+
+        // Spend past the target: balance goes negative, so `used` rises ABOVE `target_total` - that
+        // is what lets the card say "Rs 50 over" instead of silently capping at 100%.
+        spend(&conn, "250.00", Some(a.id));
+        let s = summary(&conn, "MUR", today).unwrap();
+        assert_eq!(s.target_total_minor, 30_000);
+        assert_eq!(s.used_minor, 35_000, "target 30_000 - balance -5_000");
+
+        // A paused allowance leaves the period pool entirely (it is not set aside right now), the
+        // same set `reserved_minor` is computed over.
+        update(&conn, a.id, "Groceries", 30_000, false, "MUR", today).unwrap();
+        let s = summary(&conn, "MUR", today).unwrap();
+        assert_eq!(s.target_total_minor, 0);
+        assert_eq!(s.used_minor, 0);
     }
 
     #[test]

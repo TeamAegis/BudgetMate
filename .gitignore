@@ -8,6 +8,10 @@ dist/
 # Rust / Tauri build artifacts
 src-tauri/target/
 
+# Built app binaries (a debug APK is ~230MB - never commit one, it bloats the repo forever)
+*.apk
+*.aab
+
 # IMPORTANT: do NOT ignore src-tauri/gen/ — the committed android project
 # enforces the INTERNET-permission omission (zero-network guarantee).
 # Only ignore transient build dirs inside gen/.

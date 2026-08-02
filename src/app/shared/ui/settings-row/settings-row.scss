@@ -1,6 +1,9 @@
 // Settings row: icon + label/hint + trailing (chevron or control). Host is an <a> or <div>.
 :host {
   display: flex;
+  // A wide trailing control (e.g. the base-currency SelectField) wraps onto its own line instead
+  // of squeezing the label/hint into a one-word-per-line column.
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3);
   min-height: var(--tap-target-min);
@@ -31,7 +34,9 @@
   display: flex;
   flex-direction: column;
   flex: 1;
-  min-width: 0;
+  // Keep the text column readable: rather than compressing below this, a wide trailing control
+  // wraps to the next line (flex-wrap on the host).
+  min-width: 12rem;
 }
 .srow-label {
   font-weight: var(--fw-medium);
@@ -44,5 +49,7 @@
   display: inline-flex;
   align-items: center;
   flex: none;
+  max-width: 100%;
+  margin-left: auto; // right-aligned whether inline or wrapped onto its own line
   color: var(--c-text-muted);
 }

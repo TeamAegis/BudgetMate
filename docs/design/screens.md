@@ -68,11 +68,15 @@ in the current Figma - design them to this spec.
 ### 3.1 Dashboard (populated)
 - **Figma:** `124:224` (Mobile Home). Tokens validated from this node.
 - **FR:** FR-3.x preview, entry points to FR-1.x/2.x.
-- **Components:** AppHeader (brand + settings icon `124:297`); **BalanceCard** (`app-balance-card`,
-  `124:302`) as the balance/summary **hero** - coral-40 fill + offset pink shadow, showing the live
-  total balance from `get_dashboard()`; a "ready to spend" secondary line (total minus what is set
-  aside for ongoing base-currency goals, phrased gently, never alarm-red, even when over-committed);
-  a this-month-spend figure; a grid of **labelled** quick-action tiles (**ActionTile**, old-MCB-Juice
+- **Components:** AppHeader (nav-drawer hamburger + brand + settings icon `124:297`); **BalanceCard**
+  (`app-balance-card`, `124:302`) as the balance/summary **hero** - coral-40 fill + offset pink shadow,
+  carrying the "Safe to spend" figure from `get_dashboard()` and, **inside the card**, its
+  plain-language `note` (what the figure already sets aside for ongoing base-currency goals, phrased
+  gently, never alarm-red, even when over-committed) plus a hairline-separated footer of the compact
+  secondary figures (Spent this month, and Total balance when it differs). The note and secondary
+  figures are deliberately in the card, not loose text and separate stat cards beneath it, so the hero
+  answers "where do I stand" on its own; an **AllowanceSummaryCard** follows it when the vault has an
+  active allowance (§7.6); then a grid of **labelled** quick-action tiles (**ActionTile**, old-MCB-Juice
   layout: hero on top, then the tile grid) - *Add expense* (-> `/expenses/new`), *Scan receipt*
   (-> `/import`), *Add goal* (-> `/goals/new`); labelled tiles only, never icon-only; a lazily-loaded
   (`@defer (on viewport)`) trailing 6-month TOTAL-balance **TrendChart** (Chart.js, skipped entirely
@@ -300,13 +304,46 @@ in the current Figma - design them to this spec.
 
 ## 7. Settings **[NEW]**
 
+### 7.0 NavDrawer (secondary-destination navigation) **[ADR 0013]**
+- **Components:** **NavDrawer** (`app-nav-drawer`) - a modal sheet opened by the leading hamburger in
+  the AppHeader on top-level tabs (never where Back occupies that slot). Two groups: **Your money**
+  (Allowances, Budgets, Accounts, Move money, Categories, Recurring, Rules, Import transactions) and **General**
+  (Export, Backup, Settings). The four BottomNav tabs are deliberately excluded - a drawer is the right
+  home for secondary destinations, never for primary ones.
+- **Why:** those destinations were previously reachable only by opening Settings and scrolling, which
+  put weekly-use features (Allowances, Budgets) in the preferences room and left them undiscoverable.
+- **Data:** none - contents come from `core/layout/nav-destinations.ts`, the same list §7.1 renders, so
+  a destination cannot exist in one surface and be missing from the other.
+- **States:** closed (default), open (scrim + sheet, focus trapped, current row marked
+  `aria-current="page"`); any navigation closes it, including Android hardware Back.
+
+### 7.0a Move money (transfer) **[ADR 0014]**
+- **Components:** a full-screen form page (`transfers/new`, title "Move money", back = Cancel, Save in
+  the bottom `FormActions` bar): **From** / **To** account SelectFields, Amount, Date, optional Note,
+  and a permanent plain-language note that moving money between your own accounts is not spending and
+  leaves your total balance unchanged. Reached from the NavDrawer > "Move money" (and the same row in
+  Settings > Your money). Create-only - there is no edit route for half a linked pair.
+- **Same-currency only (v1):** the **To** list offers only accounts sharing the source's currency, and
+  the field hint explains why when that leaves nothing to pick ("None of your other accounts are in
+  MUR..." / "You need a second account..."). Rust re-validates and rejects a mismatch regardless.
+- **Data:** `listAccounts()` for both pickers; `createTransfer(NewTransfer)` writes both legs in one
+  transaction. The amount is a major-unit string parsed to minor units in Rust (no money math in TS).
+- **In the ledger:** both legs appear in the Expenses list, prefixed `Transfer` in the meta line, with
+  the income/expense tint suppressed so the amount reads neutral (meaning carried by text, never
+  colour alone). They never reach spend totals, budgets, or the dashboard's this-month figure.
+- **States:** loading (spinner), populated, no-eligible-destination (hint + Save disabled), saving
+  (Save bar busy), error (banner with the Rust message, e.g. the currency mismatch).
+
 ### 7.1 Settings list
 - **FR:** FR-4.x, FR-5.2, FR-3.1, FR-2.3, FR-1.x (accounts/categories foundation).
+- **Note:** the navigation rows below are rendered from the shared list in §7.0 (so they match the
+  drawer exactly); the control rows (Duplicate detection, Base currency, Lock timeout) are preference
+  widgets and stay owned by this screen.
 - **Components:** **SettingsRow** (`app-settings-row`: leading Lucide icon + label + optional hint +
   trailing chevron/control) in **grouped** sections:
-  - **Your money** -> Accounts, Categories, Budgets/Envelopes, Rules, Import transactions,
-    Duplicate detection (FR-2.4: how many days apart, at the same amount, an imported row is
-    flagged as a possible duplicate - feeds the import dedup window), Base currency.
+  - **Your money** -> Allowances, Budgets, Accounts, Categories, Recurring, Rules, Import
+    transactions, Duplicate detection (FR-2.4: how many days apart, at the same amount, an imported
+    row is flagged as a possible duplicate - feeds the import dedup window), Base currency.
   - **General** -> Export, Backup/Restore, About/Privacy note.
   - **Security** -> Lock timeout (and the biometric/lock controls, FR-5.x).
 - **Commands:** `get_settings()`, `set_dedup_window(days)`, `update_settings(dto)`.
@@ -404,11 +441,13 @@ in the current Figma - design them to this spec.
   wrong-passphrase/corrupt-backup error (plain-language, inline).
 
 ### 7.6 Allowances
-- **FR:** FR-3.4 (implemented, 2026-07). Reached from Settings > "Allowances" (nested action, not
-  in the bottom nav - same placement as Budgets/Envelopes) and, when the vault has at least one
-  allowance, a small "Rs X set aside across your allowances" line + "Manage allowances" link on
-  Home (kept separate from the goals "ready to spend" line - allowances and goals each reserve
-  independently against the same savings total in v1, `docs/allowances.md` §3).
+- **FR:** FR-3.4 (implemented, 2026-07). Reached from the **NavDrawer** > "Allowances" (ADR 0013 - the
+  drawer is the navigation home for the secondary destinations; the Settings row remains as a second
+  path, and neither is in the bottom nav - same placement as Budgets) and, when the vault has at least
+  one active allowance, from the **`AllowanceSummaryCard`** on Home ("Rs X used of Rs Y", with a
+  progress track). That card replaced the earlier loose "Rs X set aside across your allowances"
+  sentence. Its figures stay separate from the goals "ready to spend" line - allowances and goals each
+  reserve independently against the same savings total in v1, `docs/allowances.md` §3.
 - **Components:** a concise summary card up top ("Free to spend" = `availableMinor`, plus a hint
   line naming `reservedMinor` of `totalMinor`), then `AllowanceRow` ×N - name, a cadence badge
   (Weekly/Monthly/One-time), a balance-of-target pill track, and a plain-language status line

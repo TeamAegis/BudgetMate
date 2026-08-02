@@ -1,0 +1,32 @@
+// Full-screen Move money (transfer) page. The page scrolls inside .app-content; Save is the fixed
+// bottom action bar (FormActions), so this is just a stacked field layout. Tokens only.
+
+.form-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  // Clear the fixed bottom Save bar (FormActions) so the last field is never hidden behind it.
+  padding-bottom: calc(var(--space-8) + var(--tap-target-min) + var(--safe-area-bottom));
+}
+
+.form-loading {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-8) 0;
+}
+
+.form-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+// The "this is not spending" reassurance under the fields. Plain informational copy, not a Banner:
+// a Banner is for a state that changed (error/warning), while this is a permanent property of the
+// screen and must not read as an alert.
+.form-note {
+  margin: 0;
+  font-size: var(--t-caption);
+  line-height: var(--lh-body);
+  color: var(--c-text-muted);
+}

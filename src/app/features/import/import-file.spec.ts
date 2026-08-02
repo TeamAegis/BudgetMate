@@ -290,8 +290,8 @@ describe('ImportFile - duplicate keep/skip toggling + summary', () => {
 
 describe('ImportFile - foreign-currency warning (finance#1 / code#5)', () => {
   const accounts: Account[] = [
-    { id: 1, name: 'USD Card', accountType: 'card', currency: 'USD', openingBalanceMinor: 0, archived: false },
-    { id: 2, name: 'Cash', accountType: 'cash', currency: 'MUR', openingBalanceMinor: 0, archived: false },
+    { id: 1, name: 'USD Card', accountType: 'card', currency: 'USD', openingBalanceMinor: 0, archived: false, balanceMinor: 0 },
+    { id: 2, name: 'Cash', accountType: 'cash', currency: 'MUR', openingBalanceMinor: 0, archived: false, balanceMinor: 0 },
   ];
 
   it('warns when the chosen account currency differs from the base reporting currency', () => {
@@ -385,10 +385,11 @@ describe('ImportFile - states', () => {
   it('an account list of one seeds the account picker for the idle/populated state', () => {
     const c = createComponent();
     const accounts: Account[] = [
-      { id: 7, name: 'Cash', accountType: 'cash', currency: 'MUR', openingBalanceMinor: 0, archived: false },
+      { id: 7, name: 'Cash', accountType: 'cash', currency: 'MUR', openingBalanceMinor: 0, archived: false, balanceMinor: 0 },
     ];
     c.accounts.set(accounts);
 
-    expect(c.accountOptions()).toEqual([{ value: 7, label: 'Cash (MUR)' }]);
+    // "Cash · MUR" - the app-wide account label format, not parenthesised.
+    expect(c.accountOptions()).toEqual([{ value: 7, label: 'Cash · MUR' }]);
   });
 });

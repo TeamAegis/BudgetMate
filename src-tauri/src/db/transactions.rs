@@ -46,7 +46,7 @@ pub struct TxInput<'a> {
 }
 
 const TX_COLUMNS: &str = "id, account_id, posted_date, amount_minor, currency, fx_rate, \
-    base_amount_minor, payee, note, source, source_ref, pending_review, created_at, allowance_id";
+    base_amount_minor, payee, note, source, source_ref, pending_review, created_at, allowance_id, \n    transfer_group_id";
 
 fn row_to_tx(row: &rusqlite::Row<'_>) -> rusqlite::Result<Transaction> {
     Ok(Transaction {
@@ -64,6 +64,7 @@ fn row_to_tx(row: &rusqlite::Row<'_>) -> rusqlite::Result<Transaction> {
         pending_review: row.get::<_, i64>("pending_review")? != 0,
         created_at: row.get("created_at")?,
         allowance_id: row.get("allowance_id")?,
+        transfer_group_id: row.get("transfer_group_id")?,
         splits: Vec::new(),
     })
 }
@@ -101,7 +102,7 @@ fn splits_for(conn: &Connection, tx_id: i64) -> Result<Vec<TxSplit>, DbError> {
     Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
 }
 
-fn get(conn: &Connection, id: i64) -> Result<Transaction, DbError> {
+pub(crate) fn get(conn: &Connection, id: i64) -> Result<Transaction, DbError> {
     let sql = format!("SELECT {TX_COLUMNS} FROM transactions WHERE id = ?1");
     let mut tx = conn.query_row(&sql, params![id], row_to_tx)?;
     tx.splits = splits_for(conn, id)?;

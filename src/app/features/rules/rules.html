@@ -1,10 +1,9 @@
 <section class="feature-page">
-  <div class="page-actions">
-    <app-button variant="primary" (click)="addRule()" [disabled]="busy() || loading()">
-      <svg icon lucidePlus [size]="18" aria-hidden="true"></svg>
-      <span>Add rule</span>
-    </app-button>
-  </div>
+  <!-- Add lives in the thumb-zone FAB (one convention for every list); it yields to the empty
+       state's single CTA so there is never a doubled affordance. -->
+  @if (loading() || rules().length > 0 || error()) {
+    <app-fab ariaLabel="Add rule" (action)="addRule()" />
+  }
 
   @if (error(); as err) {
     <app-banner>{{ err }}</app-banner>

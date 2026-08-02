@@ -60,3 +60,18 @@ Consequences, and Alternatives considered.
   as of `today` and never stored; allowances are base-currency only, and `Reserved` sums only
   active, base-currency allowances; editing/deleting a prior-period tagged transaction may push a
   balance above target, trimmed at the next refresh (the same §12 refund rule).
+- [0013](0013-nav-drawer-for-secondary-destinations.md): A navigation drawer for secondary
+  destinations. The nine money-setup/data screens (Allowances, Budgets, Accounts, Categories,
+  Recurring, Rules, Import, Export, Backup) were reachable only by scrolling Settings; they now also
+  live in a modal nav drawer opened from a leading hamburger on top-level tabs, rendered from one
+  shared list (`core/layout/nav-destinations.ts`). The four BottomNav tabs are deliberately excluded
+  (hidden navigation is the wrong home for PRIMARY destinations). Amends the "ConfirmDialog is the
+  only overlay" rule: ConfirmDialog remains the only centred dialog, and forms stay routed pages
+  (ADR 0002/0003).
+- [0014](0014-transfers-as-linked-transaction-pair.md): Account-to-account transfers. A transfer is a
+  linked PAIR of ordinary transactions sharing a `transfer_group_id` (source leg negative,
+  destination positive), both filed under the single `kind = 'transfer'` category - not a dedicated
+  `transfers` table, which would have forced per-account balances, the ledger list, the trend, and
+  export to each learn a second source of money movement. Spend queries already filter
+  `kind = 'expense'`, so transfers stay out of spend totals and budgets for free. v1 is
+  SAME-CURRENCY only, which is what guarantees a transfer cannot change the vault's total balance.

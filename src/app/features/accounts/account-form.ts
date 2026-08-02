@@ -61,8 +61,20 @@ export class AccountForm implements OnInit {
   );
   protected readonly editing = computed(() => this.editingId() !== null);
 
+  /** Raw enum values never render (ux-blueprint §10) - display labels only. */
+  private static readonly TYPE_LABELS: Record<string, string> = {
+    cash: 'Cash',
+    bank: 'Bank',
+    card: 'Card',
+    wallet: 'Wallet',
+    other: 'Other',
+  };
+
   /** Themed-dropdown options for the account type (native <select> can't be styled in the WebView). */
-  protected readonly kindOptions: SelectOption[] = KINDS.map((k) => ({ value: k, label: k }));
+  protected readonly kindOptions: SelectOption[] = KINDS.map((k) => ({
+    value: k,
+    label: AccountForm.TYPE_LABELS[k] ?? k,
+  }));
 
   protected readonly loading = signal(true);
   protected readonly busy = signal(false);

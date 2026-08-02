@@ -1,0 +1,58 @@
+<section class="form-page">
+  @if (error(); as err) {
+    <app-banner>{{ err }}</app-banner>
+  }
+
+  @if (loading()) {
+    <div class="form-loading" aria-busy="true">
+      <app-spinner [size]="28" label="Loading" />
+    </div>
+  } @else {
+    <!-- ngSubmit keeps Enter-to-save working; Save lives in the fixed bottom action bar. -->
+    <form class="form-body" [formGroup]="form" (ngSubmit)="save()">
+      <app-form-field label="From">
+        <app-select-field
+          ariaLabel="Move money from"
+          [options]="fromOptions()"
+          [value]="fromId()"
+          (valueChange)="onFromChange($event)"
+        />
+      </app-form-field>
+
+      <app-form-field
+        label="To"
+        [hint]="noDestinationHint() ?? 'Only accounts in the same currency can be picked'"
+      >
+        <app-select-field
+          ariaLabel="Move money to"
+          [options]="toOptions()"
+          [value]="toId()"
+          (valueChange)="onToChange($event)"
+        />
+      </app-form-field>
+
+      <app-form-field
+        label="Amount"
+        [hint]="currency() ? 'In ' + currency() : null"
+        [error]="amountError()"
+      >
+        <input type="text" inputmode="decimal" formControlName="amount" placeholder="0.00" class="numeric" />
+      </app-form-field>
+
+      <app-form-field label="Date">
+        <input type="date" formControlName="postedDate" />
+      </app-form-field>
+
+      <app-form-field label="Note" hint="Optional - what this move is for">
+        <input type="text" formControlName="note" placeholder="e.g. moving to savings" />
+      </app-form-field>
+
+      <!-- Reassurance, not decoration: this is the property the same-currency rule buys, and it is
+           the first thing someone worries about when moving their own money around. -->
+      <p class="form-note">Moving money between your own accounts does not count as spending, and
+        your total balance stays the same.</p>
+    </form>
+  }
+
+  <app-form-actions label="Move money" [loading]="saving()" [disabled]="!canSave()" (save)="save()" />
+</section>

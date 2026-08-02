@@ -16,6 +16,7 @@ pub mod recurring;
 pub mod reports;
 pub mod rules;
 pub mod transactions;
+pub mod transfers;
 
 #[derive(Debug, thiserror::Error)]
 pub enum DbError {
@@ -35,6 +36,7 @@ const MIGRATIONS: &[(i64, &str)] = &[
     (3, include_str!("migrations/0003_goals.sql")),
     (4, include_str!("migrations/0004_budgets.sql")),
     (5, include_str!("migrations/0005_allowances.sql")),
+    (6, include_str!("migrations/0006_transfers.sql")),
 ];
 
 /// Highest schema version this build knows how to migrate to. Used by restore (FR-4.3) to reject a
@@ -111,7 +113,14 @@ pub fn seed_defaults(conn: &Connection) -> Result<(), DbError> {
         )?;
     }
 
-    let category_count: i64 = tx.query_row("SELECT count(*) FROM categories", [], |r| r.get(0))?;
+    // Counts only the SPENDING/INCOME defaults, not every category: the 'transfer' category below is
+    // topped up independently, and a bare `count(*)` would then see a non-empty table and silently
+    // skip the ten defaults on a fresh vault.
+    let category_count: i64 = tx.query_row(
+        "SELECT count(*) FROM categories WHERE kind IN ('expense', 'income')",
+        [],
+        |r| r.get(0),
+    )?;
     if category_count == 0 {
         let defaults: &[(&str, &str)] = &[
             ("Groceries", "expense"),
@@ -132,6 +141,17 @@ pub fn seed_defaults(conn: &Connection) -> Result<(), DbError> {
             )?;
         }
     }
+
+    // The single `kind = 'transfer'` category both legs of a transfer are filed under (migration
+    // 0006). Topped up on its OWN guard rather than inside the block above, so an existing vault -
+    // which already has categories and therefore skips that block - still gets it. Seeded LAST on a
+    // fresh vault so it never claims a low id and shifts the default categories' ids.
+    tx.execute(
+        "INSERT INTO categories (name, parent_id, kind, archived)
+         SELECT 'Transfer', NULL, 'transfer', 0
+         WHERE NOT EXISTS (SELECT 1 FROM categories WHERE kind = 'transfer')",
+        [],
+    )?;
 
     tx.commit()?;
     Ok(())
@@ -215,6 +235,10 @@ mod tests {
         let categories: i64 =
             conn.query_row("SELECT count(*) FROM categories", [], |r| r.get(0)).unwrap();
         assert_eq!(accounts, 1, "exactly one default account");
-        assert_eq!(categories, 10, "default category set seeded once");
+        assert_eq!(
+            categories, 11,
+            "the ten expense/income defaults seeded once, plus the single 'transfer' category that \
+             migration 0006 inserts (see the kind-scoped guard in seed_defaults)"
+        );
     }
 }

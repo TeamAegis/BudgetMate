@@ -6,13 +6,20 @@ import { getAppInfo, dbHealth, isTauri } from './core/bridge';
 import { LockService } from './core/lock/lock.service';
 import { ViewportInsetsService } from './core/layout/viewport-insets.service';
 import { HeaderActionService } from './core/layout/header-action.service';
+import { NavTabService } from './core/layout/nav-tab.service';
+import {
+  MONEY_DESTINATIONS,
+  GENERAL_DESTINATIONS,
+  SETTINGS_DESTINATION,
+} from './core/layout/nav-destinations';
 import type { AppInfo, DbHealth } from './core/models';
 import { AppHeader } from './shared/ui/app-header/app-header';
 import { BottomNav } from './shared/ui/bottom-nav/bottom-nav';
+import { NavDrawer, type NavDrawerGroup } from './shared/ui/nav-drawer/nav-drawer';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, AppHeader, BottomNav],
+  imports: [RouterOutlet, AppHeader, BottomNav, NavDrawer],
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })
@@ -23,6 +30,8 @@ export class App implements OnInit {
   private readonly viewportInsets = inject(ViewportInsetsService);
   // The active page's trailing header action (e.g. a form's Save); see HeaderActionService.
   protected readonly headerAction = inject(HeaderActionService);
+  // Which bottom-nav tab owns the current screen, so pushed screens keep their tab lit.
+  private readonly navTab = inject(NavTabService);
 
   // Walking-skeleton diagnostics proving the Angular ↔ Rust bridge end to end.
   protected readonly appInfo = signal<AppInfo | null>(null);
@@ -44,10 +53,32 @@ export class App implements OnInit {
   // the user is focused on one task and exits via Back/Cancel (old-Juice page-flow model).
   protected readonly hideNav = signal(false);
 
+  /**
+   * Nav-drawer visibility (ADR 0013). Owned here, not by the drawer, because the header button that
+   * opens it and the sheet itself are siblings in the shell.
+   */
+  protected readonly drawerOpen = signal(false);
+
+  /**
+   * The drawer's contents. The four primary destinations are deliberately absent - they live in the
+   * always-visible BottomNav, and repeating them would teach that the drawer is where navigation
+   * happens. Rendered from `core/layout/nav-destinations`, the same list Settings uses.
+   */
+  protected readonly drawerGroups: readonly NavDrawerGroup[] = [
+    { title: 'Your money', items: MONEY_DESTINATIONS },
+    { title: 'General', items: [...GENERAL_DESTINATIONS, SETTINGS_DESTINATION] },
+  ];
+
   constructor() {
     this.router.events
       .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
-      .subscribe(() => this.syncHeader());
+      .subscribe(() => {
+        this.syncHeader();
+        // Any navigation closes the drawer: tapping one of its rows (it has done its job), and also
+        // Android's hardware Back, which pops history without the drawer knowing - leaving it open
+        // over a page the user has already left.
+        this.drawerOpen.set(false);
+      });
 
     // The encrypted DB is only readable once unlocked: fetch the health diagnostic when the vault
     // unlocks, and clear it on lock. (Locked db_health would just error.)
@@ -66,6 +97,14 @@ export class App implements OnInit {
     this.location.back();
   }
 
+  protected openDrawer(): void {
+    this.drawerOpen.set(true);
+  }
+
+  protected closeDrawer(): void {
+    this.drawerOpen.set(false);
+  }
+
   private syncHeader(): void {
     let route = this.router.routerState.snapshot.root;
     while (route.firstChild) {
@@ -80,6 +119,8 @@ export class App implements OnInit {
     this.hasBack.set(!!route.data['back']);
     this.chromeless.set(!!route.data['chromeless']);
     this.hideNav.set(!!route.data['hideNav']);
+    // Publish the owning tab: `data.tab` when declared, else inferred from the URL's first segment.
+    this.navTab.sync(route.data['tab'], this.router.url);
   }
 
   async ngOnInit(): Promise<void> {

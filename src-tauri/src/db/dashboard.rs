@@ -169,13 +169,14 @@ mod tests {
     #[test]
     fn aggregates_balance_goals_and_spend_excluding_pending_review_and_foreign_currency() {
         let conn = db();
+        let today = NaiveDate::from_ymd_opt(2026, 7, 13).unwrap();
 
         // Accounts: the seeded Cash (MUR, opening 0), plus a foreign-currency wallet (excluded from
         // the opening sum + counted as an excluded account) and an ARCHIVED base-currency account
         // (its opening still counts - archiving never drops history).
-        accounts::create(&conn, "Savings", AccountKind::Bank, "MUR", 10_000).unwrap();
-        let usd_wallet = accounts::create(&conn, "USD Wallet", AccountKind::Wallet, "USD", 50_000).unwrap();
-        let old_mur = accounts::create(&conn, "Old MUR", AccountKind::Bank, "MUR", 5_000).unwrap();
+        accounts::create(&conn, "Savings", AccountKind::Bank, "MUR", 10_000, today).unwrap();
+        let usd_wallet = accounts::create(&conn, "USD Wallet", AccountKind::Wallet, "USD", 50_000, today).unwrap();
+        let old_mur = accounts::create(&conn, "Old MUR", AccountKind::Bank, "MUR", 5_000, today).unwrap();
         accounts::archive(&conn, old_mur.id).unwrap();
         let _ = usd_wallet; // only needed to exist + be non-archived + foreign-currency
 
@@ -264,7 +265,6 @@ mod tests {
         goals::create(&conn, "Emergency fund", 50_000, 50_000, "MUR", None).unwrap();
         goals::create(&conn, "Gadget", 20_000, 10_000, "USD", None).unwrap();
 
-        let today = NaiveDate::from_ymd_opt(2026, 7, 13).unwrap();
         let data = dashboard(&conn, "MUR", today).unwrap();
 
         assert_eq!(data.base_currency, "MUR");
@@ -330,11 +330,11 @@ mod tests {
     #[test]
     fn foreign_only_account_vault_is_not_reported_empty() {
         let conn = db();
+        let today = NaiveDate::from_ymd_opt(2026, 7, 13).unwrap();
         // The vault's only setup is a non-archived foreign-currency account with a nonzero
         // opening balance - it must not be hidden behind the teaching-empty state.
-        accounts::create(&conn, "USD Wallet", AccountKind::Wallet, "USD", 50_000).unwrap();
+        accounts::create(&conn, "USD Wallet", AccountKind::Wallet, "USD", 50_000, today).unwrap();
 
-        let today = NaiveDate::from_ymd_opt(2026, 7, 13).unwrap();
         let data = dashboard(&conn, "MUR", today).unwrap();
 
         assert_eq!(data.total_balance_minor, 0, "the foreign account's opening is excluded from the base total");

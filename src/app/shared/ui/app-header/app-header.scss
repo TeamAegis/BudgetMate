@@ -15,21 +15,28 @@
   // Brand wordmark (Home). Fills the row so the trailing icon stays right-aligned.
   .brand {
     flex: 1;
+    min-width: 0; // let the flex child shrink so the ellipsis below can engage
     font-family: var(--font-family);
     font-size: var(--t-wordmark);
     font-weight: var(--fw-bold);
     letter-spacing: 0.15em;
     color: var(--c-primary-700); // accessible coral for the wordmark
 
-    // Titled variant (sub-screens): the screen name, not the brand.
+    // Titled variant (sub-screens): the screen name, not the brand. Always ONE line - a long
+    // title ellipsises rather than wrapping and knocking the back arrow out of alignment
+    // (route titles are chosen to fit 360px; this is the safety net).
     &.titled {
       font-size: var(--t-screen-title);
       letter-spacing: normal;
       color: var(--c-text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
   }
 
   .back,
+  .menu,
   .settings-link {
     display: inline-flex;
     align-items: center;
@@ -46,15 +53,16 @@
     }
   }
 
-  // The back affordance is a button, not a link - strip the native chrome.
-  .back {
+  // The back and menu affordances are buttons, not links - strip the native chrome. Both are
+  // left-anchored: the 24px glyph sits at the screen gutter (--space-6), matching page titles and
+  // content, not centred 12px further in (issue I2). The right-side settings / header-action icons
+  // keep their centred placement.
+  .back,
+  .menu {
     padding: 0;
     background: none;
     border: none;
     cursor: pointer;
-    // Left-anchor the 24px arrow inside its 48px tap target so the glyph box sits at the screen
-    // gutter (--space-6), matching page titles and content - not centred 12px further in (issue I2).
-    // Scoped to .back, so the right-side settings / header-action icons keep their centred placement.
     justify-content: flex-start;
   }
 

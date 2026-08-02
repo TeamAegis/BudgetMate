@@ -64,6 +64,17 @@
   }
 }
 
+// The nav drawer slides in from the leading edge (ADR 0013); its scrim reuses `scrim-in` above.
+// Movement only - the sheet never scales, so it reads as a surface sliding over the page.
+@keyframes drawer-in {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: none;
+  }
+}
+
 // ---- Enter classes (for [animate.enter]) ----
 // List items rise-and-fade as they enter; stagger them by setting an inline delay, capped for long
 // lists: [style.animation-delay]="(i < 12 ? i * 40 : 0) + 'ms'".  (Routed-page entrance is handled
@@ -80,5 +91,11 @@
   .anim-spin,
   .list-item-enter {
     animation: none !important;
+  }
+
+  // The drawer must still APPEAR under reduce - only its travel is cancelled, so it cross-fades
+  // in place instead of sliding (zeroing the token alone would leave it mid-translate).
+  .drawer-sheet {
+    animation: fade-in 0ms both !important;
   }
 }
