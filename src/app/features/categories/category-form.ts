@@ -65,7 +65,17 @@ export class CategoryForm implements OnInit {
   protected readonly editing = computed(() => this.editingId() !== null);
 
   /** Themed-dropdown options for the category kind (native <select> can't be styled in the WebView). */
-  protected readonly kindOptions: SelectOption[] = KINDS.map((k) => ({ value: k, label: k }));
+  /** Raw enum values never render (ux-blueprint §10) - display labels only. */
+  private static readonly KIND_LABELS: Record<string, string> = {
+    expense: 'Expense',
+    income: 'Income',
+    transfer: 'Transfer',
+  };
+
+  protected readonly kindOptions: SelectOption[] = KINDS.map((k) => ({
+    value: k,
+    label: CategoryForm.KIND_LABELS[k] ?? k,
+  }));
 
   protected readonly categories = signal<Category[]>([]);
   protected readonly loading = signal(true);
@@ -76,7 +86,7 @@ export class CategoryForm implements OnInit {
 
   /** Candidate parents = "None" + all categories except the one being edited (backend rejects cycles). */
   protected readonly parentOptions = computed<SelectOption[]>(() => [
-    { value: NO_PARENT, label: '- None -' },
+    { value: NO_PARENT, label: 'None' },
     ...this.categories()
       .filter((c) => c.id !== this.editingId())
       .map((c) => ({ value: c.id, label: c.name })),

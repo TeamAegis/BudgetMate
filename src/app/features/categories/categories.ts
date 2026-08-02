@@ -1,9 +1,9 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { LucidePencil, LucidePlus } from '@lucide/angular';
+import { LucidePencil } from '@lucide/angular';
 import { listCategories, toUserMessage, isTauri } from '../../core/bridge';
 import type { Category } from '../../core/models';
-import { Button } from '../../shared/ui/button/button';
+import { Fab } from '../../shared/ui/fab/fab';
 import { IconButton } from '../../shared/ui/icon-button/icon-button';
 import { Banner } from '../../shared/ui/banner/banner';
 import { EmptyState } from '../../shared/ui/empty-state/empty-state';
@@ -18,7 +18,7 @@ import { Skeleton } from '../../shared/ui/skeleton/skeleton';
  */
 @Component({
   selector: 'app-categories',
-  imports: [LucidePencil, LucidePlus, Button, IconButton, Banner, EmptyState, ListRow, Skeleton],
+  imports: [LucidePencil, Fab, IconButton, Banner, EmptyState, ListRow, Skeleton],
   templateUrl: './categories.html',
   styleUrl: './categories.scss',
 })
@@ -50,6 +50,19 @@ export class Categories implements OnInit {
   protected parentName(id: number | null): string {
     if (id === null) return '-';
     return this.categories().find((c) => c.id === id)?.name ?? '-';
+  }
+
+  /** Raw enum values never render (ux-blueprint §10) - display labels only. */
+  private static readonly KIND_LABELS: Record<string, string> = {
+    expense: 'Expense',
+    income: 'Income',
+    transfer: 'Transfer',
+  };
+
+  /** "Expense" or "Income · under Food" - never developer notation like "Parent: -". */
+  protected metaLine(c: Category): string {
+    const kind = Categories.KIND_LABELS[c.kind] ?? c.kind;
+    return c.parentId === null ? kind : `${kind} · under ${this.parentName(c.parentId)}`;
   }
 
   protected addCategory(): void {

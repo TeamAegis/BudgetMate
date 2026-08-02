@@ -21,6 +21,8 @@ import type {
   Transaction,
   NewTransaction,
   UpdateTransaction,
+  Transfer,
+  NewTransfer,
   RecurringRule,
   NewRecurringRule,
   UpdateRecurringRule,
@@ -160,6 +162,10 @@ export function listTransactions(): Promise<Transaction[]> {
 /** Create a manual transaction (Rust parses the amount + signs it from the category kind). */
 export function createTransaction(tx: NewTransaction): Promise<Transaction> {
   return invoke<Transaction>('create_transaction', { tx });
+}
+/** Move money between two of your own accounts, as one atomic linked pair of ledger rows. */
+export function createTransfer(transfer: NewTransfer): Promise<Transfer> {
+  return invoke<Transfer>('create_transfer', { transfer });
 }
 export function updateTransaction(tx: UpdateTransaction): Promise<Transaction> {
   return invoke<Transaction>('update_transaction', { tx });

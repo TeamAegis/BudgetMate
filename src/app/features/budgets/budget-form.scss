@@ -21,9 +21,8 @@
   gap: var(--space-4);
 }
 
-.numeric {
-  text-align: right;
-}
+// Amounts keep tabular figures (the global `.numeric`) but read left-aligned, like every other
+// field on the page - matches the allowance form.
 
 // Plain informational display for the read-only Category field on the edit page. Not an <input>
 // (never disabled/unavailable to assistive tech) - just styled to read as a field so it still looks

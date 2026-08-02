@@ -14,6 +14,7 @@ import {
 } from '../../core/bridge';
 import type { EnvelopeSummary } from '../../core/models';
 import { HeaderActionService } from '../../core/layout/header-action.service';
+import { readOrigin, returnTo } from '../../core/navigation/origin';
 import { CurrencyService } from '../../core/money/currency.service';
 import { maxFractionDigits } from '../../core/money/amount-validators';
 import { Banner } from '../../shared/ui/banner/banner';
@@ -51,6 +52,12 @@ export class BudgetForm implements OnInit {
   private readonly nav = this.router.getCurrentNavigation();
   private readonly passedEnvelope =
     (this.nav?.extras.state?.['envelope'] as EnvelopeSummary | undefined) ?? null;
+
+  /**
+   * Where to go after a successful save/delete: back to the screen that opened this form (e.g.
+   * Home's quick-add) rather than always the Budgets list. See core/navigation/origin.ts.
+   */
+  private readonly origin = readOrigin(this.router);
 
   /** Edit id from the route (`budgets/:id/edit`); null on the add route. */
   protected readonly editingId = signal<number | null>(
@@ -189,7 +196,7 @@ export class BudgetForm implements OnInit {
       } else {
         await updateBudget({ id, cap });
       }
-      await this.router.navigate(['/budgets']);
+      await this.router.navigate([returnTo(this.origin, '/budgets')]);
     } catch (e) {
       this.error.set(toUserMessage(e));
     } finally {
@@ -204,7 +211,7 @@ export class BudgetForm implements OnInit {
     this.error.set(null);
     try {
       await deleteBudget(id);
-      await this.router.navigate(['/budgets']);
+      await this.router.navigate([returnTo(this.origin, '/budgets')]);
     } catch (e) {
       this.error.set(toUserMessage(e));
       this.confirmingDelete.set(false);

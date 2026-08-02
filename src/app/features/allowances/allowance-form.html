@@ -38,6 +38,7 @@
       } @else {
         <app-form-field label="Kind">
           <app-segmented-toggle
+            layout="list"
             ariaLabel="Recurring or one-time"
             [options]="kindOptions"
             [value]="form.controls.kind.value"
@@ -46,8 +47,9 @@
         </app-form-field>
 
         @if (showPeriod()) {
-          <app-form-field label="Period" hint="Weekly or monthly only">
+          <app-form-field label="Period">
             <app-segmented-toggle
+              layout="list"
               ariaLabel="Weekly or monthly"
               [options]="periodOptions"
               [value]="form.controls.period.value"

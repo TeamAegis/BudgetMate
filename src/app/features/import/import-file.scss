@@ -260,3 +260,17 @@
     color: var(--c-text-muted);
   }
 }
+
+// Idle-state lede + supporting illustration (mirrors features/import/import.scss). The primary
+// action sits above the fold; the artwork follows it rather than pushing it down.
+.lede {
+  margin: 0;
+  font-size: var(--t-title);
+  color: var(--c-text);
+  text-align: center;
+}
+.idle-art {
+  align-self: center;
+  max-height: 200px;
+  max-width: 100%;
+}

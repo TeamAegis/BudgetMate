@@ -1,0 +1,115 @@
+// app-nav-drawer - the modal navigation sheet for the app's secondary destinations (ADR 0013).
+// Slides in from the leading edge over a dimmed scrim; the page stays visible in the 56px gap at the
+// trailing edge, which is what keeps it reading as a sheet over the page rather than a new page.
+// Tokens only. Motion comes from `drawer-in` / `scrim-in` in styles/_animations.scss.
+
+.drawer-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-drawer);
+  background: var(--c-scrim);
+  backdrop-filter: blur(var(--backdrop-blur));
+  -webkit-backdrop-filter: blur(var(--backdrop-blur));
+  animation: scrim-in var(--motion-fast) var(--easing) both;
+}
+
+.drawer-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: var(--layout-drawer-w);
+  height: 100%;
+  overflow-y: auto;
+  // Clears the notch at the top and the home indicator at the bottom. The Android WebView caveat
+  // applies (env() can report 0) - the inset vars are the overridable indirection, see
+  // core/layout/viewport-insets.service.ts.
+  padding: calc(var(--space-5) + var(--safe-area-top)) var(--space-4)
+    calc(var(--space-5) + var(--safe-area-bottom));
+  background: var(--c-bg);
+  box-shadow: var(--elev-float);
+  animation: drawer-in var(--motion-standard) var(--easing) both;
+}
+.drawer-sheet:focus {
+  outline: none;
+}
+
+.drawer-title {
+  margin: 0;
+  font-size: var(--t-section);
+  font-weight: var(--fw-medium);
+  color: var(--c-text-muted);
+}
+
+.drawer-group-title {
+  margin: 0;
+  font-size: var(--t-caption);
+  font-weight: var(--fw-medium);
+  color: var(--c-text-muted);
+}
+
+.drawer-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.drawer-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--tap-target-min);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-button);
+  color: var(--c-text);
+  text-decoration: none;
+}
+.drawer-row:focus-visible {
+  outline: 2px solid var(--c-primary-700);
+  outline-offset: 1px;
+}
+// Current destination. The tint is a secondary cue only: the row also carries `aria-current="page"`
+// and a heavier label weight, so the state never rests on colour alone.
+.drawer-row.active {
+  background: var(--c-primary-10);
+}
+.drawer-row.active .drawer-row-label {
+  font-weight: var(--fw-semibold);
+}
+
+.drawer-row-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  color: var(--c-primary-700);
+}
+
+.drawer-row-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+.drawer-row-label {
+  font-weight: var(--fw-medium);
+}
+.drawer-row-hint {
+  font-size: var(--t-caption);
+  color: var(--c-text-muted);
+}
+
+.drawer-row-chevron {
+  flex: none;
+  color: var(--c-text-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drawer-scrim {
+    animation: none !important;
+  }
+  // `.drawer-sheet` is handled centrally in styles/_animations.scss: it cross-fades in place rather
+  // than being left mid-translate by a zeroed slide.
+}

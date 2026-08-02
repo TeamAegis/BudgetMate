@@ -1,6 +1,14 @@
 // app-fab-menu - a labelled speed dial. The trigger and items are position:fixed in the bottom-right
 // thumb zone, above the bottom nav and below modals. Tokens only.
 
+// Everything this component renders is position:fixed, so the host must generate NO box: as a normal
+// flex item in its host page's column (`.feature-page`) it stayed zero-height but still consumed one
+// `gap` (--space-5), which showed up as unexplained dead space above the first card on Home and
+// Expenses. `display: contents` removes the box without affecting the fixed children.
+:host {
+  display: contents;
+}
+
 .fab-scrim {
   position: fixed;
   inset: 0;

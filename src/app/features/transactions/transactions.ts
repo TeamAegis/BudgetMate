@@ -4,6 +4,7 @@ import { LucideChevronRight } from '@lucide/angular';
 import { listTransactions, listAccounts, getSettings, toUserMessage, isTauri } from '../../core/bridge';
 import type { Transaction, Account } from '../../core/models';
 import { MoneyPipe } from '../../shared/pipes/money.pipe';
+import { FriendlyDatePipe } from '../../shared/pipes/friendly-date.pipe';
 import { FabMenu, type FabMenuItem } from '../../shared/ui/fab-menu/fab-menu';
 import { Banner } from '../../shared/ui/banner/banner';
 import { EmptyState } from '../../shared/ui/empty-state/empty-state';
@@ -31,7 +32,7 @@ interface DateGroup {
  */
 @Component({
   selector: 'app-transactions',
-  imports: [MoneyPipe, LucideChevronRight, FabMenu, Banner, EmptyState, ListRow, Skeleton],
+  imports: [MoneyPipe, FriendlyDatePipe, LucideChevronRight, FabMenu, Banner, EmptyState, ListRow, Skeleton],
   templateUrl: './transactions.html',
   styleUrl: './transactions.scss',
 })
@@ -39,11 +40,26 @@ export class Transactions implements OnInit {
   private readonly router = inject(Router);
   /** Placeholder row count shown while the list loads. */
   protected readonly skeletonRows = [0, 1, 2, 3, 4];
-  /** Tap-to-open FAB actions (replaces the old long-press): add by hand or scan a receipt. */
+  /** Tap-to-open FAB actions. The labelled items carry the ADR 0004 kind decision, so "Add
+   *  expense"/"Add income" deep-link straight to that kind's category picker (label honesty -
+   *  the old lone "Add expense" opened a chooser that then asked expense-or-income). */
   protected readonly fabItems: FabMenuItem[] = [
     { id: 'add', label: 'Add expense', icon: 'plus' },
+    { id: 'income', label: 'Add income', icon: 'plus' },
     { id: 'scan', label: 'Scan receipt', icon: 'scan' },
   ];
+
+  /** Transient saved/deleted acknowledgement handed over via router state by the form
+   *  (the peak-end moment of the core loop, ux-blueprint §5). */
+  protected readonly savedNotice = signal<string | null>(null);
+
+  constructor() {
+    const saved = this.router.getCurrentNavigation()?.extras.state?.['saved'];
+    if (typeof saved === 'string') {
+      this.savedNotice.set(saved);
+      setTimeout(() => this.savedNotice.set(null), 4000);
+    }
+  }
 
   protected readonly transactions = signal<Transaction[]>([]);
   protected readonly accounts = signal<Account[]>([]);
@@ -106,9 +122,17 @@ export class Transactions implements OnInit {
     return t.splits.map((s) => s.categoryName).join(', ');
   }
 
+  /** Both legs of an account-to-account transfer carry the linking group id. */
+  protected isTransfer(t: Transaction): boolean {
+    return t.transferGroupId !== null;
+  }
+
   protected metaLine(t: Transaction): string {
     const cats = t.splits.length > 1 ? `${t.splits.length} splits` : this.categoryLabel(t);
-    return `${cats} · ${this.accountName(t.accountId)}`;
+    // Label the row as a transfer in TEXT: it is neither spending nor income, and its amount is
+    // rendered without the income/expense tint, so the word is what carries the meaning.
+    const prefix = this.isTransfer(t) ? 'Transfer · ' : '';
+    return `${prefix}${cats} · ${this.accountName(t.accountId)}`;
   }
 
   /** Row display name: payee if present, else the category label. */
@@ -125,10 +149,11 @@ export class Transactions implements OnInit {
     void this.router.navigate(['/expenses/new']);
   }
 
-  /** Route a FAB-menu choice: add by hand, or open the on-device receipt scan flow. */
+  /** Route a FAB-menu choice: the labelled items carry the kind, so they skip the chooser. */
   protected onFabSelect(id: string): void {
     if (id === 'scan') void this.router.navigate(['/import']);
-    else this.addTransaction();
+    else if (id === 'income') void this.router.navigate(['/expenses/new/income']);
+    else void this.router.navigate(['/expenses/new/expense']);
   }
 
   /** Open the read-only detail page, handing the row over via router state (fast path; refetches). */

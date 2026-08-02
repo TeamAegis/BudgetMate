@@ -14,8 +14,9 @@ import {
 let nextModalId = 0;
 
 /**
- * A small centred dialog card over a blurred, dimmed scrim. This is the app's ONLY remaining
- * overlay: add/edit forms are now full-screen routed pages (see the form-page pattern and
+ * A small centred dialog card over a blurred, dimmed scrim. This is the app's only CENTRED dialog
+ * (the `NavDrawer` navigation sheet, ADR 0013, is the one other overlay, and it hosts navigation
+ * only): add/edit forms are full-screen routed pages (see the form-page pattern and
  * `.claude/rules/design.md`), so do NOT reach for this to host a form. Its single intended consumer
  * is `ConfirmDialog` (a short, keyboard-free destructive confirmation - the one genre-correct use of
  * a centred dialog). Pass `role="alertdialog"` for those.

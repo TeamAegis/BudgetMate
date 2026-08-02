@@ -1,6 +1,6 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { LucideTag, LucideChevronRight } from '@lucide/angular';
+import { LucideChevronRight } from '@lucide/angular';
 import { listCategories, toUserMessage, isTauri } from '../../core/bridge';
 import type { Category, CategoryKind } from '../../core/models';
 import { SettingsRow } from '../../shared/ui/settings-row/settings-row';
@@ -18,7 +18,7 @@ import { Skeleton } from '../../shared/ui/skeleton/skeleton';
  */
 @Component({
   selector: 'app-category-picker',
-  imports: [RouterLink, SettingsRow, EmptyState, Banner, Skeleton, LucideTag, LucideChevronRight],
+  imports: [RouterLink, SettingsRow, EmptyState, Banner, Skeleton, LucideChevronRight],
   template: `
     <section class="feature-page">
       @if (error(); as err) {
@@ -52,7 +52,11 @@ import { Skeleton } from '../../shared/ui/skeleton/skeleton';
                 [replaceUrl]="!!resumeState"
                 [label]="cat.name"
               >
-                <svg icon lucideTag [size]="24" aria-hidden="true"></svg>
+                <!-- Monogram, not a repeated generic icon: each row gets a distinct shape anchor
+                     (same avatar language as transaction rows) so the list scans 8-at-a-glance. -->
+                <span icon class="cat-avatar" [class.income]="kind === 'income'" aria-hidden="true">{{
+                  monogram(cat.name)
+                }}</span>
                 <svg trailing lucideChevronRight [size]="18" aria-hidden="true"></svg>
               </a>
             </li>
@@ -83,6 +87,24 @@ import { Skeleton } from '../../shared/ui/skeleton/skeleton';
       padding: var(--space-4);
       border: 1px solid var(--c-border);
       border-radius: var(--radius-md);
+    }
+    // Leading monogram avatar (mirrors the transaction-row avatar; income = positive tint,
+    // always paired with the row label - never colour alone).
+    .cat-avatar {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: var(--size-avatar-sm);
+      height: var(--size-avatar-sm);
+      flex: none;
+      border-radius: var(--radius-pill);
+      background: var(--c-primary-05);
+      color: var(--c-primary-700);
+      font-weight: var(--fw-medium);
+    }
+    .cat-avatar.income {
+      background: var(--c-positive-soft);
+      color: var(--c-positive-700);
     }
   `,
 })
@@ -124,5 +146,10 @@ export class CategoryPicker implements OnInit {
 
   protected addCategory(): void {
     void this.router.navigate(['/settings/categories/new']);
+  }
+
+  /** First letter of the category name, for the leading monogram avatar. */
+  protected monogram(name: string): string {
+    return (name.trim()[0] ?? '?').toUpperCase();
   }
 }

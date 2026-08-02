@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { LucideArrowLeft, LucideSettings, LucideTrash2, LucideArchive } from '@lucide/angular';
+import { LucideArrowLeft, LucideMenu, LucideSettings, LucideTrash2, LucideArchive } from '@lucide/angular';
 import type { HeaderAction } from '../../../core/layout/header-action.service';
 
 /**
@@ -13,12 +13,26 @@ import type { HeaderAction } from '../../../core/layout/header-action.service';
 @Component({
   selector: 'app-header',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, LucideArrowLeft, LucideSettings, LucideTrash2, LucideArchive],
+  imports: [RouterLink, LucideArrowLeft, LucideMenu, LucideSettings, LucideTrash2, LucideArchive],
   template: `
     <header class="app-header">
       @if (hasBack()) {
         <button type="button" class="back" (click)="back.emit()" aria-label="Back" title="Back">
           <svg lucideArrowLeft [size]="24"></svg>
+        </button>
+      } @else if (showMenu()) {
+        <!-- Opens the nav drawer (ADR 0013). Only on top-level tabs: a pushed screen's leading slot
+             belongs to Back, which must never be displaced by a menu. -->
+        <button
+          type="button"
+          class="menu"
+          (click)="menu.emit()"
+          aria-label="Go to"
+          title="Go to"
+          aria-haspopup="dialog"
+          [attr.aria-expanded]="menuOpen()"
+        >
+          <svg lucideMenu [size]="24"></svg>
         </button>
       }
       <span class="brand" [class.titled]="!isBrand()">{{ title() }}</span>
@@ -63,5 +77,11 @@ export class AppHeader {
   readonly hasBack = input.required<boolean>();
   /** Trailing primary action (e.g. Save) for full-screen task pages; null on tabs (settings shows). */
   readonly action = input<HeaderAction | null>(null);
+  /** Show the leading nav-drawer button. Ignored when `hasBack()` - Back owns that slot. */
+  readonly showMenu = input(false);
+  /** Whether the drawer is currently open, for the button's `aria-expanded`. */
+  readonly menuOpen = input(false);
   readonly back = output<void>();
+  /** The nav-drawer button was activated; the shell opens the drawer. */
+  readonly menu = output<void>();
 }

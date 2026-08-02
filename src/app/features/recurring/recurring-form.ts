@@ -59,13 +59,32 @@ export class RecurringForm implements OnInit {
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
 
+  /** Raw enum values never render (ux-blueprint §10) - display labels only. */
+  private static readonly SCHEDULE_LABELS: Record<string, string> = {
+    daily: 'Daily',
+    weekly: 'Weekly',
+    monthly: 'Monthly',
+    custom: 'Custom',
+  };
+  private static readonly KIND_LABELS: Record<string, string> = {
+    expense: 'Expense',
+    income: 'Income',
+    transfer: 'Transfer',
+  };
+
   /** Themed-dropdown options (native <select> can't be styled in the WebView - see SelectField). */
-  protected readonly scheduleOptions: SelectOption[] = SCHEDULES.map((s) => ({ value: s, label: s }));
+  protected readonly scheduleOptions: SelectOption[] = SCHEDULES.map((s) => ({
+    value: s,
+    label: RecurringForm.SCHEDULE_LABELS[s] ?? s,
+  }));
   protected readonly accountOptions = computed<SelectOption[]>(() =>
     this.accounts().map((a) => ({ value: a.id, label: `${a.name} · ${a.currency}` })),
   );
   protected readonly categoryOptions = computed<SelectOption[]>(() =>
-    this.categories().map((c) => ({ value: c.id, label: `${c.name} · ${c.kind}` })),
+    this.categories().map((c) => ({
+      value: c.id,
+      label: `${c.name} · ${RecurringForm.KIND_LABELS[c.kind] ?? c.kind}`,
+    })),
   );
 
   protected readonly form = this.fb.group({

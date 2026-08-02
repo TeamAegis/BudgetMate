@@ -2,6 +2,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import {
   LucideWallet,
+  LucideArrowLeftRight,
   LucideTags,
   LucideChevronRight,
   LucideLock,
@@ -16,6 +17,7 @@ import {
   LucideCopy,
 } from '@lucide/angular';
 import { LockService } from '../../core/lock/lock.service';
+import { MONEY_DESTINATIONS, GENERAL_DESTINATIONS } from '../../core/layout/nav-destinations';
 import { getSettings, setBaseCurrency, setDedupWindow, isTauri } from '../../core/bridge';
 import { SelectField, type SelectOption } from '../../shared/ui/select-field/select-field';
 import { SettingsRow } from '../../shared/ui/settings-row/settings-row';
@@ -26,6 +28,7 @@ import { PrivacyNote } from '../../shared/ui/privacy-note/privacy-note';
   imports: [
     RouterLink,
     LucideWallet,
+    LucideArrowLeftRight,
     LucideTags,
     LucideChevronRight,
     LucideLock,
@@ -46,48 +49,27 @@ import { PrivacyNote } from '../../shared/ui/privacy-note/privacy-note';
     <section class="feature-page">
       <h2 class="group-title">Your money</h2>
       <ul class="rows">
-        <li>
-          <a app-settings-row routerLink="/settings/accounts" label="Accounts" hint="Cash, bank, card or wallet">
-            <svg icon lucideWallet [size]="24" aria-hidden="true"></svg>
-            <svg trailing lucideChevronRight [size]="18" aria-hidden="true"></svg>
-          </a>
-        </li>
-        <li>
-          <a app-settings-row routerLink="/settings/categories" label="Categories" hint="Group your spending and income">
-            <svg icon lucideTags [size]="24" aria-hidden="true"></svg>
-            <svg trailing lucideChevronRight [size]="18" aria-hidden="true"></svg>
-          </a>
-        </li>
-        <li>
-          <a app-settings-row routerLink="/budgets" label="Budgets / Envelopes" hint="Set a monthly limit per category">
-            <svg icon lucidePiggyBank [size]="24" aria-hidden="true"></svg>
-            <svg trailing lucideChevronRight [size]="18" aria-hidden="true"></svg>
-          </a>
-        </li>
-        <li>
-          <a app-settings-row routerLink="/allowances" label="Allowances" hint="Set aside savings for spending you know is coming">
-            <svg icon lucideHandCoins [size]="24" aria-hidden="true"></svg>
-            <svg trailing lucideChevronRight [size]="18" aria-hidden="true"></svg>
-          </a>
-        </li>
-        <li>
-          <a app-settings-row routerLink="/settings/recurring" label="Recurring" hint="Bills and income that repeat">
-            <svg icon lucideRepeat [size]="24" aria-hidden="true"></svg>
-            <svg trailing lucideChevronRight [size]="18" aria-hidden="true"></svg>
-          </a>
-        </li>
-        <li>
-          <a app-settings-row routerLink="/settings/rules" label="Rules" hint="Auto-categorise by merchant">
-            <svg icon lucideFunnel [size]="24" aria-hidden="true"></svg>
-            <svg trailing lucideChevronRight [size]="18" aria-hidden="true"></svg>
-          </a>
-        </li>
-        <li>
-          <a app-settings-row routerLink="/import/file" label="Import transactions" hint="Bring in a CSV bank statement">
-            <svg icon lucideFileUp [size]="24" aria-hidden="true"></svg>
-            <svg trailing lucideChevronRight [size]="18" aria-hidden="true"></svg>
-          </a>
-        </li>
+        <!-- Rendered from core/layout/nav-destinations, the SAME list the nav drawer uses, so a new
+             destination can never appear in one surface and be forgotten in the other. -->
+        @for (item of moneyDestinations; track item.id) {
+          <li>
+            <a app-settings-row [routerLink]="item.route" [label]="item.label" [hint]="item.hint">
+              <span icon class="srow-glyph">
+                @switch (item.icon) {
+                  @case ('allowances') { <svg lucideHandCoins [size]="24" aria-hidden="true"></svg> }
+                  @case ('budgets') { <svg lucidePiggyBank [size]="24" aria-hidden="true"></svg> }
+                  @case ('accounts') { <svg lucideWallet [size]="24" aria-hidden="true"></svg> }
+                  @case ('transfer') { <svg lucideArrowLeftRight [size]="24" aria-hidden="true"></svg> }
+                  @case ('categories') { <svg lucideTags [size]="24" aria-hidden="true"></svg> }
+                  @case ('recurring') { <svg lucideRepeat [size]="24" aria-hidden="true"></svg> }
+                  @case ('rules') { <svg lucideFunnel [size]="24" aria-hidden="true"></svg> }
+                  @case ('import') { <svg lucideFileUp [size]="24" aria-hidden="true"></svg> }
+                }
+              </span>
+              <svg trailing lucideChevronRight [size]="18" aria-hidden="true"></svg>
+            </a>
+          </li>
+        }
         <li>
           <div
             app-settings-row
@@ -108,18 +90,21 @@ import { PrivacyNote } from '../../shared/ui/privacy-note/privacy-note';
 
       <h2 class="group-title">General</h2>
       <ul class="rows">
-        <li>
-          <a app-settings-row routerLink="/settings/export" label="Export" hint="Save your transactions as a CSV or Excel file">
-            <svg icon lucideDownload [size]="24" aria-hidden="true"></svg>
-            <svg trailing lucideChevronRight [size]="18" aria-hidden="true"></svg>
-          </a>
-        </li>
-        <li>
-          <a app-settings-row routerLink="/settings/backup" label="Backup" hint="Save an encrypted copy of your data">
-            <svg icon lucideDatabaseBackup [size]="24" aria-hidden="true"></svg>
-            <svg trailing lucideChevronRight [size]="18" aria-hidden="true"></svg>
-          </a>
-        </li>
+        <!-- Same shared list. The Settings destination itself is deliberately NOT included here:
+             Settings must not link to itself (that row exists for the drawer only). -->
+        @for (item of generalDestinations; track item.id) {
+          <li>
+            <a app-settings-row [routerLink]="item.route" [label]="item.label" [hint]="item.hint">
+              <span icon class="srow-glyph">
+                @switch (item.icon) {
+                  @case ('export') { <svg lucideDownload [size]="24" aria-hidden="true"></svg> }
+                  @case ('backup') { <svg lucideDatabaseBackup [size]="24" aria-hidden="true"></svg> }
+                }
+              </span>
+              <svg trailing lucideChevronRight [size]="18" aria-hidden="true"></svg>
+            </a>
+          </li>
+        }
         <li>
           <div app-settings-row label="Base currency" hint="Foreign-currency transactions convert to this for reporting">
             <svg icon lucideCoins [size]="24" aria-hidden="true"></svg>
@@ -173,10 +158,21 @@ import { PrivacyNote } from '../../shared/ui/privacy-note/privacy-note';
       flex-direction: column;
       gap: var(--space-2);
     }
+    /* The projected icon slot is a span (it wraps the @switch), so it needs to centre like the bare
+       <svg icon> it replaced; the colour comes from SettingsRow's own .srow-icon wrapper. */
+    .srow-glyph {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
   `,
 })
 export class Settings implements OnInit {
   protected readonly lock = inject(LockService);
+
+  /** The navigation rows, shared with the nav drawer (ADR 0013) - see core/layout/nav-destinations. */
+  protected readonly moneyDestinations = MONEY_DESTINATIONS;
+  protected readonly generalDestinations = GENERAL_DESTINATIONS;
 
   protected readonly baseCurrency = signal<string>('MUR');
   protected readonly dedupWindowDays = signal<number>(3);

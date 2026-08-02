@@ -43,13 +43,12 @@
           <app-banner tone="warning">{{ warning }}</app-banner>
         }
 
-        <app-empty-state
-          image="assets/illustrations/get-started.svg"
-          [message]="chooseFileMessage()"
-          [cta]="chooseFileCta()"
-          [ctaLoading]="busy()"
-          (action)="chooseFile()"
-        />
+        <!-- The primary action sits ABOVE the fold; the illustration supports it and never buries
+             the CTA. Message/CTA/note stay format-aware (CSV vs OFX/QFX). -->
+        <p class="lede">{{ chooseFileMessage() }}</p>
+        <app-button variant="primary" [block]="true" [loading]="busy()" (click)="chooseFile()">
+          {{ chooseFileCta() }}
+        </app-button>
 
         @if (busy()) {
           <div class="processing" role="status" aria-live="polite">
@@ -59,6 +58,7 @@
         }
 
         <p class="note">{{ chooseFileNote() }}</p>
+        <img class="idle-art" src="assets/illustrations/get-started.svg" alt="" />
       }
     }
 

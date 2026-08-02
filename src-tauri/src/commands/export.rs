@@ -56,7 +56,12 @@ pub async fn export_transactions<R: Runtime>(
         let conn = guard.as_ref().ok_or(AppError::Locked)?;
         let txs = db::transactions::list(conn)?;
         let account_name: HashMap<i64, String> =
-            db::accounts::list(conn, true)?.into_iter().map(|a| (a.id, a.name)).collect();
+            // Only id -> name is used here, so the balance date is immaterial; pass today for a
+            // consistent, honest read rather than an arbitrary date.
+            db::accounts::list(conn, true, chrono::Utc::now().date_naive())?
+                .into_iter()
+                .map(|a| (a.id, a.name))
+                .collect();
         let category_kind: HashMap<i64, _> =
             db::categories::list(conn, true)?.into_iter().map(|c| (c.id, c.kind)).collect();
         let base_currency = vault::read_meta(&dir).map(|m| m.settings).unwrap_or_default().base_currency;
@@ -140,7 +145,11 @@ mod tests {
 
         let txs = transactions::list(&conn).unwrap();
         let account_name: HashMap<i64, String> =
-            crate::db::accounts::list(&conn, true).unwrap().into_iter().map(|a| (a.id, a.name)).collect();
+            crate::db::accounts::list(&conn, true, chrono::Utc::now().date_naive())
+                .unwrap()
+                .into_iter()
+                .map(|a| (a.id, a.name))
+                .collect();
         let category_kind: HashMap<i64, _> = crate::db::categories::list(&conn, true)
             .unwrap()
             .into_iter()

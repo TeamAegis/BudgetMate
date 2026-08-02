@@ -19,6 +19,15 @@
   text-align: left;
   cursor: pointer;
 }
+// A soft state tint on the whole card, so "over" reads as a shape/tone shift at a glance - a second,
+// gentle reinforcement, never the sole cue (design.md: never colour alone).
+.envelope-card.approaching {
+  border-color: color-mix(in srgb, var(--c-warning) 35%, var(--c-border));
+}
+.envelope-card.over {
+  border-color: color-mix(in srgb, var(--c-danger) 40%, var(--c-border));
+  background: var(--c-danger-soft);
+}
 .envelope-card:focus-visible {
   outline: 2px solid var(--c-primary-700);
   outline-offset: 1px;
@@ -35,11 +44,26 @@
   font-weight: var(--fw-medium);
   color: var(--c-text);
 }
-.percent {
-  font-size: var(--t-body);
-  font-weight: var(--fw-medium);
-  color: var(--c-text-muted);
+// Glanceable status tag ("on track" / "getting close" / "over") - text-first, tinted to match the
+// fill, never the only signal (paired with the fill + the status-line icon/label below).
+.tag {
   flex: none;
+  font-size: var(--t-caption);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  padding: var(--space-0-5) var(--space-2);
+  border-radius: var(--radius-pill);
+  color: var(--c-positive-700);
+  background: var(--c-positive-soft);
+}
+.tag.approaching {
+  color: var(--c-warning-700);
+  background: var(--c-warning-soft);
+}
+.tag.over {
+  color: var(--c-bg);
+  background: var(--c-danger-700);
 }
 
 // Neutral track (unlike GoalProgressRow, the fill colour itself changes by status, so the track
@@ -68,6 +92,7 @@
 
 .amounts {
   display: flex;
+  align-items: baseline;
   gap: var(--space-1);
   font-size: var(--t-body);
 }
@@ -78,6 +103,13 @@
 .amounts .sep,
 .amounts .cap {
   color: var(--c-text-muted);
+}
+// The percent moves here from the head (the status tag took its place) and sits right-aligned, so
+// the row reads "spent of cap ............ 62%".
+.amounts .percent {
+  margin-left: auto;
+  color: var(--c-text-muted);
+  font-weight: var(--fw-medium);
 }
 
 // Status line: plain/muted for "under" (nothing to flag); warning/danger tone + icon for

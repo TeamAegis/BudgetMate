@@ -41,6 +41,15 @@
   text-align: center;
   text-transform: uppercase;
 }
+// The hero treatment: the amount renders at balance scale (the same emphasis the Home hero number
+// gets) so the screen's one job - type the amount - is unmistakable. Medium rather than extralight:
+// a hair-thin 32px figure is the weakest thing on the screen it is meant to dominate, and there is
+// no bundled Poppins 600 face to go heavier (see balance-card.scss). Tokens only.
+.amount-hero input {
+  font-size: var(--t-balance);
+  font-weight: var(--fw-medium);
+  line-height: var(--lh-tight);
+}
 
 // Split editor (FR-1.2).
 .splits {

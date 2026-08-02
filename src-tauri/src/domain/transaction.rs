@@ -36,6 +36,10 @@ pub struct Transaction {
     pub created_at: String,
     /// Optional allowance envelope tag (FR-3.4); `None` for an untagged transaction.
     pub allowance_id: Option<i64>,
+    /// Set on BOTH legs of an account-to-account transfer, linking them (migration 0006);
+    /// `None` for an ordinary transaction. Presence is what lets the UI label the row as a transfer
+    /// and render its amount neutrally instead of as spending or income.
+    pub transfer_group_id: Option<String>,
     pub splits: Vec<TxSplit>,
 }
 

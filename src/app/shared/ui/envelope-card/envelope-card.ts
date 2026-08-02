@@ -34,10 +34,16 @@ import type { EnvelopeStatus } from '../../../core/models';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [MoneyPipe, LucideTriangleAlert],
   template: `
-    <button type="button" class="envelope-card" (click)="open.emit()" [attr.aria-label]="ariaLabel()">
+    <button
+      type="button"
+      class="envelope-card"
+      [class]="status()"
+      (click)="open.emit()"
+      [attr.aria-label]="ariaLabel()"
+    >
       <div class="head">
         <span class="name">{{ categoryName() }}</span>
-        <span class="percent">{{ percentLabel() }}%</span>
+        <span class="tag" [class]="status()">{{ statusTag() }}</span>
       </div>
 
       <div class="track">
@@ -45,16 +51,18 @@ import type { EnvelopeStatus } from '../../../core/models';
       </div>
 
       <div class="amounts">
-        <span class="spent">{{ { amountMinor: spentMinor(), currency: currency() } | money }}</span>
+        <span class="spent numeric">{{ { amountMinor: spentMinor(), currency: currency() } | money }}</span>
         <span class="sep">of</span>
-        <span class="cap">{{ { amountMinor: capMinor(), currency: currency() } | money }}</span>
+        <span class="cap numeric">{{ { amountMinor: capMinor(), currency: currency() } | money }}</span>
+        <span class="percent numeric">{{ percentLabel() }}%</span>
       </div>
 
       <div class="status-line" [class]="status()">
         @if (status() !== 'under') {
           <svg lucideTriangleAlert [size]="16" aria-hidden="true"></svg>
         }
-        <span>{{ { amountMinor: remainingAbsMinor(), currency: currency() } | money }} {{ statusWord() }}</span>
+        <span class="numeric">{{ { amountMinor: remainingAbsMinor(), currency: currency() } | money }}</span>
+        <span>{{ statusWord() }}</span>
       </div>
     </button>
   `,
@@ -94,6 +102,19 @@ export class EnvelopeCard {
    *  (design.md "over-budget is gentle"). */
   protected statusWord(): string {
     return this.status() === 'over' ? 'over' : 'left';
+  }
+
+  /** The glanceable status tag ("on track" / "getting close" / "over") shown next to the category
+   *  name - a second, non-colour-only cue alongside the fill and status line (design.md a11y). */
+  protected statusTag(): string {
+    switch (this.status()) {
+      case 'over':
+        return 'over';
+      case 'approaching':
+        return 'getting close';
+      default:
+        return 'on track';
+    }
   }
 
   protected ariaLabel(): string {

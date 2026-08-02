@@ -118,6 +118,7 @@ mod tests {
             pending_review: false,
             created_at: "2026-06-06T10:00:00Z".into(),
             allowance_id: None,
+            transfer_group_id: None,
             splits,
         }
     }

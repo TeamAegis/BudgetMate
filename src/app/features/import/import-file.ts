@@ -127,7 +127,8 @@ export class ImportFile implements OnInit {
   protected readonly result = signal<ImportResultData | null>(null);
 
   protected readonly accountOptions = computed<SelectOption[]>(() =>
-    this.accounts().map((a) => ({ value: a.id, label: `${a.name} (${a.currency})` })),
+    // "Cash · MUR" - the same account formatting the rest of the app uses.
+    this.accounts().map((a) => ({ value: a.id, label: `${a.name} · ${a.currency}` })),
   );
 
   /**

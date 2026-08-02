@@ -12,6 +12,12 @@ pub struct Account {
     pub currency: String,
     pub opening_balance_minor: i64,
     pub archived: bool,
+    /// DERIVED, never stored: the account's balance right now, in the account's OWN `currency` -
+    /// `opening_balance_minor` plus every confirmed (`pending_review = 0`), not-future-dated
+    /// transaction on this account. This is what the Accounts screen shows; the opening balance
+    /// alone is only where the account started, which read as a permanent "Rs 0" for any account
+    /// opened at zero. Mirrors how `Allowance` carries its derived `reserved_minor`.
+    pub balance_minor: i64,
 }
 
 /// Mirrors TS `AccountKind` (string union). Stored in the DB `type` column as the lowercase str.

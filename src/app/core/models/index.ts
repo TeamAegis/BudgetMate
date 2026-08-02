@@ -81,6 +81,10 @@ export interface Account {
   currency: Iso4217;
   openingBalanceMinor: number;
   archived: boolean;
+  /** DERIVED in Rust, never stored: the balance right now in this account's own `currency` -
+   *  `openingBalanceMinor` plus its confirmed, not-future-dated transactions. Show THIS on the
+   *  Accounts screen; `openingBalanceMinor` is only where the account started. */
+  balanceMinor: number;
 }
 
 /** Input for create_account (mirrors Rust `NewAccount`). */
@@ -155,7 +159,38 @@ export interface Transaction {
   createdAt: string;
   /** Optional allowance envelope tag (FR-3.4); `null` for an untagged transaction. */
   allowanceId: number | null;
+  /** Set on BOTH legs of an account-to-account transfer, linking them; `null` for an ordinary
+   *  transaction. Its presence is what lets the UI label the row as a transfer and render the
+   *  amount neutrally rather than as spending or income. */
+  transferGroupId: string | null;
   splits: TxSplit[];
+}
+
+/** ── Transfers (linked transaction pair, migration 0006) ─────────────────────
+ *  A transfer is not its own entity: it is two ordinary transactions sharing a `transferGroupId`,
+ *  the source leg negative and the destination leg positive, both filed under the single
+ *  `transfer`-kind category. Spend queries filter `kind = 'expense'`, so transfers never reach spend
+ *  totals, budgets, or the dashboard's this-month figure. v1 is SAME-CURRENCY only (Rust rejects a
+ *  mismatch), which is what guarantees a transfer cannot change your total balance. */
+export interface Transfer {
+  /** Shared id linking the two legs (also on each leg's `transferGroupId`). */
+  groupId: string;
+  /** The negative leg, on the source account. */
+  fromLeg: Transaction;
+  /** The positive leg, on the destination account. */
+  toLeg: Transaction;
+}
+
+/** Input for create_transfer (mirrors Rust `NewTransfer`). No currency: it comes from the accounts
+ *  themselves, and Rust rejects a mismatch between them. */
+export interface NewTransfer {
+  fromAccountId: number;
+  toAccountId: number;
+  /** Positive major-unit string (e.g. "5000.00"); Rust parses it to minor units. */
+  amount: string;
+  /** ISO `yyyy-mm-dd`. */
+  postedDate: string;
+  note?: string | null;
 }
 
 /** One category line of a new/updated transaction (mirrors Rust `NewSplit`). */
@@ -413,6 +448,11 @@ export interface AllowanceSummary {
   totalMinor: number;
   reservedMinor: number;
   availableMinor: number;
+  /** Sum of `targetMinor` over ACTIVE, base-currency allowances - the period's total allowance. */
+  targetTotalMinor: number;
+  /** How much of `targetTotalMinor` has been spent. May EXCEED it when an allowance is overspent;
+   *  floored at 0. Derived in Rust - never recompute it in TS. */
+  usedMinor: number;
   baseCurrency: Iso4217;
   excludedAllowances: number;
 }

@@ -8,10 +8,21 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { LucidePlus, LucideScanLine, LucideFileDown, LucideTarget } from '@lucide/angular';
+import {
+  LucidePlus,
+  LucideScanLine,
+  LucideFileDown,
+  LucideTarget,
+  LucideHandCoins,
+  LucidePiggyBank,
+} from '@lucide/angular';
 
-/** The small set of glyphs the FAB menu can render (lucide icons are attribute directives). */
-export type FabMenuIcon = 'plus' | 'scan' | 'import' | 'goal';
+/**
+ * The small set of glyphs the FAB menu can render (lucide icons are attribute directives).
+ * `allowance` and `budget` deliberately reuse the same glyphs the Settings rows use for those
+ * destinations (`lucideHandCoins` / `lucidePiggyBank`), so the same thing looks the same everywhere.
+ */
+export type FabMenuIcon = 'plus' | 'scan' | 'import' | 'goal' | 'allowance' | 'budget';
 
 export interface FabMenuItem {
   /** Stable id emitted by `(select)`. */
@@ -31,7 +42,14 @@ export interface FabMenuItem {
 @Component({
   selector: 'app-fab-menu',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [LucidePlus, LucideScanLine, LucideFileDown, LucideTarget],
+  imports: [
+    LucidePlus,
+    LucideScanLine,
+    LucideFileDown,
+    LucideTarget,
+    LucideHandCoins,
+    LucidePiggyBank,
+  ],
   host: { '(keydown.escape)': 'close()' },
   template: `
     @if (open()) {
@@ -48,6 +66,8 @@ export interface FabMenuItem {
                   @case ('scan') { <svg lucideScanLine [size]="22"></svg> }
                   @case ('import') { <svg lucideFileDown [size]="22"></svg> }
                   @case ('goal') { <svg lucideTarget [size]="22"></svg> }
+                  @case ('allowance') { <svg lucideHandCoins [size]="22"></svg> }
+                  @case ('budget') { <svg lucidePiggyBank [size]="22"></svg> }
                 }
               </span>
             </button>

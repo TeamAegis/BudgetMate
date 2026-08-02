@@ -2,11 +2,8 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-}
-
-.page-actions {
-  display: flex;
-  justify-content: flex-end;
+  // Reserve space so the FAB never occludes the last row (design-system §7 FAB rule).
+  padding-bottom: calc(var(--layout-fab-size) + var(--space-6));
 }
 
 .rows {

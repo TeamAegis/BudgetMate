@@ -519,7 +519,9 @@ export class TransactionForm implements OnInit {
       const id = this.editingId();
       if (id === null) await createTransaction(input);
       else await updateTransaction({ id, ...input });
-      await this.router.navigate(['/expenses']);
+      // The saved-confirmation moment (ux-blueprint section 5): the list acknowledges the save with
+      // the numbers already updated. Nav state only - presentation, nothing stored.
+      await this.router.navigate(['/expenses'], { state: { saved: 'Saved' } });
     } catch (e) {
       this.error.set(toUserMessage(e));
     } finally {
@@ -534,7 +536,7 @@ export class TransactionForm implements OnInit {
     this.error.set(null);
     try {
       await deleteTransaction(id);
-      await this.router.navigate(['/expenses']);
+      await this.router.navigate(['/expenses'], { state: { saved: 'Deleted' } });
     } catch (e) {
       this.error.set(toUserMessage(e));
       this.confirmingDelete.set(false);

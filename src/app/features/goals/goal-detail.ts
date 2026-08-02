@@ -3,6 +3,8 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { listGoals, deleteGoal, toUserMessage, isTauri } from '../../core/bridge';
 import type { Goal } from '../../core/models';
 import { HeaderActionService } from '../../core/layout/header-action.service';
+import { MoneyPipe } from '../../shared/pipes/money.pipe';
+import { FriendlyDatePipe } from '../../shared/pipes/friendly-date.pipe';
 import { Banner } from '../../shared/ui/banner/banner';
 import { Skeleton } from '../../shared/ui/skeleton/skeleton';
 import { EmptyState } from '../../shared/ui/empty-state/empty-state';
@@ -21,7 +23,17 @@ import { DetailRow } from '../../shared/ui/detail-row/detail-row';
  */
 @Component({
   selector: 'app-goal-detail',
-  imports: [Banner, Skeleton, EmptyState, GoalProgressRow, FormActions, ConfirmDialog, DetailRow],
+  imports: [
+    MoneyPipe,
+    FriendlyDatePipe,
+    Banner,
+    Skeleton,
+    EmptyState,
+    GoalProgressRow,
+    FormActions,
+    ConfirmDialog,
+    DetailRow,
+  ],
   templateUrl: './goal-detail.html',
   styleUrl: './goal-detail.scss',
 })

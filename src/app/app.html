@@ -5,7 +5,10 @@
       [isBrand]="isBrand()"
       [hasBack]="hasBack()"
       [action]="headerAction.action()"
+      [showMenu]="true"
+      [menuOpen]="drawerOpen()"
       (back)="goBack()"
+      (menu)="openDrawer()"
     />
 
     @if (showDiagnostics && (appInfo() || health() || coreError())) {
@@ -32,5 +35,11 @@
 
   @if (!chromeless() && !hideNav()) {
     <app-bottom-nav />
+  }
+
+  <!-- The nav drawer (ADR 0013). Rendered only while open - existence IS open, which is what drives
+       its focus trap / scroll lock / focus restore. Never over the chromeless lock screens. -->
+  @if (!chromeless() && drawerOpen()) {
+    <app-nav-drawer [groups]="drawerGroups" (dismiss)="closeDrawer()" />
   }
 </div>

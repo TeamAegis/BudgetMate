@@ -1,10 +1,9 @@
 <section class="feature-page">
-  <div class="page-actions">
-    <app-button variant="primary" (click)="addCategory()">
-      <svg icon lucidePlus [size]="18" aria-hidden="true"></svg>
-      <span>Add</span>
-    </app-button>
-  </div>
+  <!-- Add lives in the thumb-zone FAB (one convention for every list); it yields to the empty
+       state's single CTA so there is never a doubled affordance. -->
+  @if (loading() || categories().length > 0 || error()) {
+    <app-fab ariaLabel="Add category" (action)="addCategory()" />
+  }
 
   @if (error(); as err) {
     <app-banner>{{ err }}</app-banner>
@@ -33,7 +32,7 @@
           animate.enter="list-item-enter"
           [style.animation-delay]="(i < 12 ? i * 40 : 0) + 'ms'"
           [name]="c.name"
-          [meta]="c.kind + ' · parent: ' + parentName(c.parentId)"
+          [meta]="metaLine(c)"
         >
           <app-icon-button actions ariaLabel="Edit" (click)="editCategory(c)">
             <svg lucidePencil [size]="18" aria-hidden="true"></svg>

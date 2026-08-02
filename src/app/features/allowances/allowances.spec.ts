@@ -43,6 +43,8 @@ describe('Allowances', () => {
       totalMinor: 500_000,
       reservedMinor: 30_000,
       availableMinor: 470_000,
+      targetTotalMinor: 150_000,
+      usedMinor: 120_000,
       baseCurrency: 'MUR',
       excludedAllowances: 0,
       ...overrides,

@@ -1,4 +1,14 @@
 <section class="feature-page">
+  <!-- Quick-add in the thumb zone on the landing tab: the same labelled menu Expenses uses. Hidden
+       while the teaching empty state is on screen, so only one add affordance shows at a time. -->
+  @if (!loading() && dashboard() && !dashboard()!.isEmpty) {
+    <app-fab-menu
+      ariaLabel="Add a transaction, allowance or budget"
+      [items]="fabItems"
+      (selected)="onFabSelect($event)"
+    />
+  }
+
   @if (loading()) {
     <div class="skeletons" aria-busy="true">
       <app-skeleton variant="block" height="120px" />
@@ -21,33 +31,47 @@
         (action)="addExpense()"
       />
     } @else {
+      <!-- The one glanceable answer: what can I still spend? usableBalanceMinor comes from Rust
+           (total minus the goals reserve) - no money math here. The explainer and the secondary
+           figures live INSIDE the card, so the hero answers "where do I stand" on its own instead
+           of trailing loose grey sentences and competing stat cards underneath it. -->
       <app-balance-card
-        label="Total balance"
-        [amountMinor]="d.totalBalanceMinor"
+        label="Safe to spend"
+        [amountMinor]="d.usableBalanceMinor"
         [currency]="d.baseCurrency"
-      />
-      @if (readyToSpendLine(); as ready) {
-        <p class="ready-line">
-          {{ ready }}
-          @if (readyToSpendExplainer(); as explainer) {
-            <span class="ready-explainer">{{ explainer }}</span>
+        [note]="heroSubline()"
+      >
+        <div footer class="hero-stats" [attr.aria-busy]="refreshing() || null">
+          <span class="hero-stat">
+            <span class="hero-stat-label">Spent this month</span>
+            <span class="hero-stat-value numeric">{{ { amountMinor: d.thisMonthSpendMinor, currency: d.baseCurrency } | money }}</span>
+          </span>
+          @if (d.goalsReservedMinor > 0) {
+            <!-- Only shown when it differs from the hero (otherwise it just duplicates it). -->
+            <span class="hero-stat">
+              <span class="hero-stat-label">Total balance</span>
+              <span class="hero-stat-value numeric">{{ { amountMinor: d.totalBalanceMinor, currency: d.baseCurrency } | money }}</span>
+            </span>
           }
-        </p>
-      }
-      @if (allowanceLine(); as line) {
-        <p class="ready-line">
-          {{ line }} <a routerLink="/allowances" class="see-all">Manage allowances</a>
-        </p>
-      }
+          @if (refreshing()) {
+            <app-spinner [size]="18" label="Updating" />
+          }
+        </div>
+      </app-balance-card>
 
-      <app-card class="spend-figure" [attr.aria-busy]="refreshing() || null">
-        <span class="label">Spent this month</span>
-        <span class="amount numeric">{{ { amountMinor: d.thisMonthSpendMinor, currency: d.baseCurrency } | money }}</span>
-        <span class="caption">so far</span>
-        @if (refreshing()) {
-          <app-spinner [size]="18" label="Updating" />
+      <!-- Allowances: a card with its usage progress, not a sentence. Both figures are derived in
+           Rust (targetTotalMinor / usedMinor). Omitted entirely until the user has one. -->
+      @if (allowanceSummary(); as a) {
+        @if (a.allowances.length > 0 && a.targetTotalMinor > 0) {
+          <app-allowance-summary-card
+            [usedMinor]="a.usedMinor"
+            [targetTotalMinor]="a.targetTotalMinor"
+            [count]="a.allowances.length"
+            [currency]="a.baseCurrency"
+            (open)="openAllowances()"
+          />
         }
-      </app-card>
+      }
 
       @if (caveatNote(); as note) {
         <app-banner tone="info">
@@ -55,18 +79,9 @@
         </app-banner>
       }
 
-      @if (showTrend()) {
-        <p class="section-title">Balance trend</p>
-        @defer (on viewport) {
-          <app-balance-trend-chart [points]="linePoints()" [currency]="d.baseCurrency" />
-        } @placeholder {
-          <app-skeleton variant="block" height="180px" />
-        }
-      }
-
       <p class="section-title">Quick actions</p>
       <div class="tiles">
-        <a app-action-tile routerLink="/expenses/new" label="Add expense">
+        <a app-action-tile routerLink="/expenses/new/expense" label="Add expense">
           <svg icon lucidePlus [size]="24" aria-hidden="true"></svg>
         </a>
         <a app-action-tile routerLink="/import" label="Scan receipt">
@@ -127,6 +142,17 @@
             </li>
           }
         </ul>
+      }
+
+      <!-- The trend is context, not the answer - it renders LAST, after the actionable content,
+           still deferred so Chart.js never lands in the eager chunk. -->
+      @if (showTrend()) {
+        <p class="section-title">Balance trend</p>
+        @defer (on viewport) {
+          <app-balance-trend-chart [points]="linePoints()" [currency]="d.baseCurrency" />
+        } @placeholder {
+          <app-skeleton variant="block" height="180px" />
+        }
       }
     }
   }

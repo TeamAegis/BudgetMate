@@ -61,10 +61,19 @@ the UI/UX principles, UX laws, WCAG 2.2, and anti-patterns - lives in
   (Account, Category) - is a **danger icon-button at the top-right of the header** on the edit page,
   published via `HeaderActionService` (which carries an optional `icon: 'trash' | 'archive'`) and
   opens a ConfirmDialog. Build to the form-page pattern (`transaction-form` is the canonical example),
-  never a centred modal. **`ConfirmDialog` is the only overlay in the app**; `app-modal` is its
-  confirm/alert substrate only, retired as a form container. See `docs/design/screens.md` §8.0 and
-  ADR 0003 (form action placement, superseding `docs/adr/0002-page-based-forms-no-modals.md` on
-  Save/Delete placement).
+  never a centred modal. **`ConfirmDialog` is the only *centred dialog* in the app**; `app-modal` is
+  its confirm/alert substrate only, retired as a form container. The one other overlay is the
+  **`NavDrawer`** navigation sheet (ADR 0013) - a navigation surface, never a form or content host.
+  No overlay may ever host a form. See `docs/design/screens.md` §8.0 and ADR 0003 (form action
+  placement, superseding `docs/adr/0002-page-based-forms-no-modals.md` on Save/Delete placement).
+- **Secondary destinations live in the `NavDrawer`** (`app-nav-drawer`, ADR 0013), opened by a leading
+  hamburger in the header on top-level tabs (never on a screen that has Back - that slot is Back's).
+  It lists the money-setup/data screens (Allowances, Budgets, Accounts, Move money, Categories,
+  Recurring, Rules, Import, Export, Backup) and deliberately **excludes the four BottomNav tabs** - hiding a *primary*
+  destination behind a menu is the anti-pattern the research warns about; the drawer exists for the
+  secondary ones that previously had no home but a scroll through Settings. Both the drawer and the
+  Settings list render from **`core/layout/nav-destinations.ts`** - add a destination there, never
+  inline in a template.
 - **Adding a transaction is a two-step flow before the form** (ADR 0004): a kind chooser
   (`expenses/new`, Expense/Income) then a per-kind category picker (`expenses/new/:kind`), both
   plain navigation lists (SettingsRow, **no** Save bar), then the entry form
@@ -74,8 +83,15 @@ the UI/UX principles, UX laws, WCAG 2.2, and anti-patterns - lives in
   and every other add/edit form stay single pages. See `docs/design/screens.md` §4.2/§8.0.
 - **Buttons are slightly rounded** via `--radius-button` (14px) - not a full pill; the shared
   `Button` uses this token (the FormActions Save and the ActionTile/SettingsRow chrome all sit on it).
-- **Expenses primary action is a `FabMenu`** (`app-fab-menu`, tap-to-open, labelled *Add expense* /
-  *Scan receipt*), not the old long-press FAB; Goals keeps a simple single-action FAB.
+- **Quick-add is a `FabMenu` on Home and Expenses** (`app-fab-menu`, tap-to-open, labelled), not the
+  old long-press FAB. Items come from the host: Expenses offers *Add expense* / *Add income* /
+  *Scan receipt*; Home adds *Add allowance* / *Add budget* on top, since those are otherwise buried
+  in Settings. The labelled expense/income item carries the ADR 0004 kind, so it deep-links straight
+  to that kind's category picker. **Every other list's add action is a thumb-zone FAB** (Goals,
+  Budgets, Allowances, Accounts, Categories, Recurring, Rules) - never a top-right Add button.
+  FAB/FabMenu hide while an empty state's CTA is on screen (one affordance at a time), and every
+  host reserves `padding-bottom >= --layout-fab-size + --space-6` so the FAB never covers the last
+  row.
 - **Charts:** bundled **Chart.js (canvas)** only - never a remote chart script, never static
   image charts. (TrendChart, pie, line.)
 - BottomNav canonical tabs: **Home · Expenses · Goals · Analytics** (one label set - do not

@@ -80,6 +80,7 @@ describe('Home', () => {
     pendingReview: false,
     createdAt: '2026-07-05T00:00:00Z',
     allowanceId: null,
+    transferGroupId: null,
     splits: [{ id: 1, categoryId: 1, categoryName: 'Groceries', amountMinor: -5_000 }],
   };
 
@@ -115,6 +116,9 @@ describe('Home', () => {
     totalMinor: 500_000,
     reservedMinor: 30_050,
     availableMinor: 469_950,
+    // The allowance above is a 1500.00 weekly with 300.00 left, so 1200.00 of it has been used.
+    targetTotalMinor: 150_000,
+    usedMinor: 120_000,
     baseCurrency: 'MUR',
     excludedAllowances: 0,
   };
@@ -154,9 +158,36 @@ describe('Home', () => {
     expect(host.querySelector('app-empty-state')).not.toBeNull();
     expect(host.textContent).toContain('Add an expense');
     expect(host.querySelector('app-balance-card')).toBeNull();
+    // One add affordance at a time: the quick-add menu yields to the empty state's CTA.
+    expect(host.querySelector('app-fab-menu')).toBeNull();
   });
 
-  it('populated state: renders the hero balance, ready-to-spend line, spend figure, recent activity, and goals', () => {
+  it('quick-add menu: offers allowance and budget alongside the transaction actions', () => {
+    const fixture = createFixture();
+    fixture.detectChanges();
+    const component = fixture.componentInstance as unknown as HomeInternals;
+    component.loading.set(false);
+    component.error.set(null);
+    component.dashboard.set(sampleDashboard);
+    fixture.detectChanges();
+
+    const host = fixture.nativeElement as HTMLElement;
+    const fab = host.querySelector('app-fab-menu');
+    expect(fab).not.toBeNull();
+
+    // Open it and check the labels: allowances and budgets are otherwise buried in Settings.
+    host.querySelector<HTMLButtonElement>('.fab')!.click();
+    fixture.detectChanges();
+    const labels = Array.from(host.querySelectorAll('.fab-item')).map((i) => i.textContent ?? '');
+    expect(labels.length).toBe(5);
+    expect(labels.some((l) => l.includes('Add expense'))).toBe(true);
+    expect(labels.some((l) => l.includes('Add income'))).toBe(true);
+    expect(labels.some((l) => l.includes('Scan receipt'))).toBe(true);
+    expect(labels.some((l) => l.includes('Add allowance'))).toBe(true);
+    expect(labels.some((l) => l.includes('Add budget'))).toBe(true);
+  });
+
+  it('populated state: hero is the safe-to-spend figure, with total balance as a secondary stat', () => {
     const fixture = createFixture();
     fixture.detectChanges();
     const component = fixture.componentInstance as unknown as HomeInternals;
@@ -169,20 +200,53 @@ describe('Home', () => {
     const host = fixture.nativeElement as HTMLElement;
     expect(host.querySelector('app-empty-state')).toBeNull();
     expect(host.querySelector('app-balance-card')).not.toBeNull();
-    // Total balance 465_050 minor -> Rs 4,650.50 via the shared money pipe.
-    expect(host.textContent).toContain('4,650.50');
-    // Ready-to-spend: usable 425_025 minor -> Rs 4,250.25.
+    // The hero answers "what can I spend": usable 425_025 minor -> Rs 4,250.25.
+    expect(host.textContent).toContain('Safe to spend');
     expect(host.textContent).toContain('4,250.25');
-    expect(host.textContent).toContain('ready to spend');
     expect(host.textContent).toContain('set aside for goals');
-    // Spend figure: 50_075 minor -> Rs 500.75.
+    // Total balance is demoted to a secondary stat in the hero card's footer: 465_050 -> Rs 4,650.50.
+    expect(host.textContent).toContain('Total balance');
+    expect(host.textContent).toContain('4,650.50');
+    // Spend figure, also in the hero footer: 50_075 minor -> Rs 500.75.
     expect(host.textContent).toContain('Spent this month');
     expect(host.textContent).toContain('500.75');
-    expect(host.textContent).toContain('so far');
+    // Both secondary figures live INSIDE the hero card, under its hairline rule (ADR 0013 era
+    // redesign) - not in separate stat cards competing with the headline figure.
+    expect(host.querySelector('app-balance-card .hero-stats')).not.toBeNull();
     expect(host.querySelector('app-goal-progress-row')).not.toBeNull();
     expect(host.textContent).toContain('Supermarket');
     // The chart lives behind @defer (on viewport) - not rendered synchronously in this test.
     expect(host.querySelector('app-balance-trend-chart')).toBeNull();
+  });
+
+  it('orders sections so the actionable content precedes the trend chart', () => {
+    const fixture = createFixture();
+    fixture.detectChanges();
+    const component = fixture.componentInstance as unknown as HomeInternals;
+    component.loading.set(false);
+    component.error.set(null);
+    component.dashboard.set(sampleDashboard);
+    component.transactions.set([sampleTransaction]);
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    // The trend is context, not the answer, so it comes last - see home.html.
+    const order = [
+      'Safe to spend',
+      'Spent this month',
+      'Quick actions',
+      'Recent activity',
+      'Goals',
+      'Balance trend',
+    ];
+    const positions = order.map((s) => text.indexOf(s));
+    expect(positions.every((p) => p >= 0)).toBe(true, `all sections must render: ${positions.join(',')}`);
+    for (let i = 1; i < positions.length; i++) {
+      expect(positions[i]).toBeGreaterThan(
+        positions[i - 1],
+        `"${order[i]}" must come after "${order[i - 1]}"`,
+      );
+    }
   });
 
   it('recent-activity row shows the base-currency equivalent only for a foreign-currency transaction', () => {
@@ -239,7 +303,7 @@ describe('Home', () => {
     expect(host.textContent).toContain('is more than your free balance right now');
   });
 
-  it('shows a separate "set aside across your allowances" line once the allowance summary loads', () => {
+  it('shows the allowances CARD with its usage progress once the allowance summary loads', () => {
     const fixture = createFixture();
     fixture.detectChanges();
     const component = fixture.componentInstance as unknown as HomeInternals;
@@ -250,9 +314,15 @@ describe('Home', () => {
     fixture.detectChanges();
 
     const host = fixture.nativeElement as HTMLElement;
-    // reservedMinor 30_050 minor -> Rs 300.50; never conflated with the goals ready-to-spend figure.
-    expect(host.textContent).toContain('300.50 set aside across your allowances');
-    expect(host.querySelector('a[href="/allowances"]')).not.toBeNull();
+    const card = host.querySelector('app-allowance-summary-card');
+    expect(card).not.toBeNull();
+    // usedMinor 120_000 of targetTotalMinor 150_000, both derived in Rust. A card, not the loose
+    // sentence Home used to carry - and never conflated with the goals ready-to-spend figure.
+    // Asserted on the numerals: the money pipe joins symbol and amount with a non-breaking space.
+    const text = card!.textContent!;
+    expect(text).toContain('1,200');
+    expect(text).toContain('1,500');
+    expect(host.textContent).not.toContain('set aside across your allowances');
   });
 
   it('omits the allowances line entirely when the user has none yet (no clutter)', () => {
@@ -269,7 +339,7 @@ describe('Home', () => {
     expect(host.textContent).not.toContain('set aside across your allowances');
   });
 
-  it('no ready-to-spend line when nothing has been set aside for goals', () => {
+  it('with nothing set aside for goals, the hero says so instead of implying a hidden reserve', () => {
     const fixture = createFixture();
     fixture.detectChanges();
     const component = fixture.componentInstance as unknown as HomeInternals;
@@ -279,7 +349,11 @@ describe('Home', () => {
     fixture.detectChanges();
 
     const host = fixture.nativeElement as HTMLElement;
-    expect(host.textContent).not.toContain('ready to spend');
+    expect(host.textContent).toContain("That's your whole balance");
+    // Not the "after Rs N set aside for goals" explainer - there is no reserve to explain.
+    expect(host.textContent).not.toContain('after Rs');
+    // No goals reserve means the hero already IS the total, so the duplicate stat is suppressed.
+    expect(host.textContent).not.toContain('Total balance');
   });
 
   it('foreign-currency caveat note appears only when accounts/goals are excluded', () => {

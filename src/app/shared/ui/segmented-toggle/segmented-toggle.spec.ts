@@ -71,4 +71,63 @@ describe('SegmentedToggle', () => {
     fixture.detectChanges();
     expect(fixture.componentInstance.value()).toBe('ongoing');
   });
+
+  describe('layout', () => {
+    /** Builds the two-option Kind field the allowance form uses, both options carrying a hint. */
+    function makeWithHints(layout: 'pill' | 'list', value = 'recurring') {
+      const fixture = TestBed.createComponent(SegmentedToggle);
+      fixture.componentRef.setInput('ariaLabel', 'Recurring or one-time');
+      fixture.componentRef.setInput('options', [
+        { value: 'recurring', label: 'Recurring', hint: 'Refills on its own every week or month' },
+        { value: 'one_time', label: 'One-time', hint: 'A single amount you set aside once' },
+      ]);
+      fixture.componentRef.setInput('value', value);
+      fixture.componentRef.setInput('layout', layout);
+      fixture.detectChanges();
+      return fixture;
+    }
+
+    it('defaults to the pill treatment, so the filter usages are untouched', () => {
+      const el = make('ongoing').nativeElement as HTMLElement;
+      expect(el.querySelector('.seg')!.classList.contains('list')).toBe(false);
+    });
+
+    it('ignores hints in the pill layout (no room for a second line)', () => {
+      const el = makeWithHints('pill').nativeElement as HTMLElement;
+      expect(el.querySelector('.seg-hint')).toBeNull();
+      expect(el.textContent).not.toContain('A single amount you set aside once');
+    });
+
+    it('renders stacked rows with each option hint when layout is list', () => {
+      const el = makeWithHints('list').nativeElement as HTMLElement;
+      expect(el.querySelector('.seg')!.classList.contains('list')).toBe(true);
+      const hints = el.querySelectorAll('.seg-hint');
+      expect(hints.length).toBe(2);
+      expect(hints[0].textContent).toContain('Refills on its own every week or month');
+      expect(hints[1].textContent).toContain('A single amount you set aside once');
+    });
+
+    it('keeps the same radiogroup contract in list layout, with a non-colour selected cue', () => {
+      const el = makeWithHints('list', 'one_time').nativeElement as HTMLElement;
+      expect(el.querySelector('[role="radiogroup"]')).not.toBeNull();
+      const segments = el.querySelectorAll<HTMLButtonElement>('[role="radio"]');
+      expect(segments.length).toBe(2);
+      expect(segments[0].getAttribute('aria-checked')).toBe('false');
+      expect(segments[1].getAttribute('aria-checked')).toBe('true');
+      // Selection carries a shape cue (a glyph) as well as the tint, so it never rests on colour.
+      expect(segments[1].querySelector('.seg-mark svg')).not.toBeNull();
+      // The glyph is decorative - the state is already announced via aria-checked.
+      expect(segments[1].querySelector('.seg-mark')!.getAttribute('aria-hidden')).toBe('true');
+    });
+
+    it('still moves selection with arrow keys in list layout', () => {
+      const fixture = makeWithHints('list', 'recurring');
+      const segments = (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>(
+        '[role="radio"]',
+      );
+      segments[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
+      fixture.detectChanges();
+      expect(fixture.componentInstance.value()).toBe('one_time');
+    });
+  });
 });

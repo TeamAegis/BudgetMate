@@ -42,3 +42,57 @@
 .segment:disabled {
   cursor: default;
 }
+
+// ---- layout="list" ----------------------------------------------------------------------------
+// Full-width stacked rows for a form ANSWER (see the component doc). The pill chrome is dropped:
+// each option becomes its own card-like row, so a follow-up field revealed by the choice reads as
+// belonging to the form rather than to the control.
+.seg.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+}
+.seg.list .segment {
+  justify-content: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
+  background: var(--c-surface);
+  // Rows keep normal ink (the pill's muted-until-active treatment would dim the hint too).
+  color: var(--c-text);
+  text-align: left;
+}
+// Selected: glyph + border + soft tint together. Deliberately NOT the pill's white-on-coral fill -
+// a filled row would make the hint line hard to read.
+.seg.list .segment.active {
+  border-color: var(--c-primary-700);
+  background: var(--c-primary-05);
+  color: var(--c-text);
+}
+.seg.list .seg-mark {
+  display: inline-flex;
+  flex: none;
+  color: var(--c-text-muted);
+}
+.seg.list .segment.active .seg-mark {
+  color: var(--c-primary-700);
+}
+.seg.list .seg-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-0-5);
+  min-width: 0;
+}
+.seg.list .seg-label {
+  font-weight: var(--fw-medium);
+}
+.seg.list .seg-hint {
+  font-size: var(--t-caption);
+  font-weight: var(--fw-regular);
+  color: var(--c-text-muted);
+}

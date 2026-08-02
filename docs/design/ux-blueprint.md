@@ -31,9 +31,10 @@ LockScreen (biometric/passphrase)            ← app entry gate (FR-5.1) [NEW]
 App Shell (header + bottom nav)
    ├── Home / Dashboard            (Home tab)
    │     • Balance/summary card  • Labelled quick-action tile grid (Juice-style)  • Goals preview
+   │     • FabMenu → Add expense / Add income / Scan receipt / Add allowance / Add budget
    ├── Expenses                    (Expenses tab)
    │     • Balance summary  • Daily/Weekly/Monthly toggle  • Trend chart
-   │     • Transaction list  • FabMenu → Add expense / Scan receipt
+   │     • Transaction list  • FabMenu → Add expense / Add income / Scan receipt
    │     • Add/Edit Transaction (split, recurring, multi-currency)  [partly NEW]
    │     • Scan Receipt (OCR)                                       [NEW]
    │     • Import file (CSV/OFX/QFX) → rules → dedup review         [NEW]
@@ -89,8 +90,10 @@ Onboarding (first run, before the shell): intro → income setup → first goal 
   arrow is *Cancel* (returns to origin unchanged); *Save* lives in the header via
   `HeaderActionService`. On an **edit** page a destructive action (Delete for Transaction/Goal/Rule,
   Archive for Account/Category) sits in a `.danger-zone` and routes through a ConfirmDialog;
-  Recurring has no delete (pause/resume stays on its list). `ConfirmDialog` is the only overlay in
-  the app. See `design-system.md` §7 (Form page, FabMenu, ConfirmDialog) and `screens.md` §8.0.
+  Recurring has no delete (pause/resume stays on its list). `ConfirmDialog` is the only centred dialog
+  in the app; the only other overlay is the `NavDrawer` navigation sheet (ADR 0013), and no overlay ever
+  hosts a form. See `design-system.md` §7 (Form page, FabMenu, ConfirmDialog, NavDrawer) and
+  `screens.md` §7.0/§8.0.
   The decision is recorded in `docs/adr/0002-page-based-forms-no-modals.md`.
 
 ---
@@ -167,8 +170,12 @@ Special states required by the FRs:
 Surface notes:
 - **Home** uses the old-MCB-Juice layout: the balance/summary card on top, then a grid of
   **labelled** quick-action tiles (Add expense -> `/expenses/new`, Scan receipt -> `/import`,
-  Add goal -> `/goals/new`). Labelled tiles only, never icon-only.
-- **Expenses** opens its primary action through a labelled `FabMenu` (Add expense / Scan receipt).
+  Add goal -> `/goals/new`). Labelled tiles only, never icon-only. Home **also** carries the
+  labelled `FabMenu` in the thumb zone (Add expense / Add income / Scan receipt / Add allowance /
+  Add budget) - the tiles are the discoverable entry point while scrolling, the FAB is the
+  one-handed shortcut, and the FabMenu yields to the teaching empty state's CTA.
+- **Expenses** opens its primary action through a labelled `FabMenu` (Add expense / Add income /
+  Scan receipt).
 - **Add Transaction** is **amount-first** - the amount is the hero field; Split and FX are
   progressively disclosed.
 

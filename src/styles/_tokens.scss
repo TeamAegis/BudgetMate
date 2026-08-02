@@ -13,6 +13,9 @@
   --c-primary-40: rgba(255, 119, 85, 0.40);  // hero balance card fill
   --c-primary-10: rgba(255, 119, 85, 0.10);  // goals / soft section fill
   --c-primary-05: rgba(255, 119, 85, 0.05);  // quick-action chips
+  --c-on-primary-rule: rgba(0, 0, 0, 0.12);  // hairline divider ON the coral hero fill (BalanceCard
+                                             // footer); --c-border is a white-background rule and
+                                             // disappears against --c-primary-40
 
   // ---- Color: neutrals ----
   --c-bg: #ffffff;
@@ -104,6 +107,10 @@
   --layout-header-h: 80px;
   --layout-bottomnav-h: 80px;
   --layout-fab-size: 60px;
+  // Nav-drawer sheet width (ADR 0013). Material's modal-drawer rule for phones: the smallest screen
+  // width minus 56px, capped at 280px - the gap is what keeps the page edge visible behind the
+  // scrim, so the drawer never reads as a full page.
+  --layout-drawer-w: min(280px, calc(100vw - 56px));
   --tap-target-min: 48px;   // Android (v1 primary) usability target; ≥ WCAG 2.2 24px floor & iOS 44pt
 
   // ---- Insets (Android WebView: env(safe-area-inset-*) is unreliable - these vars let the
@@ -116,6 +123,7 @@
   // ---- Z-index scale (keep stacking explicit; only these layers float) ----
   --z-dropdown: 20;         // select-field listbox menu
   --z-fab-menu: 900;        // the FAB speed-dial scrim + items (above the page/nav, below modals)
+  --z-drawer: 950;          // nav-drawer scrim + sheet (over the page/nav/FAB, under ConfirmDialog)
   --z-modal: 1000;          // modal scrim + dialog (above everything in-page)
   --z-modal-nested: 1010;   // a dialog layered over another modal (e.g. ConfirmDialog over an edit form)
 

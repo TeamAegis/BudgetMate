@@ -1,10 +1,9 @@
 <section class="feature-page">
-  <div class="page-actions">
-    <app-button variant="primary" (click)="addAccount()">
-      <svg icon lucidePlus [size]="18" aria-hidden="true"></svg>
-      <span>Add</span>
-    </app-button>
-  </div>
+  <!-- Add lives in the thumb-zone FAB (one convention for every list); it yields to the empty
+       state's single CTA so there is never a doubled affordance. -->
+  @if (loading() || accounts().length > 0 || error()) {
+    <app-fab ariaLabel="Add account" (action)="addAccount()" />
+  }
 
   @if (error(); as err) {
     <app-banner>{{ err }}</app-banner>
@@ -33,10 +32,13 @@
           animate.enter="list-item-enter"
           [style.animation-delay]="(i < 12 ? i * 40 : 0) + 'ms'"
           [name]="a.name"
-          [meta]="a.accountType + ' · ' + a.currency"
+          [meta]="typeLabel(a.accountType) + ' · ' + a.currency"
         >
+          <!-- The account's balance NOW (Rust-derived: opening + its confirmed, not-future ledger).
+               This used to render openingBalanceMinor, which left every account opened at zero
+               showing a permanent "Rs 0" no matter how many transactions it held. -->
           <span amount class="amount numeric">{{
-            { amountMinor: a.openingBalanceMinor, currency: a.currency } | money
+            { amountMinor: a.balanceMinor, currency: a.currency } | money
           }}</span>
           <app-icon-button actions ariaLabel="Edit" (click)="editAccount(a)">
             <svg lucidePencil [size]="18" aria-hidden="true"></svg>

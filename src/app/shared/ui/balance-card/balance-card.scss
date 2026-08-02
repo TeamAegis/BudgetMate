@@ -1,8 +1,11 @@
 // Signature hero card: coral-40 fill, offset pink shadow, large radius. Tokens only.
+// One clear step per hierarchy level - uppercase caption label, large figure, body note, hairline
+// rule, small footer stats - so the figure is unmistakably the subject and nothing competes with it.
 :host {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  // Tighter than the other stacks: the label and the figure it introduces are one unit.
+  gap: var(--space-1);
   padding: var(--space-5);
   background: var(--c-primary-40);
   border-radius: var(--radius-lg);
@@ -10,17 +13,45 @@
 }
 
 .bc-label {
-  font-size: var(--t-section);
+  font-size: var(--t-caption);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: var(--c-text);
 }
 .bc-figure {
   font-size: var(--t-balance);
-  font-weight: var(--fw-extralight);
+  // Medium, not extralight: a hair-thin 32px figure is the weakest thing on the busiest card.
+  // Deliberately NOT --fw-semibold (600) - no poppins-semibold.woff2 is bundled, so 600 would
+  // fall back to Bold. 500 is the heaviest weight with a real bundled face.
+  font-weight: var(--fw-medium);
   line-height: var(--lh-tight);
   color: var(--c-text);
 }
+
+// The explainer for the figure. Full-strength text, not a washed-out grey: it is the sentence that
+// tells the user what the headline number already accounts for, so it has to be readable on the
+// coral fill (muted grey on --c-primary-40 fails AA).
+.bc-note {
+  margin-top: var(--space-1);
+  font-size: var(--t-caption);
+  line-height: var(--lh-body);
+  color: var(--c-text);
+}
+
 .bc-caption {
   font-size: var(--t-body);
   color: var(--c-text);
   opacity: 0.85;
+}
+
+// Secondary figures, separated from the headline by a hairline on the coral fill. Empty (no footer
+// projected) collapses completely - no stray padding or rule.
+.bc-footer {
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--c-on-primary-rule);
+}
+.bc-footer:empty {
+  display: none;
 }
