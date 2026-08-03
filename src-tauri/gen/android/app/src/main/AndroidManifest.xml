@@ -1,7 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <!-- Zero-internet guarantee (NFR-P4): the INTERNET permission is intentionally
          omitted and must never be re-added. The no-network guard enforces this. -->
+
+    <!-- Omitting INTERNET here is necessary but NOT sufficient: the manifest merger folds in the
+         permissions and components declared by every dependency, and ML Kit drags in Google's
+         telemetry uploader. Chain:
+           com.google.mlkit:text-recognition
+             -> play-services-mlkit-text-recognition(-common)
+               -> com.google.android.datatransport:transport-backend-cct
+         which declares INTERNET + ACCESS_NETWORK_STATE and a scheduled upload service, so the
+         BUILT APK carried both even though this file never did. Remove them at merge time.
+         Stripping INTERNET is the load-bearing part - without it the OS blocks every socket, so
+         the telemetry transport cannot phone home even if it is still linked in. The component
+         removals stop it being scheduled at all. OCR itself is unaffected: the ML Kit text model
+         is bundled and runs fully on-device (docs/adr/0016). -->
+    <uses-permission android:name="android.permission.INTERNET" tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" tools:node="remove" />
 
     <!-- AndroidTV support -->
     <uses-feature android:name="android.software.leanback" android:required="false" />
@@ -35,5 +51,18 @@
             android:name="android.support.FILE_PROVIDER_PATHS"
             android:resource="@xml/file_paths" />
         </provider>
+
+        <!-- Google's datatransport (Firelog) telemetry components, injected by ML Kit. They exist
+             only to batch and upload usage events, which this app must never do (NFR-P4, no
+             telemetry). Removed at merge time so nothing schedules them. -->
+        <service
+            android:name="com.google.android.datatransport.runtime.backends.TransportBackendDiscovery"
+            tools:node="remove" />
+        <service
+            android:name="com.google.android.datatransport.runtime.scheduling.jobscheduling.JobInfoSchedulerService"
+            tools:node="remove" />
+        <receiver
+            android:name="com.google.android.datatransport.runtime.scheduling.jobscheduling.AlarmManagerSchedulerBroadcastReceiver"
+            tools:node="remove" />
     </application>
 </manifest>
