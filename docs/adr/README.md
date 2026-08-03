@@ -75,3 +75,12 @@ Consequences, and Alternatives considered.
   export to each learn a second source of money movement. Spend queries already filter
   `kind = 'expense'`, so transfers stay out of spend totals and budgets for free. v1 is
   SAME-CURRENCY only, which is what guarantees a transfer cannot change the vault's total balance.
+- [0015](0015-android-release-signing-and-distribution.md): Android release signing and
+  distribution. `app/build.gradle.kts` gains a `signingConfigs` block reading
+  `app/keystore.properties` (gitignored) with an `ANDROID_*` env-var fallback for CI; an
+  unconfigured keystore WARNS and produces an unsigned artifact rather than failing, so the
+  install-size measurement (issue #22) still runs without a key. `wsl-build-apk.sh` gains
+  `[debug|release] [apk|aab]` modes and verifies the signature with `apksigner`. Builds are
+  distributed as a GitHub release from a tag on `main`; the 221 MB debug APK is not a release
+  artifact. Explicit R8 keep rules for the by-name-loaded OCR plugin back up tauri-android's
+  consumer rules.
