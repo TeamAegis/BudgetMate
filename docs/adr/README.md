@@ -84,3 +84,12 @@ Consequences, and Alternatives considered.
   distributed as a GitHub release from a tag on `main`; the 221 MB debug APK is not a release
   artifact. Explicit R8 keep rules for the by-name-loaded OCR plugin back up tauri-android's
   consumer rules.
+- [0016](0016-strip-dependency-injected-internet-permission.md): Strip the dependency-injected
+  INTERNET permission. The first inspected release APK declared INTERNET and ACCESS_NETWORK_STATE
+  even though the committed manifest never has: the manifest merger folds in
+  `com.google.android.datatransport` (Google's Firelog telemetry uploader), pulled transitively by
+  ML Kit text recognition, along with an upload service and scheduler receiver. They are now
+  removed at merge time with `tools:node="remove"`. The guard scanned SOURCE manifests only and so
+  reported `[ok]` while the artifact shipped the permission; it now parses `<uses-permission>`
+  elements and treats any manifest under `build/` as a merge output, and `wsl-build-apk.sh` fails
+  the build if `aapt2 dump badging` finds INTERNET in what it just produced.

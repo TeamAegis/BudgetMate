@@ -7,6 +7,14 @@ Tauri 2.x Android. v1's primary target. Read alongside `.claude/rules/rust.md`,
 - **Never add the `INTERNET` permission or any network entitlement.** The committed Android
   manifest omits `INTERNET` on purpose - that omission *is* the enforcement. CORS applies normally
   in the Android WebView; there is no "Tauri bypasses the network" mode.
+- **Omission is not enough - the manifest merger folds in every dependency's declarations.** ML Kit
+  drags in `com.google.android.datatransport` (Google's telemetry uploader), which declares
+  `INTERNET` + `ACCESS_NETWORK_STATE`, so the built APK carried both while the source manifest was
+  clean. They are stripped with `tools:node="remove"` (see the manifest and
+  `docs/adr/0016-strip-dependency-injected-internet-permission.md`). **Check the artifact, not the
+  source:** `scripts/wsl-build-apk.sh` runs `aapt2 dump badging` on what it builds and fails on
+  `INTERNET`. Any new Android dependency must be re-checked this way - `npm run guards` alone
+  cannot see a merged manifest, and CI builds no Android artifact.
 - `src-tauri/gen/android/` is **committed** (not gitignored) so the zero-internet manifest is
   versioned. If you rename the app or change the identifier, delete and re-init the project rather
   than hand-editing generated files.

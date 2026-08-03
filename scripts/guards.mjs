@@ -85,19 +85,53 @@ function checkCargoLock() {
 }
 
 // ── 1c. AndroidManifest must omit INTERNET (the load-bearing block). ────────────
+// Omission in the SOURCE manifest is necessary but not sufficient: the manifest merger folds in
+// every dependency's declarations, and ML Kit's telemetry transport
+// (com.google.android.datatransport) declares INTERNET. Scanning only the source manifest reported
+// [ok] while the built APK shipped the permission (docs/adr/0016). So:
+//   - source manifests may name INTERNET only inside a `tools:node="remove"` directive;
+//   - a MERGED manifest (anything under build/) is the real artifact, where tools: directives have
+//     already been applied - any mention there is a genuine permission and fails.
+// A merged manifest only exists after an Android build, which does not happen in CI, so the
+// authoritative artifact check also lives in scripts/wsl-build-apk.sh.
 function checkAndroidManifest() {
   const base = join(ROOT, 'src-tauri', 'gen', 'android');
   if (!existsSync(base)) {
     note('gen/android not present yet - skipping INTERNET-permission check.');
     return;
   }
+  let mergedSeen = 0;
   for (const file of walk(base)) {
-    if (file.endsWith('AndroidManifest.xml')) {
-      const text = readFileSync(file, 'utf8');
-      if (/android\.permission\.INTERNET/.test(text)) {
-        errors.push(`[no-network] INTERNET permission present in ${relative(ROOT, file)}`);
-      }
+    if (!file.endsWith('AndroidManifest.xml')) continue;
+    const rel = relative(ROOT, file).replace(/\\/g, '/');
+    const text = readFileSync(file, 'utf8');
+    const isMerged = /\/build\//.test(rel);
+    if (isMerged) mergedSeen++;
+
+    for (const [element] of text.matchAll(/<uses-permission\b[^>]*>/g)) {
+      if (!/android\.permission\.INTERNET/.test(element)) continue;
+      if (!isMerged && /tools:node\s*=\s*"remove"/.test(element)) continue;
+      errors.push(
+        isMerged
+          ? `[no-network] INTERNET permission in MERGED manifest ${rel} - a dependency injected it`
+          : `[no-network] INTERNET permission declared in ${rel}`,
+      );
     }
+
+    // Anything naming INTERNET outside a uses-permission element (and outside a comment) is
+    // unexpected - flag it rather than let a novel shape through.
+    const outside = text
+      .replace(/<uses-permission\b[^>]*>/g, '')
+      .replace(/<!--[\s\S]*?-->/g, '');
+    if (/android\.permission\.INTERNET/.test(outside)) {
+      errors.push(`[no-network] unexpected INTERNET reference in ${rel}`);
+    }
+  }
+  if (mergedSeen === 0) {
+    note(
+      '[no-network] no merged manifest on disk (Android not built here) - the built-artifact ' +
+        'check runs in scripts/wsl-build-apk.sh.',
+    );
   }
 }
 

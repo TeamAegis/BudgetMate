@@ -100,6 +100,29 @@ echo "$ARTIFACTS" | while read -r f; do
   printf '%s  %s\n' "$(du -h "$f" | cut -f1)" "$f"
 done
 
+# --- Zero-internet check on the BUILT artifact (NFR-P4) ----------------------------------------
+# The source AndroidManifest.xml omitting INTERNET is not enough: the manifest merger folds in
+# every dependency's declarations, and ML Kit's telemetry transport declares INTERNET. This is the
+# only check that sees what actually ships, so a violation FAILS the build (docs/adr/0016).
+AAPT2="$(find "$ANDROID_HOME/build-tools" -name aapt2 -type f 2>/dev/null | sort | tail -1)"
+if [ "$FORMAT" = "apk" ] && [ -n "$AAPT2" ]; then
+  echo "### zero-internet check ###"
+  ZI_FAIL=0
+  while read -r f; do
+    PERMS="$("$AAPT2" dump badging "$f" 2>/dev/null | grep "^uses-permission" || true)"
+    if echo "$PERMS" | grep -q "android.permission.INTERNET"; then
+      echo "[x] $f declares android.permission.INTERNET - zero-internet promise broken" >&2
+      echo "$PERMS" >&2
+      ZI_FAIL=1
+    else
+      echo "[ok] no INTERNET permission: $f"
+    fi
+  done <<< "$ARTIFACTS"
+  [ "$ZI_FAIL" -eq 0 ] || exit 1
+else
+  echo "[warn] zero-internet artifact check skipped (aapt2 not found or format=$FORMAT)"
+fi
+
 if [ "$MODE" = "release" ]; then
   # An unsigned release artifact will not install. Verify rather than assume: apksigner ships in
   # the SDK build-tools. Missing tool is a warning, not a hard failure.
