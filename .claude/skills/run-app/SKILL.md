@@ -32,7 +32,11 @@ scope on this Windows machine. See `docs/architecture.md` §11 (platform scope).
 - Frontend only (browser preview): `npm run start` → http://localhost:4200
 - **Desktop dev (WebView2, fastest UI/bridge loop):** `npm run tauri dev`
 - Android emulator/device (hot reload): `npm run tauri android dev`
-- Android release: `npm run tauri android build`
+- Android debug APK (WSL2): `scripts/wsl-build-apk.sh` → sideload with `adb install`
+- **Android release APK/AAB (WSL2):** `scripts/wsl-build-apk.sh release [apk|aab]`. Signing comes
+  from `src-tauri/gen/android/app/keystore.properties` (gitignored) or the `ANDROID_*` env vars;
+  unconfigured means the artifact is UNSIGNED and will not install. The script runs `apksigner
+  verify` and prints `[ok] signed` / `[warn] UNSIGNED`. See ADR 0015 and `.claude/rules/android.md`.
 - Frontend production bundle: `npm run build` → `dist/vault/browser`
 
 ## First-time Android init (greenfield)

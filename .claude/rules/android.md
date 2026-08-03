@@ -43,10 +43,17 @@ Tauri 2.x Android. v1's primary target. Read alongside `.claude/rules/rust.md`,
 ## Versioning & signing
 - `versionCode` is derived as `major*1000000 + minor*1000 + patch`; override in config if needed.
   Default `minSdkVersion` is Android 7.0 (SDK 24); raise via config.
-- **Never commit the keystore.** In CI, read keystore values from env vars (`ANDROID_KEY_ALIAS`,
-  `ANDROID_KEY_PASSWORD`, `ANDROID_KEYSTORE_PATH`, `ANDROID_STORE_PASSWORD`). The generated
-  `build.gradle.kts` varies across Tauri/AGP versions - verify the generated file rather than
-  copying blog snippets.
+- **Never commit the keystore.** `src-tauri/gen/android/app/build.gradle.kts` reads the four signing
+  values from `app/keystore.properties` (gitignored) and falls back to the env vars
+  (`ANDROID_KEYSTORE_PATH`, `ANDROID_STORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`)
+  for CI. With none of them set the release build WARNS and emits an unsigned artifact, so a
+  size check still works without a key. Paths must be WSL-resolvable (`/mnt/c/...`) since Android
+  builds run under WSL2. See `docs/adr/0015-android-release-signing-and-distribution.md`.
+- **Build releases with `scripts/wsl-build-apk.sh release [apk|aab]`** (default is `debug apk`); it
+  verifies the signature with `apksigner` afterwards. A debug APK is NOT a release artifact - it
+  installs under a different application id (`.debug` suffix) and cannot upgrade a release install.
+- `build.gradle.kts` and `app/proguard-rules.pro` are generated files that now carry hand-written
+  blocks (signing, OCR R8 keep rules). Re-applying them is part of any `tauri android init` redo.
 
 ## Debugging
 - Inspect the WebView via Chrome DevTools (`chrome://inspect`); use `adb logcat` for native logs.
